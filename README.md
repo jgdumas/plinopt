@@ -15,7 +15,7 @@
 **Installation**:
 - Requires some distribution packages like: 
            `g++`, `pkg-config`, `make`, `liblinbox-dev`.
-- Then just run `make`, in order to produce the following executable
+- Then just run `make`, in order to produce the following executable programs
 
 
 
