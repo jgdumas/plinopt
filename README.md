@@ -14,7 +14,8 @@
 
 **Installation**:
 - Requires some distribution packages like: 
-           `sudo apt install git make g++ pkg-config libntl-dev liblinbox-dev`.
+           `sudo apt install git make g++ pkg-config liblinbox-dev`
+           (sometimes also `sudo apt install libntl-dev libiml-dev libflint-dev`).
 - Then just run `make`, in order to produce the following executable programs
 
 
