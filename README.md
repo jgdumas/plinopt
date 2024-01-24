@@ -14,7 +14,7 @@
 
 **Installation**:
 - Requires some distribution packages like: 
-           `g++`, `pkg-config`, `make`, `liblinbox-dev`.
+           `sudo apt install git make g++ pkg-config libntl-dev liblinbox-dev`.
 - Then just run `make`, in order to produce the following executable programs
 
 
