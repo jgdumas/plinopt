@@ -38,8 +38,7 @@
 
 
 
-**Matrix Syntax**:
-- SMS format, see [Sparse Integer Matrix Collection](https://hpac.imag.fr)
+**Matrix Syntax**: SMS format, see [Sparse Integer Matrix Collection](https://hpac.imag.fr)
 |  |  |  |  |
 | :--- | :--- | :--- | :--- |
 | Starts with| `m` | `n` | `'R'` |
