@@ -126,7 +126,8 @@ int main(int argc, char** argv) {
     for (size_t i = 1; argc>i; ++i) {
         std::string args(argv[i]);
         if (args == "-h") {
-            std::clog << "Usage: " << argv[0] << " [-h|-M|-P|-K|-D] [stdin|matrixfile.sms]";
+            std::clog << "Usage: " << argv[0] << " [-h|-M|-P|-K|-D] [stdin|matrixfile.sms]\n";
+            exit(-1);
         } else if (args == "-M") { printMaple = true; }
         else if (args == "-P") { printPretty = true; }
         else if (args == "-D") { directOnly = true; }

@@ -356,6 +356,12 @@ int Tellegen(std::istream& input) {
 // Main: select between file / std::cin
 int main(int argc, char** argv) {
     if ( argc > 1 ) {
+        std::string args(argv[1]);
+        if (args == "-h") {
+            std::clog << "Usage: " << argv[0] << "[stdin|matrixfile.sms]\n";
+            exit(-1);
+        } 
+
         std::ifstream ifile(argv[1]);
         if ( ifile ) {
             int rt=Tellegen(ifile);

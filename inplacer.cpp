@@ -40,11 +40,20 @@
 
 #include "plinopt_inplace.h"
 
+
+
+
 // ===============================================================
 // argv[1-3]: L.sms R.sms P.sms 
 // argv[4]: if present, double expand intermediate result
 int main(int argc, char ** argv) {
 
+
+    if ((argc <=3) || (std::string(argv[1]) == "-h")) {
+        std::clog << "Usage: " << argv[0] << " L.sms R.sms P.sms [expand]\n";
+        exit(-1);
+    }
+     
         // ==========================
         // Reading matrices
 	std::ifstream left (argv[1]), right (argv[2]), product(argv[3]);

@@ -2,38 +2,50 @@
 # PLinOpt: a collection of C++ routines handling linear programs
 --------------------------------------------------------------------------------
 
-**Authors**:  Jean-Guillaume Dumas
+**Authors**:  Jean-Guillaume Dumas, Bruno Grenet, Clément Pernet, Alexandre Sedoglavic
+
 
 
 **Requirements**:
-- C++
+- C++, pkg-config
 - [LinBox](https://linalg.org/), dev: headers & library
 
 
 
-**Automatic linux install & run first benchmarks**:
-- Fetch and run [auto-vm.run](https://raw.githubusercontent.com/jgdumas/vespo/main/auto-vm.run)
-
-	- Requires a linux virtual machine or sudoer rights to install packages.
-	- Will install distribution packages: `g++`, `make`, `liblinbox-dev`.
-	- Then clone and install the `libvespo` libraries.
-	- Then run one small example.
+**Installation**:
+- Requires some distribution packages like: 
+           `g++`, `pkg-config`, `make`, `liblinbox-dev`.
+- Then just run `make`, in order to produce the following executable
 
 
 
 **About**:
-- `transpozer`: transposes a program, via Tellegen's transposition principle
-- `optimizer` : produces a small program computing a linear transformation
-- `inplacer`  : produces an in-place program from a bilinear transformation
+|  |  |
+| :--------- | :------ |
+|`transpozer`| transposes a program, via Tellegen's transposition principle|
+|`optimizer`| produces a small program computing a linear transformation|
+|`inplacer`| produces an in-place program from a bilinear transformation|
+|  |  |
+
+
+
+**Tools**:
+|  |  |
+| :--------- | :------ |
+|`matrix-transpose`| transposes a matrix from an SMS file |
+|`sms2pretty`| pretty print a matrix from an SMS file |
+|  |  |
 
 
 
 **Matrix Syntax**:
 - SMS format, see [Sparse Integer Matrix Collection](https://hpac.imag.fr)
-
-	- Starts with: `m n 'R'`
-	- then: `i j value`
-	- ends with: `0 0 0`
+|  |  |  |  |
+| :--- | :--- | :--- | :--- |
+| Starts with| `m` | `n` | `'R'` |
+| then | `i` | `j` | `value` |
+| ends with| `0` | `0` | `0` |
+|  |  |  |  |
 
 
 
@@ -46,3 +58,15 @@
 	- Constant variables start by `c`
 	- Input variables start by `i`
 	- Output variables start by `o`
+- Program must start by loading each input variable into a temporary `t1:=i1`
+
+
+**Examples**:
+- `./sms2pretty data/Lw.sms data/Rw.sms data/Pw.sms`: pretty print HM representation of Strassen-Winograd's fast 2x2 multiplication algorithm`
+- `./matrix-transpose data/Pw.sms`: the transposed matrix
+- `./optimizer data/cyclic.sms`: a program computing that matrix-vector product
+- `./optimizer data/Pw.sms`: a program computing that matrix-vector product
+- `./transpozer data/test.prg`: a program computing the transposed program
+- `./matrix-transpose data/Pw.sms | ./optimizer -D | ./transpozer`: a program computing that matrix-vector product
+- `./inplacer data/Lw.sms data/Rw.sms data/Pw.sms`: in-place version of Strassen-Winograd's fast 2x2 accumulating multiplication
+- `./inplacer data/Lk.sms data/Rk.sms data/Pk.sms e`: in-place version of Karatsuba's fast accumulating polynomia multiplication
