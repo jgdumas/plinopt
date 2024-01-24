@@ -30,9 +30,7 @@
 //         * otherwise random order
 // ============================================================
 
-#include "plinopt_library.h"
-#include "plinopt_library.inl"
-#include <linbox/util/args-parser.h>
+#include "plinopt_optimize.h"
 
 
 // ============================================================

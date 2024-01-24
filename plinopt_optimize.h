@@ -4,18 +4,8 @@
 // ==========================================================================
 
 /****************************************************************
- * PLinOpt Library definitions
+ * PLinOpt Library, Optimization definitions
  ****************************************************************/
-
-#ifndef _PLINOPT_LIBRARY_H_
-#define _PLINOPT_LIBRARY_H_
-
-#include <iostream>
-#include <givaro/givrational.h>
-#include <linbox/matrix/sparse-matrix.h>
-#include <linbox/util/matrix-stream.h>
-#include <linbox/algorithms/gauss.h>
-
 
 // ============================================================
 // Define to print comments during parsing
@@ -32,14 +22,12 @@
 // ============================================================
 
 
-using Givaro::Rational;
-using LinBox::Tag::FileFormat;
+#include "plinopt_library.h"
+#include <linbox/algorithms/gauss.h>
 
+#ifndef _PLINOPT_LIBRARY_OPTIMIZE_H_
+#define _PLINOPT_LIBRARY_OPTIMIZE_H_
 
-typedef Givaro::QField<Rational> QRat;
-typedef LinBox::MatrixStream<QRat> QMstream;
-typedef LinBox::SparseMatrix<QRat,
-                             LinBox::SparseMatrixFormat::SparseSeq > Matrix;
 
 typedef std::tuple<size_t, size_t, Rational> triple;
 typedef std::vector<triple> VTriple;
@@ -73,8 +61,6 @@ bool OneSub(Matrix& M, VTriple& multiples, size_t& nbmul,
             const char tev, const char rav);
 
 
-void Transpose(Matrix& T, const Matrix& A);
-
 // Factors out same coefficient in a column
 template<typename Iter>
 void FactorOutColumns(Matrix& T, VTriple& multiples, size_t& nbmul,
@@ -100,4 +86,5 @@ std::pair<size_t,size_t> Optimizer(Matrix& M,
 std::pair<size_t,size_t> nullspacedecomp(Matrix& x, Matrix& A) ;
 
 
+#include "plinopt_optimize.inl"
 #endif

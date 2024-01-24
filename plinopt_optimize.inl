@@ -4,10 +4,10 @@
 // ==========================================================================
 
 /****************************************************************
- * PLinOpt Library inline implementations
+ * PLinOpt Library, Optimization inline implementations
  ****************************************************************/
 
-#include "plinopt_library.h"
+#include "plinopt_optimize.h"
 
 bool operator==(const triple& u, const triple&v) {
     return ( (std::get<0>(u) == std::get<0>(v)) &&
@@ -213,20 +213,6 @@ bool OneSub(Matrix& M, VTriple& multiples, size_t& nbmul,
         }
     }
     return false;
-}
-
-void Transpose(Matrix& T, const Matrix& A) {
-    T.resize(0,0);
-    T.resize(A.coldim(), A.rowdim());
-    for(auto it = A.IndexedBegin(); it != A.IndexedEnd(); ++it)
-        T.setEntry(it.colIndex(),it.rowIndex(), it.value());
-}
-void NegTranspose(Matrix& T, const Matrix& A) {
-    T.resize(0,0);
-    T.resize(A.coldim(), A.rowdim());
-    Matrix::Element tmp; T.field().init(tmp);
-    for(auto it = A.IndexedBegin(); it != A.IndexedEnd(); ++it)
-        T.setEntry(it.colIndex(),it.rowIndex(), T.field().neg(tmp,it.value()));
 }
 
 // Factors out same coefficient in a column
