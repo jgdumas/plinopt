@@ -144,7 +144,7 @@ void DoubleExpand(Matrix& AA, Matrix& BB, Matrix& TT,
             BB.setEntry(1+(l<<1),iter->first,iter->second);
         }
     }
-    
+
         /* Inflate & Interleave Product */
     for(size_t l=0; l<T.rowdim();++l) {
         for(auto iter(T[l].begin()); iter != T[l].end(); ++iter) {
@@ -152,14 +152,12 @@ void DoubleExpand(Matrix& AA, Matrix& BB, Matrix& TT,
             TT.setEntry(1+(l<<1),1+(iter->first),iter->second);
         }
     }
-    
+
 #ifdef VERBATIM_PARSING
     AA.write(std::clog << "A:=",Tag::FileFormat::Maple) << ';' << std::endl;
     BB.write(std::clog << "B:=",Tag::FileFormat::Maple) << ';' << std::endl;
     TT.write(std::clog << "T:=",Tag::FileFormat::Maple) << ';' << std::endl;
     std::clog << std::string(20,'#') << std::endl;
 #endif
-    
+
 }
-
-

@@ -22,38 +22,54 @@
 using namespace LinBox;
 
 
-int PrettyPrint(std::istream& input) 
+int PrettyPrint(std::istream& input, const Tag::FileFormat& matformat)
 {
     Givaro::QField<Givaro::Rational> QQ;
     MatrixStream<Givaro::QField<Givaro::Rational>> ms( QQ, input );
-    
+
     Givaro::Timer chrono; chrono.start();
     SparseMatrix<Givaro::QField<Givaro::Rational>, SparseMatrixFormat::SparseSeq> A ( ms );
     chrono.stop();
-    
+
     size_t nnz(0);
     for(auto iter=A.rowBegin(); iter != A.rowEnd(); ++iter) nnz += iter->size();
-    
+
     std::clog << "[READ]: " << A.rowdim() << 'x' << A.coldim() << ' ' << nnz << ' ' << chrono << std::endl;
-    
-    A.write(std::cout, Tag::FileFormat::Pretty);
-    
+
+    A.write(std::cout, matformat);
+
     return 0;
 }
 
-    
-    
+
+/* Matrix formats:
+  Maple = 1,
+  SMS = 5,
+  Matlab = 7,
+  Pretty = 8,
+*/
 int main(int argc, char ** argv) {
+        // Pretty output by default
+    LinBox::Tag::FileFormat matformat = LinBox::Tag::FileFormat::Pretty;
+
     if (argc <=1) {
-        PrettyPrint(std::cin);    
+        PrettyPrint(std::cin, matformat);
     } else {
         for(size_t i=1; i<argc; ++i) {
-            std::ifstream input (argv[i]);
-            PrettyPrint(input);
+            std::string args(argv[i]);
+            if (args[0] == '-') {
+                if (args[1] == 'h') {
+                    std::clog << "Usage: " << argv[0] << " [-#] [stdin|matrixfile.sms]\n";
+                    exit(-1);
+                } else {
+                    matformat = LinBox::Tag::FileFormat(-atoi(args.c_str()));
+                    args = std::string(argv[++i]);
+                }
+            }
+            std::ifstream input (args);
+            PrettyPrint(input, matformat);
         }
     }
+
     return 0;
 }
-
-    
-    

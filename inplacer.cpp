@@ -4,14 +4,14 @@
 // ==========================================================================
 
 /****************************************************************
- * Returns an in-place program 
+ * Returns an in-place program
  *          computing the bilinear function in HM representation
  *
  * Usage: L.sms R.sms P.sms [expansion]
  *          L.sms/R.sms/P.sms the 3 HM matrices
  *          expansion: if present intermediate results grouped by 2
  *
- * References: 
+ * References:
  *      [ In-place accumulation of fast multiplication formulae
  *        J-G. Dumas, B. Grenet
  *        https://hal.science/hal-04167499 ]
@@ -44,7 +44,7 @@
 
 
 // ===============================================================
-// argv[1-3]: L.sms R.sms P.sms 
+// argv[1-3]: L.sms R.sms P.sms
 // argv[4]: if present, double expand intermediate result
 int main(int argc, char ** argv) {
 
@@ -53,7 +53,7 @@ int main(int argc, char ** argv) {
         std::clog << "Usage: " << argv[0] << " L.sms R.sms P.sms [expand]\n";
         exit(-1);
     }
-     
+
         // ==========================
         // Reading matrices
 	std::ifstream left (argv[1]), right (argv[2]), product(argv[3]);
@@ -63,7 +63,7 @@ int main(int argc, char ** argv) {
     Matrix A(ls), B(rs), C(ss);
 
     Matrix T(QQ); Transpose(T, C);
-    
+
 
 #ifdef VERBATIM_PARSING
     A.write(std::clog << "A:=",Tag::FileFormat::Maple) << ';' << std::endl;
