@@ -12,10 +12,11 @@
  *          bitsize: if present bitsize of random matrices
  ****************************************************************/
 
-#include "plinopt_inplace.h"
+#include "plinopt_library.h"
 
 // ===============================================================
 // argv[1-3]: L.sms R.sms P.sms
+// argv[4]: bitsize
 int main(int argc, char ** argv) {
 
     if ((argc <=3) || (std::string(argv[1]) == "-h")) {
@@ -46,6 +47,8 @@ int main(int argc, char ** argv) {
         // =============================================
         // Random inputs
     Givaro::GivRandom generator;
+    Givaro::Integer::seeding(generator.seed());
+
     QVector va(QQ,L.rowdim()), ua(QQ,L.coldim());
     QVector vb(QQ,R.rowdim()), ub(QQ,R.coldim());
     for(auto iter=ua.begin(); iter!=ua.end(); ++iter) QQ.random(generator, *iter, bitsize);
