@@ -28,6 +28,9 @@ int main(int argc, char ** argv) {
 	std::ifstream left (argv[1]), right (argv[2]), product(argv[3]);
     size_t bitsize(argc>4?atoi(argv[4]):32u);
 
+    Givaro::Integer sq(argv[5]), mod(argv[6]);
+    Givaro::Integer quotient(mod*mod-sq);
+
     QRat QQ;
     QMstream ls(QQ, left), rs(QQ, right), ss(QQ, product);
     Matrix L(ls), R(rs), P(ss);
@@ -61,6 +64,17 @@ int main(int argc, char ** argv) {
 
     P.apply(wc,vc);
 
+    wc.write(std::clog << "wc:=", LinBox::Tag::FileFormat::Maple ) << ';' << std::endl;
+
+    for(auto& iter: wc) {
+        auto a = iter.nume() % quotient;
+        auto b = iter.deno() % quotient;
+        iter = a;
+        iter /= b;
+    }
+
+    wc.write(std::clog << "wc:=", LinBox::Tag::FileFormat::Maple ) << ';' << std::endl;
+
 
         // =============================================
         // Compute the matrix product directly
@@ -74,6 +88,9 @@ int main(int argc, char ** argv) {
     LinBox::MatrixDomain<QRat> BMD(QQ);
     LinBox::DenseMatrix<QRat> Rc(QQ,n,n);
     BMD.mul(Rc,Ma,Mb); // Direct matrix multiplication
+
+
+
 
 
     if (BMD.areEqual (Rc,Mc))
