@@ -23,7 +23,7 @@
 //#define VERBATIM_PARSING
 // ============================================================
 
-int MatrixTranspose(std::istream& input) {
+int MatrixTranspose(std::istream& input, const LinBox::Tag::FileFormat& matformat) {
 
     Givaro::QField<Givaro::Rational> QQ;
     LinBox::MatrixStream<Givaro::QField<Givaro::Rational>> ms( QQ, input );
@@ -52,7 +52,7 @@ int MatrixTranspose(std::istream& input) {
 #endif
 
     chrono.start();
-    AT.write(std::cout, LinBox::Tag::FileFormat::SMS) << std::flush;
+    AT.write(std::cout, matformat) << std::flush;
 
     chrono.stop();
 
@@ -62,14 +62,33 @@ int MatrixTranspose(std::istream& input) {
     return 0;
 }
 
+
+/* Matrix formats:
+  Maple = 1,
+  SMS = 5,
+  Matlab = 7,
+  Pretty = 8,
+*/
 int main(int argc, char ** argv) {
+    LinBox::Tag::FileFormat matformat = LinBox::Tag::FileFormat(5); // SMS output by default
 
     if (argc <= 1) {
-        return MatrixTranspose(std::cin);
+        return MatrixTranspose(std::cin, matformat);
     } else {
-        std::ifstream inputmatrix(argv[1]);
+        std::string args(argv[1]);
+        if (args[0] == '-') {
+            if (args[1] == 'h') {
+                std::clog << "Usage: " << argv[0] << " [-#] [stdin|matrixfile.sms]\n";
+                exit(-1);
+            } else {
+                matformat = LinBox::Tag::FileFormat(-atoi(argv[1]));
+                args = std::string(argv[2]);
+            }
+        }
+
+        std::ifstream inputmatrix(args);
         if ( inputmatrix ) {
-            int rt=MatrixTranspose(inputmatrix);
+            int rt=MatrixTranspose(inputmatrix, matformat);
             inputmatrix.close();
             return rt;
         }

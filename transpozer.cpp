@@ -6,7 +6,7 @@
 /****************************************************************
  * Transposition of programs via Tellegen's principle
  * Program syntax: see main Tellegen function below
- * Reference: [ Tellegen's principle into practice. 
+ * Reference: [ Tellegen's principle into practice.
  *              ISSAC'03:37-44, A. Bostan, G. Lecerf, É. Schost
  *              https://doi.org/10.1145/860854.860870 ]
  ****************************************************************/
@@ -360,7 +360,7 @@ int main(int argc, char** argv) {
         if (args == "-h") {
             std::clog << "Usage: " << argv[0] << "[stdin|matrixfile.sms]\n";
             exit(-1);
-        } 
+        }
 
         std::ifstream ifile(argv[1]);
         if ( ifile ) {

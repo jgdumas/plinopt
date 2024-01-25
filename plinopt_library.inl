@@ -23,4 +23,3 @@ void NegTranspose(Matrix& T, const Matrix& A) {
     for(auto it = A.IndexedBegin(); it != A.IndexedEnd(); ++it)
         T.setEntry(it.colIndex(),it.rowIndex(), T.field().neg(tmp,it.value()));
 }
-
