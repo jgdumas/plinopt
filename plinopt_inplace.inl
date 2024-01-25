@@ -154,9 +154,9 @@ void DoubleExpand(Matrix& AA, Matrix& BB, Matrix& TT,
     }
     
 #ifdef VERBATIM_PARSING
-    AA.write(std::clog << "A:=",Tag::FileFormat::Maple) << ';' << std::endl;
-    BB.write(std::clog << "B:=",Tag::FileFormat::Maple) << ';' << std::endl;
-    TT.write(std::clog << "T:=",Tag::FileFormat::Maple) << ';' << std::endl;
+    AA.write(std::clog << "A:=",LinBox::Tag::FileFormat::Maple) << ';' << std::endl;
+    BB.write(std::clog << "B:=",LinBox::Tag::FileFormat::Maple) << ';' << std::endl;
+    TT.write(std::clog << "T:=",LinBox::Tag::FileFormat::Maple) << ';' << std::endl;
     std::clog << std::string(20,'#') << std::endl;
 #endif
     

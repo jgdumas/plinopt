@@ -66,10 +66,10 @@ int main(int argc, char ** argv) {
     
 
 #ifdef VERBATIM_PARSING
-    A.write(std::clog << "A:=",Tag::FileFormat::Maple) << ';' << std::endl;
-    B.write(std::clog << "B:=",Tag::FileFormat::Maple) << ';' << std::endl;
-    C.write(std::clog << "C:=",Tag::FileFormat::Maple) << ';' << std::endl;
-    T.write(std::clog << "T:=",Tag::FileFormat::Maple) << ';' << std::endl;
+    A.write(std::clog << "A:=",LinBox::Tag::FileFormat::Maple) << ';' << std::endl;
+    B.write(std::clog << "B:=",LinBox::Tag::FileFormat::Maple) << ';' << std::endl;
+    C.write(std::clog << "C:=",LinBox::Tag::FileFormat::Maple) << ';' << std::endl;
+    T.write(std::clog << "T:=",LinBox::Tag::FileFormat::Maple) << ';' << std::endl;
     std::clog << std::string(20,'#') << std::endl;
 #endif
 

@@ -22,30 +22,34 @@
 using namespace LinBox;
 
 
-int PrettyPrint(std::istream& input) 
+int PrettyPrint(std::istream& input)
 {
     Givaro::QField<Givaro::Rational> QQ;
     MatrixStream<Givaro::QField<Givaro::Rational>> ms( QQ, input );
-    
+
     Givaro::Timer chrono; chrono.start();
-    SparseMatrix<Givaro::QField<Givaro::Rational>, SparseMatrixFormat::SparseSeq> A ( ms );
+    SparseMatrix<Givaro::QField<Givaro::Rational>,
+        SparseMatrixFormat::SparseSeq> A ( ms );
     chrono.stop();
-    
-    size_t nnz(0);
-    for(auto iter=A.rowBegin(); iter != A.rowEnd(); ++iter) nnz += iter->size();
-    
-    std::clog << "[READ]: " << A.rowdim() << 'x' << A.coldim() << ' ' << nnz << ' ' << chrono << std::endl;
-    
+
+    size_t nnz(0); Givaro::Rational FNormSq(0);
+    for(auto row=A.rowBegin(); row != A.rowEnd(); ++row) {
+        nnz += row->size(); // # of non-zero elements
+        for(const auto& iter:*row)
+            FNormSq += (iter.second)*(iter.second); // Square of Frobenius norm
+    }
+
+    std::clog << "[READ]: " << A.rowdim() << 'x' << A.coldim() << ' ' << nnz << ' ' << FNormSq << ' ' << chrono << std::endl;
+
     A.write(std::cout, Tag::FileFormat::Pretty);
-    
+
     return 0;
 }
 
-    
-    
+
 int main(int argc, char ** argv) {
     if (argc <=1) {
-        PrettyPrint(std::cin);    
+        PrettyPrint(std::cin);
     } else {
         for(size_t i=1; i<argc; ++i) {
             std::ifstream input (argv[i]);
@@ -54,6 +58,3 @@ int main(int argc, char ** argv) {
     }
     return 0;
 }
-
-    
-    

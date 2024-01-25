@@ -23,6 +23,7 @@ typedef Givaro::QField<Givaro::Rational> QRat;
 typedef LinBox::MatrixStream<QRat> QMstream;
 typedef LinBox::SparseMatrix<QRat, 
                              LinBox::SparseMatrixFormat::SparseSeq > Matrix;
+typedef LinBox::DenseVector<QRat> QVector;
 
 
 void Transpose(Matrix& T, const Matrix& A);
