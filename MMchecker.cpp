@@ -7,9 +7,12 @@
  * Randomly checks a matrix multiplication algorithm
  *        given as an HM representation
  *
- * Usage: L.sms R.sms P.sms [bitsize]
+ * Usage: L.sms R.sms P.sms [bitsize [sq srep]]
  *          L.sms/R.sms/P.sms the 3 HM matrices
  *          bitsize: if present bitsize of random matrices
+ *          sq srep: if present srep represents sqrt(sq)
+ *                  then results is correct up to srep^2=sq,
+ *                  that is modulo remainder=(srep^2-sq)
  ****************************************************************/
 
 #include "plinopt_library.h"
@@ -17,20 +20,24 @@
 // ===============================================================
 // argv[1-3]: L.sms R.sms P.sms
 // argv[4]: bitsize
+// argv[5-6]: modulus = argv[6]^2-argv[5]
 int main(int argc, char ** argv) {
 
     if ((argc <=3) || (std::string(argv[1]) == "-h")) {
-        std::clog << "Usage: " << argv[0] << " L.sms R.sms P.sms [bitsize]\n";
+        std::clog << "Usage: " << argv[0] << " L.sms R.sms P.sms [bitsize [sq srep]]\n";
         exit(-1);
     }
+
+        // =============================================
+        // if present, result is checked modulo (srep^2-sq)
+    Givaro::Integer sq(argc>6?argv[5]:""), srep(argc>6?argv[6]:"");
+    Givaro::Integer modulus(srep*srep-sq);
 
         // =============================================
         // Reading matrices
 	std::ifstream left (argv[1]), right (argv[2]), product(argv[3]);
     size_t bitsize(argc>4?atoi(argv[4]):32u);
 
-    Givaro::Integer sq(argv[5]), mod(argv[6]);
-    Givaro::Integer quotient(mod*mod-sq);
 
     QRat QQ;
     QMstream ls(QQ, left), rs(QQ, right), ss(QQ, product);
@@ -67,18 +74,6 @@ int main(int argc, char ** argv) {
 
     P.apply(wc,vc);
 
-    wc.write(std::clog << "wc:=", LinBox::Tag::FileFormat::Maple ) << ';' << std::endl;
-
-    for(auto& iter: wc) {
-        auto a = iter.nume() % quotient;
-        auto b = iter.deno() % quotient;
-        iter = a;
-        iter /= b;
-    }
-
-    wc.write(std::clog << "wc:=", LinBox::Tag::FileFormat::Maple ) << ';' << std::endl;
-
-
         // =============================================
         // Compute the matrix product directly
     size_t n(L.coldim()>>1);
@@ -92,11 +87,22 @@ int main(int argc, char ** argv) {
     LinBox::DenseMatrix<QRat> Rc(QQ,n,n);
     BMD.mul(Rc,Ma,Mb); // Direct matrix multiplication
 
+    BMD.subin(Mc, Rc);
 
+        // =============================================
+        // Computations should agree modulo (srep^2-sq)
+        //              as 'srep' represents sqrt('sq')
+    if(argc>6) {
+        for(size_t i=0; i<n; ++i) {
+            for(size_t j=0; j<n; ++j) {
+                Mc.refEntry(i,j) = (Mc.refEntry(i,j).nume() % modulus) / Rc.refEntry(i,j).deno();
+            }
+        }
+    }
 
-
-
-    if (BMD.areEqual (Rc,Mc))
+        // =============================================
+        // Both computations should agree
+    if (BMD.isZero (Mc))
         std::clog <<"# \033[1;32mOK : correct Matrix-Multiplication!\033[0m" << std::endl;
     else{
         std::cerr << "# \033[1;31m****** ERROR, not a MM algorithm******\033[0m"
