@@ -32,6 +32,10 @@ int main(int argc, char ** argv) {
     QMstream ls(QQ, left), rs(QQ, right), ss(QQ, product);
     Matrix L(ls), R(rs), P(ss);
 
+	assert(L.coldim() == R.coldim());
+	assert(L.coldim() == P.rowdim());
+
+
 #ifdef VERBATIM_PARSING
     L.write(std::clog << "L:=",LinBox::Tag::FileFormat::Maple) << ';' << std::endl;
     R.write(std::clog << "R:=",LinBox::Tag::FileFormat::Maple) << ';' << std::endl;
