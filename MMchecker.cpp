@@ -68,11 +68,11 @@ int main(int argc, char ** argv) {
     for(size_t i=0; i<wc.size(); ++i) Mc.setEntry(i/n,i%n,wc[i]);
 
     LinBox::MatrixDomain<QRat> BMD(QQ);
-    LinBox::DenseMatrix<QRat> Res(QQ,n,n);
-    BMD.mul(Res,Ma,Mb); // Direct matrix multiplication
+    LinBox::DenseMatrix<QRat> Rc(QQ,n,n);
+    BMD.mul(Rc,Ma,Mb); // Direct matrix multiplication
 
 
-    if (BMD.areEqual (Res,Mc))
+    if (BMD.areEqual (Rc,Mc))
         std::clog <<"# \033[1;32mOK : correct Matrix-Multiplication!\033[0m" << std::endl;
     else{
         std::cerr << "# \033[1;31m****** ERROR, not a MM algorithm******\033[0m"
@@ -88,7 +88,7 @@ int main(int argc, char ** argv) {
         Ma.write(std::clog << "Ma:=", LinBox::Tag::FileFormat::Maple) << ';' << std::endl;
         Mb.write(std::clog << "Mb:=", LinBox::Tag::FileFormat::Maple) << ';' << std::endl;
         Mc.write(std::clog << "Mc:=", LinBox::Tag::FileFormat::Maple) << ';' << std::endl;
-        Res.write(std::clog << "Re:=", LinBox::Tag::FileFormat::Maple) << ';' << std::endl;
+        Rc.write(std::clog << "Rc:=", LinBox::Tag::FileFormat::Maple) << ';' << std::endl;
     }
 
     return 0;
