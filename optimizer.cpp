@@ -123,7 +123,7 @@ int main(int argc, char** argv) {
 
     std::string filename;
 
-    for (size_t i = 1; argc>i; ++i) {
+    for (int i = 1; argc>i; ++i) {
         std::string args(argv[i]);
         if (args == "-h") {
             std::clog << "Usage: " << argv[0] << " [-h|-M|-P|-K|-D] [stdin|matrixfile.sms]\n";

@@ -28,7 +28,7 @@ bool BiLinearAlgorithm(const Matrix& A, const Matrix& B,
 
 
     const QRat& QQ = T.field();
-    const size_t t(A.rowdim()), m(A.coldim()), n(B.coldim()), s(T.coldim());
+    const size_t t(A.rowdim());
 
 
 #ifdef VERBATIM_PARSING

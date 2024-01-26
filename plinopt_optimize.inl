@@ -69,7 +69,7 @@ size_t score(const std::vector<VTriple>& AllPairs,
 // Removing one pair
 bool OneSub(Matrix& M, VTriple& multiples, size_t& nbmul,
             const char tev, const char rav) {
-// M.write(std::clog << "BEG OS\n",FileFormat::Pretty) << ';' << std::endl;
+// M.write(std::clog << "# BEG OS\n",FileFormat::Pretty) << ';' << std::endl;
     size_t m(M.coldim());
 
     std::vector<VTriple> AllPairs;
@@ -208,7 +208,7 @@ bool OneSub(Matrix& M, VTriple& multiples, size_t& nbmul,
 
             ++m;
             M.resize(M.rowdim(), m);
-// M.write(std::clog << "END OS\n",FileFormat::Pretty) << ';' << std::endl;
+// M.write(std::clog << "# END OS\n",FileFormat::Pretty) << ';' << std::endl;
             return true;
         }
     }

@@ -60,7 +60,7 @@ int main(int argc, char ** argv) {
     if (argc <=1) {
         PrettyPrint(std::cin, matformat);
     } else {
-        for(size_t i=1; i<argc; ++i) {
+        for(int i=1; i<argc; ++i) {
             std::string args(argv[i]);
             if (args[0] == '-') {
                 if (args[1] == 'h') {
