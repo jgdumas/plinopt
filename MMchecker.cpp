@@ -20,7 +20,7 @@
 // ===============================================================
 // argv[1-3]: L.sms R.sms P.sms
 // argv[4]: bitsize
-// argv[5-6]: modulus = argv[6]^2-argv[5]
+// argv[5-6]: modulus = argv[6]^2-argv[5], in that case 2*argv[6].bitsize is added to bitsize
 int main(int argc, char ** argv) {
 
     if ((argc <=3) || (std::string(argv[1]) == "-h")) {
@@ -37,6 +37,9 @@ int main(int argc, char ** argv) {
         // Reading matrices
 	std::ifstream left (argv[1]), right (argv[2]), product(argv[3]);
     size_t bitsize(argc>4?atoi(argv[4]):32u);
+
+        // To not interfere too much with probabilistic modular check ...
+    if(argc>6) bitsize += srep.bitsize()<<1;
 
 
     QRat QQ;
@@ -95,11 +98,10 @@ int main(int argc, char ** argv) {
     if(argc>6) {
         for(size_t i=0; i<n; ++i) {
             for(size_t j=0; j<n; ++j) {
-                Mc.refEntry(i,j) = (Mc.refEntry(i,j).nume() % modulus) / Rc.refEntry(i,j).deno();
+                Mc.refEntry(i,j) = (Mc.refEntry(i,j).nume() % modulus) / Mc.refEntry(i,j).deno();
             }
         }
     }
-
         // =============================================
         // Both computations should agree
     if (BMD.isZero (Mc))
