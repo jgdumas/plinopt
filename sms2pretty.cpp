@@ -22,16 +22,51 @@
 using namespace LinBox;
 
 
+// ============================================================
+// Special latex formatting for matrices of rationals
+// ============================================================
+template<typename Matrix>
+std::ostream& latex_print(std::ostream& out, const Matrix& A) {
+    out << "\\begin{bmatrix}\n";
+    Givaro::Rational tmp;
+    for(size_t i=0; i<A.rowdim();++i) {
+        for(size_t j=0; j<A.coldim(); ++j) {
+            A.getEntry(tmp,i,j);
+            if (tmp.nume()<0) {
+                out << '-'; tmp=-tmp;
+            }
+            if (! isOne(tmp.deno())) {
+                out << "\\frac{" << tmp.nume() << "}{" << tmp.deno() << '}';
+            } else {
+                out << tmp;
+            }
+            out << '&';
+        }
+        out << "\\\\\n";
+    }
+    return out << "\\end{bmatrix}";
+}
+// ============================================================
+
+
+
+// ============================================================
+// Pretty print SMS matrix, number of non-zero & Frobenius norm
+// ============================================================
 int PrettyPrint(std::istream& input, const Tag::FileFormat& matformat)
 {
     Givaro::QField<Givaro::Rational> QQ;
     MatrixStream<Givaro::QField<Givaro::Rational>> ms( QQ, input );
 
+        // ====================================================
+        // Read Matrix
     Givaro::Timer chrono; chrono.start();
     SparseMatrix<Givaro::QField<Givaro::Rational>,
         SparseMatrixFormat::SparseSeq> A ( ms );
     chrono.stop();
 
+        // ====================================================
+        // number of non-zero & Frobenius norm
     size_t nnz(0); Givaro::Rational FNormSq(0);
     for(auto row=A.rowBegin(); row != A.rowEnd(); ++row) {
         nnz += row->size(); // # of non-zero elements
@@ -41,21 +76,34 @@ int PrettyPrint(std::istream& input, const Tag::FileFormat& matformat)
 
     std::clog << "[READ]: " << A.rowdim() << 'x' << A.coldim() << ' ' << nnz << ' ' << FNormSq << ' ' << chrono << std::endl;
 
-    A.write(std::cout, matformat);
+        // ====================================================
+        // Special latex for rationals or one of LinBox formats
+    if (matformat == Tag::FileFormat::LaTeX) {
+        latex_print(std::cout, A) << std::endl;
+    } else {
+        A.write(std::cout, matformat);
+    }
 
     return 0;
 }
+// ============================================================
 
 
-/* Matrix formats:
-  Maple = 1,
-  SMS = 5,
-  Matlab = 7,
-  Pretty = 8,
-*/
+// ============================================================
+// LinBox Matrix formats:
+/* Maple = 1,
+ * LaTeX = 3,
+ * SMS = 5,
+ * Matlab = 7,
+ * Pretty = 8,
+ */
 int main(int argc, char ** argv) {
+        // ====================================================
+        // argv[i]: '-i' selects format 'i', otherwise filename
+
+        // ====================================================
         // Pretty output by default
-    LinBox::Tag::FileFormat matformat = LinBox::Tag::FileFormat::Pretty;
+    Tag::FileFormat matformat = Tag::FileFormat::Pretty;
 
     if (argc <=1) {
         PrettyPrint(std::cin, matformat);
@@ -67,7 +115,7 @@ int main(int argc, char ** argv) {
                     std::clog << "Usage: " << argv[0] << " [-#] [stdin|matrixfile.sms]\n";
                     exit(-1);
                 } else {
-                    matformat = LinBox::Tag::FileFormat(-atoi(args.c_str()));
+                    matformat = Tag::FileFormat(-atoi(args.c_str()));
                     args = std::string(argv[++i]);
                 }
             }

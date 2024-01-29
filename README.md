@@ -35,6 +35,7 @@
 | :--------- | :------ |
 |`matrix-transpose`| transposes a matrix from an SMS file |
 |`sms2pretty`| pretty print a matrix from an SMS file |
+|`MMchecker`| asserts correctness of bilinear program for matrix-multiplication |
 |  |  |
 
 
@@ -64,6 +65,8 @@
 **Examples**:
 - `./sms2pretty data/Lw.sms data/Rw.sms data/Pw.sms`: pretty print HM representation of Strassen-Winograd's fast 2x2 multiplication algorithm`
 - `./matrix-transpose data/Pw.sms`: the transposed matrix
+- `./MMchecker data/Lw.sms data/Rw.sms data/Pw.sms`: probabilistically checking Strassen-Winograd's matrix-multiplication algorithm
+- `./MMchecker data/Lo.sms data/Ro.sms data/Po.sms 32 3 1013`: probabilistically checking matrix-multiplication algorithm using 32 bits random elements and 1013 as a placeholder for sqrt(3)
 - `./optimizer data/cyclic.sms`: a program computing that matrix-vector product
 - `./optimizer data/Pw.sms`: a program computing that matrix-vector product
 - `./transpozer data/test.prg`: a program computing the transposed program
