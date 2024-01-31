@@ -25,6 +25,7 @@
 | :--------- | :------ |
 |`transpozer`| transposes a program, via Tellegen's transposition principle|
 |`optimizer`| produces a small program computing a linear transformation|
+|`sparsifier`| factors a Nx4 matrix into a sparser one, times a 4x4 matrix |
 |`inplacer`| produces an in-place program from a bilinear transformation|
 |  |  |
 
@@ -47,6 +48,8 @@
 | then | `i` | `j` | `value` |
 | ends with| `0` | `0` | `0` |
 |  |  |  |  |
+- `data` directory contains example matrices in this format
+
 
 
 

@@ -31,9 +31,9 @@ typedef std::vector<Givaro::Rational> QArray;
 typedef LinBox::DenseVector<QRat> QVector;
 
 
-void Transpose(Matrix& T, const Matrix& A);
+Matrix& Transpose(Matrix& T, const Matrix& A);
 
-void NegTranspose(Matrix& T, const Matrix& A);
+Matrix& NegTranspose(Matrix& T, const Matrix& A);
 
 
 #include "plinopt_library.inl"

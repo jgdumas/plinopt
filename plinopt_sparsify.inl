@@ -78,6 +78,39 @@ size_t& rank(size_t& r, const Matrix& A) {
 }
 
 
+
+	// Computes the inverse of A
+Matrix& inverse(Matrix& I, const Matrix& A) {
+    assert(A.rowdim() == A.coldim());
+    const int n(A.rowdim());
+
+    static QRat QQ;
+    static LinBox::GaussDomain<QRat> GD(QQ);
+
+    I.resize(n,n); Matrix T(QQ,n,n);
+    Matrix U(QQ); sparse2sparse(U, A);
+
+    Givaro::Rational Det;
+    size_t Rank;
+    Matrix L(QQ, n, n);
+    LinBox::Permutation<QRat> Q(QQ,n);
+    LinBox::Permutation<QRat> P(QQ,n);
+
+    GD.QLUPin(Rank, Det, Q, L, U, P, n, n );
+
+    QVector x(QQ,n), w(QQ,n), Iv(QQ, n);
+    for(size_t i=0; i<Iv.size(); ++i) Iv[i] = QQ.zero;
+
+    for(int i=0; i<n; ++i) {
+        Iv[i] = QQ.one;
+        GD.solve(x, w, Rank, Q, L, U, P, Iv);
+        Iv[i] = QQ.zero;
+        setRow(T, i, x, QQ);
+    }
+
+    return Transpose(I, T);
+}
+
     // Prints out density profile of M
     // returns total density
 std::ostream& densityProfile(std::ostream& out, size_t& ss, const Matrix& M) {
@@ -145,7 +178,7 @@ Matrix& Sparsifier(Matrix& CoB, Matrix& M, const size_t maxnumcoeff) {
                     // Find the best one so far
                if (hwl > hw) {
 #ifdef VERBATIM_PARSING
-                    std::clog << "Found: " << w << ' ' << hwl << std::endl;
+                    std::clog << "# Found: " << w << ' ' << hwl << std::endl;
 #endif
                     hw = hwl;
                         // Register best linear combination so far
@@ -216,11 +249,11 @@ std::ostream& consistency(std::ostream& out, const Matrix& M,
     else{
         std::cerr << "# \033[1;31m****** ERROR inconsistency ******\033[0m"
                   << std::endl;
-        M.write(out,FileFormat::Pretty) << std::endl;
+        M.write(out,FileFormat::Maple) << std::endl;
         out << " != " << std::endl;
-        R.write(out,FileFormat::Pretty) << std::endl;
+        R.write(out,FileFormat::Maple) << std::endl;
         out << " * " << std::endl;
-        C.write(out,FileFormat::Pretty) << std::endl;
+        C.write(out,FileFormat::Maple) << std::endl;
         out << std::string(20,'#') << std::endl;
     }
 

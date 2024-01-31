@@ -22,49 +22,53 @@ int Selector(std::istream& input,
     QMstream ms(QQ,input);
     Matrix M(ms); M.resize(M.rowdim(),M.coldim());
 
-    LinBox::DenseMatrix<QRat> R(M);
+    Matrix R(M);
 
-    size_t sm(0);
+#ifdef VERBATIM_PARSING
     M.write(std::clog,FileFormat::Pretty);
-
+#endif
         // ============================================================
         // Prints and computes density profile of M
     size_t s2;
     densityProfile(std::clog, s2, M) << std::endl;
 
         // ============================================================
-        // Initialize CoB to identity
-    Matrix CoB(QQ,M.coldim(), M.coldim());
-    for(size_t i=0; i<CoB.coldim(); ++i) CoB.setEntry(i,i,QQ.one);
+        // Initialize ICoB to identity
+    Matrix ICoB(QQ,M.coldim(), M.coldim());
+    for(size_t i=0; i<ICoB.coldim(); ++i) ICoB.setEntry(i,i,QQ.one);
 
         // ============================================================
         // Main loop, alternating sparsification and column factoring
     size_t ss(s2);
     do {
         ss = s2;
-        FactorDiagonals(CoB, M);
-        Sparsifier(CoB, M, maxnumcoeff);
+        FactorDiagonals(ICoB, M);
+        Sparsifier(ICoB, M, maxnumcoeff);
         densityProfile(std::clog, s2, M) << std::endl;
 
 #ifdef DEBUG
-        consistency(std::clog, M, R, CoB) << std::endl;
+        consistency(std::clog, M, R, ICoB) << std::endl;
 #endif
     } while ( s2 < ss );
-    FactorDiagonals(CoB, M);
+    FactorDiagonals(ICoB, M);
 
+    Matrix CoB(QQ,M.coldim(), M.coldim());
+    inverse(CoB, ICoB);
     chrono.stop();
 
         // ============================================================
         // Print resulting matrices
+    ICoB.write(std::clog, matformat)<< std::endl;
+
     std::clog << std::string(20,'#') << std::endl;
-    std::clog << "ICoB:=";
+    std::clog << "CoB:=" << std::flush;
         // change of basis to stdout
-    CoB.write(std::cout, matformat);
+    CoB.write(std::cout, matformat) << std::flush;
     std::clog << ';' << std::endl;
         // sparse matrix to stdlog
     M.write(std::clog, matformat)<< std::endl;
 
-    consistency(std::clog, M, R, CoB) << ' ' << chrono << std::endl;
+    consistency(std::clog, R, M, CoB) << ' ' << chrono << std::endl;
 
     return 0;
 }

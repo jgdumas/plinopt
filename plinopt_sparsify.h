@@ -59,27 +59,7 @@ std::ostream& consistency(std::ostream& out, const Matrix& M,
 std::ostream& densityProfile(std::ostream& out, size_t& s, const Matrix& M);
 
 
-	// Find most frequent Rational between begin and end
-    // element is suppoded to be the second in a pair
-template <typename Fwd>
-Givaro::Rational most_frequent_element(const Fwd& begin, const Fwd& end);
-
-	// Replace row i of A, by v
-template<typename Vector>
-Matrix& setRow(Matrix& A, size_t i, const Vector& v, const QRat& QQ);
-
-	// copy dense matrix M into sparse matrix A
-Matrix& dense2sparse(Matrix& A, const DenseMatrix& M, const QRat& QQ);
-
-	// copy sparse matrix B into sparse matrix A
-Matrix& sparse2sparse(Matrix& A, const Matrix& B);
-
-	// v is augmented by i, -i, 1/i and -1/i
-template<typename Vector>
-void augment(Vector& v, const Givaro::Integer& i, const QRat& QQ);
-
-	// Computes the rank of A
-size_t& rank(size_t& r, const Matrix& A);
+	// Find most frequent Rational;
 
 // ============================================================
 
