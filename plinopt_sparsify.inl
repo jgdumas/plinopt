@@ -155,7 +155,7 @@ Matrix& Sparsifier(Matrix& CoB, Matrix& M, const size_t maxnumcoeff) {
 
         QArray v(M.rowdim());
         Matrix A(QQ); sparse2sparse(A, TCoB);
-        int hw(-1); // Best Hamming weight so far
+        int hw(-1), vw(-1); // Best Hamming weight so far
 
 
             // ========================================
@@ -172,15 +172,20 @@ Matrix& Sparsifier(Matrix& CoB, Matrix& M, const size_t maxnumcoeff) {
 
             if (r>num) {
                 M.apply(v,w);
+
+                auto zeroTest = [](const auto& e) { return isZero(e);};
+
                     // Count number of produced zeroes
-                int hwl = std::count_if(v.begin(), v.end(),
-                                        [](const auto& e) { return isZero(e);} );
+                int hwl = std::count_if(v.begin(), v.end(), zeroTest );
+                int vwl = std::count_if(w.begin(), w.end(), zeroTest );
+
                     // Find the best one so far
-               if (hwl > hw) {
+               if ((hwl > hw) || ( (hwl==hw) && (vwl>vw) ) ) {
 #ifdef VERBATIM_PARSING
                     std::clog << "# Found: " << w << ' ' << hwl << std::endl;
 #endif
                     hw = hwl;
+                    vw = vwl;
                         // Register best linear combination so far
                     setRow(TCoB,num,w,QQ);
                 }
