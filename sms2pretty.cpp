@@ -102,26 +102,37 @@ int main(int argc, char ** argv) {
         // argv[i]: '-i' selects format 'i', otherwise filename
 
         // ====================================================
-        // Pretty output by default
-    Tag::FileFormat matformat = Tag::FileFormat::Pretty;
+    std::vector<Tag::FileFormat> matformat;
+    std::vector<std::string> filenames;
 
-    if (argc <=1) {
-        PrettyPrint(std::cin, matformat);
-    } else {
-        for(int i=1; i<argc; ++i) {
-            std::string args(argv[i]);
-            if (args[0] == '-') {
-                if (args[1] == 'h') {
-                    std::clog << "Usage: " << argv[0] << " [-#] [stdin|matrixfile.sms]\n";
-                    exit(-1);
-                } else {
-                    matformat = Tag::FileFormat(-atoi(args.c_str()));
-                    args = std::string(argv[++i]);
-                }
+    for(int i=1; i<argc; ++i) {
+        std::string args(argv[i]);
+        std::clog << "argv[" << i << "]: " << args << std::endl;
+        
+        if (args[0] == '-') {
+            if (args[1] == 'h') {
+                std::clog << "Usage: " << argv[0] << " [stdin| ([-#] matrixfile.sms)*]\n";
+                exit(-1);
+            } else {
+                matformat.push_back(Tag::FileFormat(-atoi(args.c_str())));
             }
-            std::ifstream input (args);
-            PrettyPrint(input, matformat);
+        } else {
+            filenames.push_back(args);
         }
+    }
+
+        // Pretty output by default
+    if (matformat.size() == 0)
+        matformat.emplace_back(Tag::FileFormat::Pretty);
+
+    if (filenames.size() > 0) {
+        for(size_t i(0); i<filenames.size(); ++i) {
+            std::ifstream input (filenames[i]);
+            PrettyPrint(input, 
+                        i<matformat.size() ? matformat[i] : matformat.back());
+        }
+    } else {
+        return PrettyPrint(std::cin, matformat.front());
     }
 
     return 0;
