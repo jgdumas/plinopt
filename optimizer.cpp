@@ -3,14 +3,15 @@
 // Authors: J-G. Dumas, C. Pernet, A. Sedoglavic
 // ==========================================================================
 
-/****************************************************************
- * Optimization of linear programs via Common Subexpression Elimination
+/*************************************************************************
+ * Optimization of linear programs via Common Subexpression Elimination &
+ *                                     Kernel Output Factorization
  * Matrix syntax: SMS format, see:
  *                [Sparse Integer Matrix Collection](https://hpac.imag.fr)
  *				- Starts with: `m n 'R'`
  *				- then: `i j value`
  *				- ends with: `0 0 0`
- ****************************************************************/
+ *************************************************************************/
 
 // ============================================================
 // Define to print comments during parsing
@@ -112,6 +113,8 @@ int Selector(std::istream& input,
 
 // ============================================================
 // Main: select between file / std::cin
+// -D/-K options seect direct/kernel methods only (default is both)
+// -P/-M option choose the printing format
 int main(int argc, char** argv) {
 
         // ============================================================
