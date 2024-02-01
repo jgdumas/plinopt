@@ -1,3 +1,5 @@
+# Optimal growth factor left HM matrix (7 add, 4 mul)
+# 1013 is a placehodler for sqrt(3)
 7 4 R
 1 1 1013/2
 1 3 1/2

@@ -40,9 +40,6 @@
 
 #include "plinopt_inplace.h"
 
-
-
-
 // ===============================================================
 // argv[1-3]: L.sms R.sms P.sms
 // argv[4]: if present, double expand intermediate result
@@ -54,33 +51,34 @@ int main(int argc, char ** argv) {
         exit(-1);
     }
 
-        // ==========================
+        // ================================
         // Reading matrices
 	std::ifstream left (argv[1]), right (argv[2]), product(argv[3]);
 
     QRat QQ;
-    QMstream ls(QQ, left), rs(QQ, right), ss(QQ, product);
-    Matrix A(ls), B(rs), C(ss);
+    QMstream ls(QQ, left), rs(QQ, right), ps(QQ, product);
+    Matrix A(ls), B(rs), C(ps);
 
     Matrix T(QQ); Transpose(T, C);
 
 
 #ifdef VERBATIM_PARSING
-    A.write(std::clog << "A:=",LinBox::Tag::FileFormat::Maple) << ';' << std::endl;
-    B.write(std::clog << "B:=",LinBox::Tag::FileFormat::Maple) << ';' << std::endl;
-    C.write(std::clog << "C:=",LinBox::Tag::FileFormat::Maple) << ';' << std::endl;
-    T.write(std::clog << "T:=",LinBox::Tag::FileFormat::Maple) << ';' << std::endl;
+    A.write(std::clog << "A:=",FileFormat::Maple) << ';' << std::endl;
+    B.write(std::clog << "B:=",FileFormat::Maple) << ';' << std::endl;
+    C.write(std::clog << "C:=",FileFormat::Maple) << ';' << std::endl;
+    T.write(std::clog << "T:=",FileFormat::Maple) << ';' << std::endl;
     std::clog << std::string(20,'#') << std::endl;
 #endif
 
     if (argc>4) {
-            // ==========================
+            // ================================
             // Duplicate intermediate products
+            // to group them 2 by 2
         Matrix AA(QQ), BB(QQ), TT(QQ);
         DoubleExpand(AA,BB,TT, A,B,T);
         BiLinearAlgorithm(AA, BB, TT);
     } else {
-            // ==========================
+            // ================================
             // Direct computation
         BiLinearAlgorithm(A, B, T);
     }

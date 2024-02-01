@@ -1,3 +1,5 @@
+# Optimal growth factor product HM matrix (10 add, 4 mul)
+# 1013 is a placehodler for sqrt(3)
 4 7 R
 1 1 1013/6
 1 2 -1013/3
