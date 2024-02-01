@@ -5,7 +5,9 @@
 
 /****************************************************************
  * Randomly checks a matrix multiplication algorithm
- *        given as an HM representation
+ *        given as a row-major HM representation:
+ *        [ a11 a12 ]
+ *        [ a21 a22 ] is vectorized as [a11 a12 a21 a22]
  *
  * Usage: L.sms R.sms P.sms [bitsize [sq srep]]
  *          L.sms/R.sms/P.sms the 3 HM matrices

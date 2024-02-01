@@ -11,6 +11,11 @@
  *          L.sms/R.sms/P.sms the 3 HM matrices
  *          expansion: if present intermediate results grouped by 2
  *
+ * For an HM representation of a matrix product,
+ *     the vectorization is supposed row-major:
+ *        [ a11 a12 ]
+ *        [ a21 a22 ] is vectorized as [a11 a12 a21 a22]
+ *
  * References:
  *      [ In-place accumulation of fast multiplication formulae
  *        J-G. Dumas, B. Grenet
