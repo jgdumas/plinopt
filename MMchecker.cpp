@@ -84,6 +84,7 @@ int main(int argc, char ** argv) {
     size_t n(L.coldim()>>1);
     LinBox::DenseMatrix<QRat> Ma(QQ,n,n), Mb(QQ,n,n), Mc(QQ,n,n);
 
+        // row-major vectorization
     for(size_t i=0; i<ua.size(); ++i) Ma.setEntry(i/n,i%n,ua[i]);
     for(size_t i=0; i<ub.size(); ++i) Mb.setEntry(i/n,i%n,ub[i]);
     for(size_t i=0; i<wc.size(); ++i) Mc.setEntry(i/n,i%n,wc[i]);
