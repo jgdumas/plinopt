@@ -40,7 +40,7 @@ std::ostream& latex_print(std::ostream& out, const Matrix& A) {
             } else {
                 out << tmp;
             }
-            out << '&';
+            if ( (j+1) < A.coldim()) out << '&';
         }
         out << "\\\\\n";
     }

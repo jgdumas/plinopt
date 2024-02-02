@@ -3,7 +3,7 @@
 # Authors: J-G. Dumas, C. Pernet, A. Sedoglavic
 ####################################################################
 
-OPTFLAGS=-Ofast
+OPTFLAGS=-Ofast -D RANDOM_TIES
 
 CXXFLAGS += ${OPTFLAGS} `pkg-config linbox --cflags`
 LOADLIBES+= `pkg-config linbox --libs`
