@@ -1,0 +1,31 @@
+#####################################################
+### PLinOpt: a collection of C++ routines handling 
+###          linear & bilinear programs    (c) 2024
+### J-G. Dumas, B. Grenet, C. Pernet, A. Sedoglavic
+#####################################################
+
+#####################################################
+### Requirements: we suppose an existing environment,
+###           with git, cmake, c++, GMP, LinBox, etc.
+### For instance via a virtual machine (here docker):
+# > sudo docker run -it debian:12 bash
+
+#####################################################
+### Install & run benchmarks, within the environment:
+
+apt update
+apt install git make g++ pkg-config
+apt install libgmp-dev liblinbox-dev libntl-dev
+cd; git clone https://github.com/jgdumas/plinopt.git
+cd plinopt; make
+./inplacer data/Lw.sms data/Rw.sms data/Pw.sms
+./inplacer data/Lk.sms data/Rk.sms data/Pk.sms e
+./sms2pretty data/Ls.sms data/Rs.sms data/Ps.sms
+./matrix-transpose data/Pw.sms
+./MMchecker data/Lw.sms data/Rw.sms data/Pw.sms
+./MMchecker data/Lo.sms data/Ro.sms data/Po.sms 32 3 1013
+./optimizer data/cyclic.sms
+./transpozer data/test.prg
+./optimizer data/Pi.sms
+./matrix-transpose data/Pi.sms | ./optimizer -K |./transpozer
+./sparsifier data/Rr.sms

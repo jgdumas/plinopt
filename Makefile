@@ -6,7 +6,7 @@
 OPTFLAGS=-Ofast -D RANDOM_TIES
 
 CXXFLAGS += ${OPTFLAGS} `pkg-config linbox --cflags`
-LOADLIBES+= `pkg-config linbox --libs`
+LOADLIBES+= `pkg-config linbox --libs |sed 's/-liml//;s/-lfplll//;s/-lflint//'`
 
 EXE = sms2pretty matrix-transpose MMchecker 
 EXE += transpozer optimizer sparsifier
