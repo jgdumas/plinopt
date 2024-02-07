@@ -76,4 +76,4 @@
 - `./matrix-transpose data/Pi.sms | ./optimizer -K | ./transpozer`: a program computing that matrix-vector product
 - `./sparsifier -c 4 data/Lr.sms`: a factorization of that matrix into a sparsest one (also with many 1s) by a alternate change of basis(CoB) 4x4 matrix
 - `./inplacer data/Lw.sms data/Rw.sms data/Pw.sms`: in-place version of Strassen-Winograd's fast 2x2 accumulating multiplication
-- `./inplacer data/Lk.sms data/Rk.sms data/Pk.sms e`: in-place version of Karatsuba's fast accumulating polynomia multiplication
+- `./inplacer data/Lk.sms data/Rk.sms data/Pk.sms e`: in-place version of Karatsuba's fast accumulating polynomial multiplication
