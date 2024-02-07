@@ -51,12 +51,12 @@ int Selector(std::istream& input,
 
     if (printPretty) {
         M.write(std::clog,FileFormat::Pretty) << ';' << std::endl;
-        std::clog << std::string(20,'#') << std::endl;
+        std::clog << std::string(30,'#') << std::endl;
     }
 
     if (printMaple) {
         M.write(std::clog << "M:=",FileFormat::Maple) << ';' << std::endl;
-        std::clog << std::string(20,'#') << std::endl;
+        std::clog << std::string(30,'#') << std::endl;
     }
 
 
@@ -69,7 +69,7 @@ int Selector(std::istream& input,
     for(auto it = M.IndexedBegin(); it != M.IndexedEnd(); ++it)
         if (!isOne(abs(it.value()))) ++mulinit;
 
-    std::clog << std::string(20,'#') << std::endl;
+    std::clog << std::string(30,'#') << std::endl;
 
 
 
@@ -82,10 +82,10 @@ int Selector(std::istream& input,
             // Cancellation-free optimization
         auto nbops( Optimizer(M, 'i', 'o', 't', 'r') );
 
-        std::clog << std::string(20,'#') << std::endl;
+        std::clog << std::string(30,'#') << std::endl;
         std::clog << "# " << nbops.first << "\tadditions\tinstead of " << addinit << std::endl;
         std::clog << "# " << nbops.second << "\tmultiplications\tinstead of " << mulinit << std::endl;
-        std::clog << std::string(20,'#') << std::endl;
+        std::clog << std::string(30,'#') << std::endl;
 
     }
 
@@ -99,10 +99,10 @@ int Selector(std::istream& input,
         auto Nops( nullspacedecomp(NullSpace, T) );
 
         if ((Nops.first !=0 || Nops.second != 0)) {
-            std::clog << std::string(20,'#') << std::endl;
+            std::clog << std::string(30,'#') << std::endl;
             std::clog << "# " << Nops.first << "\tadditions\tinstead of " << addinit << std::endl;
             std::clog << "# " << Nops.second << "\tmultiplications\tinstead of " << mulinit << std::endl;
-            std::clog << std::string(20,'#') << std::endl;
+            std::clog << std::string(30,'#') << std::endl;
         }
     }
 

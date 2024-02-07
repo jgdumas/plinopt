@@ -439,7 +439,7 @@ std::pair<size_t,size_t> Optimizer(Matrix& M,
     }
 
 
-// std::clog << std::string(20,'#') << std::endl;
+// std::clog << std::string(30,'#') << std::endl;
 // M.write(std::clog << "M:=",FileFormat::Maple) << ';' << std::endl;
     return std::pair<size_t,size_t>(addcount,nbmul);
 }
@@ -516,7 +516,7 @@ std::pair<size_t,size_t> nullspacedecomp(Matrix& x, Matrix& A) {
     x.resize(x.rowdim(),nullity);
 #ifdef VERBATIM_PARSING
     std::clog << "# NullSpace dimensions:" << x.rowdim() << 'x' << x.coldim() << std::endl;
-    std::clog << std::string(20,'#') << std::endl;
+    std::clog << std::string(30,'#') << std::endl;
 #endif
     if ( (Rank != 0) && (nullity != 0) ) {
             // compute U2T s.t. U = [ U1 | -U2T^T ]
@@ -566,7 +566,7 @@ std::pair<size_t,size_t> nullspacedecomp(Matrix& x, Matrix& A) {
 #ifdef VERBATIM_PARSING
         FreePart.write(std::clog << "# FreePart:", FileFormat::Maple)
                                  << std::endl;
-        std::clog << std::string(20,'#') << std::endl;
+        std::clog << std::string(30,'#') << std::endl;
 #endif
 
 
@@ -582,10 +582,10 @@ std::pair<size_t,size_t> nullspacedecomp(Matrix& x, Matrix& A) {
         NegTranspose(Tx, x);
 
 #ifdef VERBATIM_PARSING
-        std::clog << std::string(20,'#') << std::endl;
+        std::clog << std::string(30,'#') << std::endl;
         Tx.write(std::clog << "# Dependent:", FileFormat::Maple) << std::endl;
 #endif
-        std::clog << std::string(20,'#') << std::endl;
+        std::clog << std::string(30,'#') << std::endl;
 
         input2Temps(Tx.coldim(), 'o', 'v', x);
         auto Kops( Optimizer(Tx, 'o', 'x', 'v', 'g') );

@@ -41,7 +41,7 @@ bool BiLinearAlgorithm(const Matrix& A, const Matrix& B,
     for(size_t h=0; h<s; ++h)
         std::clog << 'c' << h << ":=F[" << (h+1) << "];";
     std::clog << std::endl;
-    std::clog << std::string(20,'#') << std::endl;
+    std::clog << std::string(30,'#') << std::endl;
 #endif
 
 
@@ -103,7 +103,7 @@ bool BiLinearAlgorithm(const Matrix& A, const Matrix& B,
     }
 
 #ifdef VERBATIM_PARSING
-    std::clog << std::string(20,'#') << std::endl;
+    std::clog << std::string(30,'#') << std::endl;
     for(size_t h=0; h<s; ++h)
         std::clog << "R[" << (h+1) << "]:=simplify(" << 'c' << h << ",symbolic);";
     std::clog << std::endl;
@@ -113,7 +113,7 @@ bool BiLinearAlgorithm(const Matrix& A, const Matrix& B,
     for(size_t h=0; h<m; ++h)
         std::clog << 'a' << h << "-L[" << (h+1) << "],";
     std::clog << "0;" << std::endl;
-    std::clog << std::string(20,'#') << std::endl;
+    std::clog << std::string(30,'#') << std::endl;
 #endif
 
 
@@ -157,7 +157,7 @@ void DoubleExpand(Matrix& AA, Matrix& BB, Matrix& TT,
     AA.write(std::clog << "A:=",LinBox::Tag::FileFormat::Maple) << ';' << std::endl;
     BB.write(std::clog << "B:=",LinBox::Tag::FileFormat::Maple) << ';' << std::endl;
     TT.write(std::clog << "T:=",LinBox::Tag::FileFormat::Maple) << ';' << std::endl;
-    std::clog << std::string(20,'#') << std::endl;
+    std::clog << std::string(30,'#') << std::endl;
 #endif
 
 }

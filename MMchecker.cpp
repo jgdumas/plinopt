@@ -56,7 +56,7 @@ int main(int argc, char ** argv) {
     L.write(std::clog << "L:=",LinBox::Tag::FileFormat::Maple) << ';' << std::endl;
     R.write(std::clog << "R:=",LinBox::Tag::FileFormat::Maple) << ';' << std::endl;
     P.write(std::clog << "P:=",LinBox::Tag::FileFormat::Maple) << ';' << std::endl;
-    std::clog << std::string(20,'#') << std::endl;
+    std::clog << std::string(30,'#') << std::endl;
 #endif
 
         // =============================================

@@ -72,7 +72,7 @@ int main(int argc, char ** argv) {
     B.write(std::clog << "B:=",FileFormat::Maple) << ';' << std::endl;
     C.write(std::clog << "C:=",FileFormat::Maple) << ';' << std::endl;
     T.write(std::clog << "T:=",FileFormat::Maple) << ';' << std::endl;
-    std::clog << std::string(20,'#') << std::endl;
+    std::clog << std::string(30,'#') << std::endl;
 #endif
 
     if (argc>4) {

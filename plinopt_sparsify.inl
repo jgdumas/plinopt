@@ -10,7 +10,7 @@
 #include "plinopt_sparsify.h"
 
 
-	// Find most frequent Rational between begin and end
+    // Find most frequent Rational between begin and end
     // element is suppoded to be the second in a pair
 template <typename Fwd>
 Givaro::Rational most_frequent_element(const Fwd& begin, const Fwd& end)
@@ -79,15 +79,15 @@ size_t& rank(size_t& r, const Matrix& A) {
 
 
 
-	// Computes the inverse of A
-Matrix& inverse(Matrix& I, const Matrix& A) {
+	// Computes the transposed inverse of A
+Matrix& inverseTranspose(Matrix& TI, const Matrix& A) {
     assert(A.rowdim() == A.coldim());
     const int n(A.rowdim());
 
     static QRat QQ;
     static LinBox::GaussDomain<QRat> GD(QQ);
 
-    I.resize(n,n); Matrix T(QQ,n,n);
+    TI.resize(n,n);
     Matrix U(QQ); sparse2sparse(U, A);
 
     Givaro::Rational Det;
@@ -105,39 +105,40 @@ Matrix& inverse(Matrix& I, const Matrix& A) {
         Iv[i] = QQ.one;
         GD.solve(x, w, Rank, Q, L, U, P, Iv);
         Iv[i] = QQ.zero;
-        setRow(T, i, x, QQ);
+        setRow(TI, i, x, QQ);
     }
 
-    return Transpose(I, T);
+    return TI;
 }
 
     // Prints out density profile of M
     // returns total density
 std::ostream& densityProfile(std::ostream& out, size_t& ss, const Matrix& M) {
     ss = 0;
-    out << "# Density profile: ";
     for(auto it=M.rowBegin();it!=M.rowEnd();++it) {
         ss += it->size();
         out << it->size() << ' ';
     }
-    return out << ':' << ss;
+    return out << '=' << ss;
 }
 
 // ============================================================
-// Sparsifying a Matrix M
+// Sparsifying a Matrix TM
 //   uses a limited number of coefficients for the linear comb.
 //   (that is at most: maxnumcoeff)
-Matrix& Sparsifier(Matrix& CoB, Matrix& M, const size_t maxnumcoeff) {
+Matrix& Sparsifier(Matrix& TCoB, Matrix& TM, const size_t maxnumcoeff) {
+
+    static QRat QQ;
+    auto zeroTest = [](const auto& e) { return isZero(e);};
 
         // ========================================
         // Read Matrix of Linear Transformation
-    static QRat QQ;
-    Matrix TCoB(QQ,4,4);
+    Matrix LCoB(QQ,4,4);
 
         // ========================================
         // Try 0, 1, -1 and some coefficients in M
     std::vector<Givaro::Rational> Coeffs{0, 1, -1};
-    for(auto row=M.rowBegin(); row != M.rowEnd(); ++row) {
+    for(auto row=TM.rowBegin(); row != TM.rowEnd(); ++row) {
         for(auto it=row->begin(); it != row->end(); ++it) {
             augment(Coeffs, it->second.nume(), QQ);
             augment(Coeffs, it->second.deno(), QQ);
@@ -148,18 +149,17 @@ Matrix& Sparsifier(Matrix& CoB, Matrix& M, const size_t maxnumcoeff) {
         // reduce to at most maxnumcoeff
     if (Coeffs.size()>maxnumcoeff) Coeffs.resize(maxnumcoeff);
 
-
         // ========================================
-        // Try each column of CoB, one at a time
-    for(size_t num=0; num<TCoB.rowdim(); ++num) {
+        // Try each row of TCoB, one at a time
+    for(size_t num=0; num<LCoB.rowdim(); ++num) {
 
-        QArray v(M.rowdim());
-        Matrix A(QQ); sparse2sparse(A, TCoB);
+        QArray v(TM.coldim());
+        Matrix A(QQ); sparse2sparse(A, LCoB);
         int hw(-1), vw(-1); // Best Hamming weight so far
 
 
             // ========================================
-            // Ech column has 4 coefficients
+            // Each row has 4 coefficients
         for(size_t i=0; i<Coeffs.size(); ++i) {
         for(size_t j=0; j<Coeffs.size(); ++j) {
         for(size_t k=0; k<Coeffs.size(); ++k) {
@@ -171,9 +171,7 @@ Matrix& Sparsifier(Matrix& CoB, Matrix& M, const size_t maxnumcoeff) {
             size_t r; rank(r, A);
 
             if (r>num) {
-                M.apply(v,w);
-
-                auto zeroTest = [](const auto& e) { return isZero(e);};
+                TM.applyTranspose(v,w); // transpose of M.apply(v,w)
 
                     // Count number of produced zeroes
                 int hwl = std::count_if(v.begin(), v.end(), zeroTest );
@@ -182,12 +180,13 @@ Matrix& Sparsifier(Matrix& CoB, Matrix& M, const size_t maxnumcoeff) {
                     // Find the best one so far
                if ((hwl > hw) || ( (hwl==hw) && (vwl>vw) ) ) {
 #ifdef VERBATIM_PARSING
-                    std::clog << "# Found: " << w << ' ' << hwl << std::endl;
+                   std::clog << "# Found: " << w << ' ' << hwl
+                             << " >= " << hw << std::endl;
 #endif
                     hw = hwl;
                     vw = vwl;
                         // Register best linear combination so far
-                    setRow(TCoB,num,w,QQ);
+                    setRow(LCoB,num,w,QQ);
                 }
             }
         }}}}
@@ -195,56 +194,47 @@ Matrix& Sparsifier(Matrix& CoB, Matrix& M, const size_t maxnumcoeff) {
 
         // ========================================
         // Supplementary change of basis found
-    Matrix C(QQ,CoB.rowdim(), CoB.coldim());
-    Transpose(C,TCoB);
-
-        // ========================================
         // Apply it:
         //   - to the sparsified matrix
         //   - to previous change of Basis
     static LinBox::MatrixDomain<QRat> BMD(QQ);
-    DenseMatrix R(M), S(CoB);
-    BMD.mul(R,M,C); // Direct matrix multiplication
-    BMD.mul(S,CoB,C);
+    DenseMatrix TR(TM), TS(TCoB);
+    BMD.mul(TR,LCoB,TM);   // Direct matrix multiplication
+    BMD.mul(TS,LCoB,TCoB); // Direct matrix multiplication
 
+        // Need sparse representation
+    dense2sparse(TM,TR,QQ);
+    dense2sparse(TCoB,TS,QQ);
 
-    dense2sparse(M,R,QQ);
-    dense2sparse(CoB,S,QQ);
-
-    return CoB;
+    return TCoB;
 }
 
 
 // ============================================================
 // Factoring out some coefficients:
-//    from most frequent in a column of M, towards a row of CoB
-Matrix& FactorDiagonals(Matrix& CoB, Matrix& M) {
+//    from most frequent in a row of TM, towards a column of TCoB
+Matrix& FactorDiagonals(Matrix& TCoB, Matrix& TM) {
     static QRat QQ;
-    Matrix T(QQ), C(QQ);
-    Transpose(T, M);
-    Transpose(C, CoB);
-
-    for(size_t i=0; i<T.rowdim(); ++i) {
-        Givaro::Rational r(most_frequent_element(T[i].begin(), T[i].end() ) );
-        for(auto& iter : T[i]) iter.second /= r; // scale T
-        for(auto& iter : C[i]) iter.second /= r; // scale C
+    for(size_t i=0; i<TM.rowdim(); ++i) {
+        Givaro::Rational r(most_frequent_element(TM[i].begin(), TM[i].end() ) );
+        for(auto& iter : TM[i]) iter.second /= r;   // scale TM
+        for(auto& iter : TCoB[i]) iter.second /= r; // scale TCoB
     }
-
-    Transpose(M,T);
-    Transpose(CoB, C);
-
-    return CoB;
+    return TCoB;
 }
-
-
 
 // ============================================================
 // Consistency check of M == R.C
 std::ostream& consistency(std::ostream& out, const Matrix& M,
-                          const DenseMatrix& R, const Matrix& C) {
+                          const Matrix& R, const DenseMatrix& C) {
     static QRat QQ;
     static LinBox::MatrixDomain<QRat> BMD(QQ);
-    DenseMatrix A(R);
+
+    assert( M.rowdim() == R.rowdim() );
+    assert( M.coldim() == C.coldim() );
+    assert( R.coldim() == C.rowdim() );
+
+    DenseMatrix A(QQ, R.rowdim(), C.coldim() );
 
     BMD.mul(A,R,C);
     BMD.subin(A,M);
@@ -259,7 +249,7 @@ std::ostream& consistency(std::ostream& out, const Matrix& M,
         R.write(out,FileFormat::Maple) << std::endl;
         out << " * " << std::endl;
         C.write(out,FileFormat::Maple) << std::endl;
-        out << std::string(20,'#') << std::endl;
+        out << std::string(30,'#') << std::endl;
     }
 
     return out;

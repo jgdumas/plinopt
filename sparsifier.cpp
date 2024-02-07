@@ -27,55 +27,71 @@ int Selector(std::istream& input,
                   << "# \033[1;31mColumn dimension must be exactly 4.\033[0m\n";
         exit(-1);
     }
-
-
-    Matrix R(M);
-
 #ifdef VERBATIM_PARSING
     M.write(std::clog,FileFormat::Pretty);
 #endif
+
+
+    Matrix TM(QQ,M.coldim(),M.rowdim()); Transpose(TM, M);
+
+#ifdef DEBUG
+    Matrix TR(TM);
+#endif
         // ============================================================
-        // Prints and computes density profile of M
+        // Prints and computes density profile of TM
     size_t s2;
-    densityProfile(std::clog, s2, M) << std::endl;
+    std::clog << std::string(30,'#') << std::endl;
+    densityProfile(std::clog << "# Initial profile: ", s2, TM) << std::endl;
 
         // ============================================================
-        // Initialize ICoB to identity
-    Matrix ICoB(QQ,M.coldim(), M.coldim());
-    for(size_t i=0; i<ICoB.coldim(); ++i) ICoB.setEntry(i,i,QQ.one);
+        // Initialize TICoB to identity
+    Matrix TICoB(QQ,TM.rowdim(), TM.rowdim());
+    for(size_t i=0; i<TICoB.coldim(); ++i) TICoB.setEntry(i,i,QQ.one);
 
         // ============================================================
         // Main loop, alternating sparsification and column factoring
-    size_t ss(s2);
+    size_t numcoeffs(3u);
+    size_t ss(s2), sc;
     do {
         ss = s2;
-        FactorDiagonals(ICoB, M);
-        Sparsifier(ICoB, M, maxnumcoeff);
-        densityProfile(std::clog, s2, M) << std::endl;
+        Sparsifier(TICoB, TM, numcoeffs);
+        FactorDiagonals(TICoB, TM);
+        densityProfile(std::clog << "# Density profile: ", s2, TM) << std::endl;
 
 #ifdef DEBUG
-        consistency(std::clog, M, R, ICoB) << std::endl;
+            // Check that a factorization M=R.ICoB is computed
+            //              via TM = TICoB.TR
+        consistency(std::clog, TM, TICoB, TR) << std::endl;
 #endif
+        if (numcoeffs<maxnumcoeff) numcoeffs += 4;
     } while ( s2 < ss );
-    FactorDiagonals(ICoB, M);
 
-    Matrix CoB(QQ,M.coldim(), M.coldim());
-    inverse(CoB, ICoB);
+        // CoB = TICoB^{-T}, transposed inverse
+    Matrix CoB(QQ,TICoB.coldim(), TICoB.rowdim());
+    inverseTranspose(CoB, TICoB);
     chrono.stop();
 
         // ============================================================
         // Print resulting matrices
-    ICoB.write(std::clog, matformat)<< std::endl;
 
-    std::clog << std::string(20,'#') << std::endl;
-    std::clog << "CoB:=" << std::flush;
+        // Transposed Inverse change of basis to stdlog
+    TICoB.write(std::clog, matformat)<< std::endl;
+    std::clog << std::string(30,'#') << std::endl;
+
         // change of basis to stdout
+    densityProfile(std::clog << "# CoBasis profile: ", sc, CoB) << std::endl;
+    std::clog << "CoB:=" << std::flush;
     CoB.write(std::cout, matformat) << std::flush;
     std::clog << ';' << std::endl;
-        // sparse matrix to stdlog
-    M.write(std::clog, matformat)<< std::endl;
 
-    consistency(std::clog, R, M, CoB) << ' ' << chrono << std::endl;
+
+        // sparse matrix to stdlog
+    Matrix TTM(QQ,TM.coldim(), TM.rowdim()); Transpose(TTM, TM);
+    TTM.write(std::clog, matformat)<< std::endl;
+
+        // Final check that we computed a factorization M=TTM.CoB
+    std::clog << std::string(30,'#') << std::endl;
+    consistency(std::clog, M, TTM, CoB) << ' ' << chrono << std::endl;
 
     return 0;
 }

@@ -28,4 +28,4 @@ cd plinopt; make
 ./transpozer data/test.prg
 ./optimizer data/Pi.sms
 ./matrix-transpose data/Pi.sms | ./optimizer -K |./transpozer
-./sparsifier data/Rr.sms
+./sparsifier -c 4 data/Lr.sms

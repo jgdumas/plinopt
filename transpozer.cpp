@@ -93,7 +93,7 @@ int Tellegen(std::istream& input) {
 
     std::pair<size_t, size_t> Nops(0,0);
 
-    std::clog << std::string(20,'#') << std::endl;
+    std::clog << std::string(30,'#') << std::endl;
 
         // ============================================================
         // ====================
@@ -230,7 +230,7 @@ int Tellegen(std::istream& input) {
         // End line by line parsing
         // ============================================================
 
-    std::clog << std::string(20,'#') << std::endl;
+    std::clog << std::string(30,'#') << std::endl;
 
         // ============================================================
         // Select only temporary variables (others are initialized)
@@ -331,20 +331,20 @@ int Tellegen(std::istream& input) {
     }
 #endif
 
-    std::clog << std::string(20,'#') << std::endl;
+    std::clog << std::string(30,'#') << std::endl;
         // Produce output results "oi:=xi;"
     for(const auto& iter: outSet) std::cout << iter << std::endl;
 
     const int dimOffset(inSet.size()-outSet.size());
 
 
-    std::clog << std::string(20,'#') << std::endl;
+    std::clog << std::string(30,'#') << std::endl;
     std::clog << "# " << Nops.first << "\tadditions ("
               << (Nops.first-dimOffset)
               << (dimOffset<0?'-':'+') << abs(dimOffset)
               << ')' << std::endl;
     std::clog << "# " << Nops.second << "\tmultiplications" << std::endl;
-    std::clog << std::string(20,'#') << std::endl;
+    std::clog << std::string(30,'#') << std::endl;
 
     return 0;
 }

@@ -35,14 +35,14 @@
 //   uses a limited number of coefficients for the linear comb.
 //   (that is at most: COEFFICIENT_SEARCH)
 //   Returns the (inverse) change of basis and the sparsified M
-Matrix& Sparsifier(Matrix& CoB, Matrix& M);
+Matrix& Sparsifier(Matrix& TC, Matrix& TM);
 // ============================================================
 
 
 // ============================================================
 // Factoring out some coefficients:
-//    from a column of M, towards a row of CoB
-Matrix& FactorDiagonals(Matrix& CoB, Matrix& M);
+//    from a row of TM, towards a column of TC
+Matrix& FactorDiagonals(Matrix& TC, Matrix& TM);
 // ============================================================
 
 
@@ -52,17 +52,24 @@ Matrix& FactorDiagonals(Matrix& CoB, Matrix& M);
 
     // Consistency check of M == R.C
 std::ostream& consistency(std::ostream& out, const Matrix& M,
-                          const DenseMatrix& R, const Matrix& C);
+                          const Matrix& R, const DenseMatrix& C);
 
     // Prints out density profile of M
     // returns total density
 std::ostream& densityProfile(std::ostream& out, size_t& s, const Matrix& M);
 
+	// Computes the transposed inverse of A
+Matrix& inverseTranspose(Matrix& I, const Matrix& A);
 
-	// Find most frequent Rational;
+	// Computes the rank of A
+size_t& rank(size_t& r, const Matrix& A);
+
+    // Find most frequent Rational between begin and end
+    // element is suppoded to be the second in a pair
+template <typename Fwd>
+Givaro::Rational most_frequent_element(const Fwd& begin, const Fwd& end);
 
 // ============================================================
-
 
 #include "plinopt_sparsify.inl"
 #endif
