@@ -223,6 +223,47 @@ Matrix& FactorDiagonals(Matrix& TCoB, Matrix& TM) {
     return TCoB;
 }
 
+
+
+
+// ============================================================
+// Alternating sparsification and column factoring
+//   starting with only 3 coefficents (thus -1,0,1) ...
+//   ... increasing this number by increment ...
+//   ... until threshold.
+size_t SparseFactor(Matrix& TICoB, Matrix& TM,
+                    const size_t start, const size_t increment,
+                    const size_t threshold) {
+
+        // ============================================================
+        // Prints and computes density profile of TM
+    size_t s2;
+    densityProfile(std::clog << "# Initial profile: ", s2, TM) << std::endl;
+
+    size_t numcoeffs(start);
+    size_t ss(s2);
+
+        // ============================================================
+        // Main loop, alternating sparsification and column factoring
+    do {
+        ss = s2;
+        Sparsifier(TICoB, TM, numcoeffs);
+        FactorDiagonals(TICoB, TM);
+        densityProfile(std::clog << "# Density profile: ", s2, TM) << std::endl;
+        if (numcoeffs<threshold) numcoeffs += increment;
+
+#ifdef DEBUG
+            // Check that a factorization M=R.ICoB is computed
+            //              via TM = TICoB.TR
+        consistency(std::clog, TM, TICoB, TR) << std::endl;
+#endif
+    } while ( s2 < ss );
+
+
+    return s2;
+}
+
+
 // ============================================================
 // Consistency check of M == R.C
 std::ostream& consistency(std::ostream& out, const Matrix& M,

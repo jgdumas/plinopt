@@ -19,7 +19,7 @@
 //   (search within COEFFICIENT_SEARCH^4 possibilities)
 // ============================================================
 #ifndef COEFFICIENT_SEARCH
-#define COEFFICIENT_SEARCH 11
+#define COEFFICIENT_SEARCH 11u
 #endif
 // ============================================================
 
@@ -45,6 +45,15 @@ Matrix& Sparsifier(Matrix& TC, Matrix& TM);
 Matrix& FactorDiagonals(Matrix& TC, Matrix& TM);
 // ============================================================
 
+// ============================================================
+// Alternating sparsification and column factoring
+//   starting with only 3 coefficents (thus -1,0,1) ...
+//   ... increasing this number by increment ...
+//   ... until threshold.
+size_t SparseFactor(Matrix& TICoB, Matrix& TM,
+                    const size_t start=3u, const size_t increment=4u,
+                    const size_t threshold=COEFFICIENT_SEARCH);
+// ============================================================
 
 
 // ============================================================

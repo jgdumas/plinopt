@@ -6,7 +6,6 @@
 #include "plinopt_sparsify.h"
 
 
-
 // ============================================================
 // Sparsifying and reducing coefficient diversity of a matrix
 int Selector(std::istream& input,
@@ -37,11 +36,6 @@ int Selector(std::istream& input,
 #ifdef DEBUG
     Matrix TR(TM);
 #endif
-        // ============================================================
-        // Prints and computes density profile of TM
-    size_t s2;
-    std::clog << std::string(30,'#') << std::endl;
-    densityProfile(std::clog << "# Initial profile: ", s2, TM) << std::endl;
 
         // ============================================================
         // Initialize TICoB to identity
@@ -49,23 +43,15 @@ int Selector(std::istream& input,
     for(size_t i=0; i<TICoB.coldim(); ++i) TICoB.setEntry(i,i,QQ.one);
 
         // ============================================================
-        // Main loop, alternating sparsification and column factoring
-    size_t numcoeffs(3u);
-    size_t ss(s2), sc;
-    do {
-        ss = s2;
-        Sparsifier(TICoB, TM, numcoeffs);
-        FactorDiagonals(TICoB, TM);
-        densityProfile(std::clog << "# Density profile: ", s2, TM) << std::endl;
+        // Alternating sparsification and column factoring
+        //    start by diagonals
+    FactorDiagonals(TICoB, TM);
+        //    default alternate to sparsify/factor simple things first
+    SparseFactor(TICoB, TM);
+        //    now try harder (with more potential combination coeffs)
+    SparseFactor(TICoB, TM, maxnumcoeff, 1u, maxnumcoeff);
 
-#ifdef DEBUG
-            // Check that a factorization M=R.ICoB is computed
-            //              via TM = TICoB.TR
-        consistency(std::clog, TM, TICoB, TR) << std::endl;
-#endif
-        if (numcoeffs<maxnumcoeff) numcoeffs += 4;
-    } while ( s2 < ss );
-
+        // ============================================================
         // CoB = TICoB^{-T}, transposed inverse
     Matrix CoB(QQ,TICoB.coldim(), TICoB.rowdim());
     inverseTranspose(CoB, TICoB);
@@ -79,6 +65,7 @@ int Selector(std::istream& input,
     std::clog << std::string(30,'#') << std::endl;
 
         // change of basis to stdout
+    size_t sc;
     densityProfile(std::clog << "# CoBasis profile: ", sc, CoB) << std::endl;
     std::clog << "CoB:=" << std::flush;
     CoB.write(std::cout, matformat) << std::flush;
