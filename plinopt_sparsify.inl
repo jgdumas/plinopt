@@ -149,7 +149,7 @@ std::pair<int,int>& testLinComb(std::pair<int,int>& weight,
         if ((hwl > weight.first) ||
             ( (hwl==weight.first) && (vwl>weight.second) ) ) {
 #ifdef VERBATIM_PARSING
-            std::clog << "# Found: " << w << ' ' << hwl
+            std::clog << "# Found(" << num << "): " << w << ' ' << hwl
                       << " >= " << weight.first << std::endl;
 #endif
             weight.first = hwl;
@@ -167,7 +167,6 @@ std::pair<int,int>& testLinComb(std::pair<int,int>& weight,
 //   uses a limited number of coefficients for the linear comb.
 //   (that is at most: maxnumcoeff)
 Matrix& Sparsifier(Matrix& TCoB, Matrix& TM, const size_t maxnumcoeff) {
-
     static QRat QQ;
 
     assert(TCoB.rowdim() == TCoB.coldim());
@@ -193,9 +192,10 @@ Matrix& Sparsifier(Matrix& TCoB, Matrix& TM, const size_t maxnumcoeff) {
     if (Coeffs.size()>maxnumcoeff) Coeffs.resize(maxnumcoeff);
 
         // ========================================
-        // Try each row of TCoB, one at a time
-    for(size_t num=0; num<LCoB.rowdim(); ++num) {
+        // Try first 4 rows of TCoB, one at a time
+    const size_t firstcolumns(std::min(size_t(4u),LCoB.rowdim()));
 
+    for(size_t num=0; num<firstcolumns; ++num) {
         QArray v(TM.coldim());
         Matrix A(QQ); sparse2sparse(A, LCoB);
         std::pair<int,int> weight{-1,-1}; // Best Hamming weight so far
@@ -214,13 +214,19 @@ Matrix& Sparsifier(Matrix& TCoB, Matrix& TM, const size_t maxnumcoeff) {
         }}}}
     }
 
+        // Set bottom-right to identity
+    for(size_t num=firstcolumns; num<LCoB.rowdim(); ++num) {
+        LCoB.setEntry(num,num,QQ.one);
+    }
+
         // ========================================
         // Supplementary change of basis found
         // Apply it:
         //   - to the sparsified matrix
         //   - to previous change of Basis
     static LinBox::MatrixDomain<QRat> BMD(QQ);
-    DenseMatrix TR(TM), TS(TCoB);
+    DenseMatrix TR(QQ,TM.rowdim(), TM.coldim()),
+        TS(QQ, TCoB.rowdim(),TCoB.coldim());
     BMD.mul(TR,LCoB,TM);   // Direct matrix multiplication
     BMD.mul(TS,LCoB,TCoB); // Direct matrix multiplication
 
@@ -247,6 +253,7 @@ Matrix& FactorDiagonals(Matrix& TCoB, Matrix& TM) {
             }
         }
     }
+
     return TCoB;
 }
 
@@ -293,13 +300,10 @@ size_t SparseFactor(Matrix& TICoB, Matrix& TM,
 #ifdef DEBUG
             // Check that a factorization R=M.CoB is preserved
             //              via TM = TICoB.TR
-    TICoB.write(std::clog << "AFT TC: ", FileFormat::Maple) << std::endl;
-    TM.write(std::clog << "AFT TM: ", FileFormat::Maple) << std::endl;
         static LinBox::MatrixDomain<QRat> BMD(QQ);
         consistency(std::clog, TM, TICoB, TR) << std::endl;
 #endif
     } while ( s2 < ss );
-
 
     return s2;
 }

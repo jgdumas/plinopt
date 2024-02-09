@@ -21,11 +21,6 @@ int Selector(std::istream& input,
     QMstream ms(QQ,input);
     Matrix M(ms); M.resize(M.rowdim(),M.coldim());
 
-    if (M.coldim() > 4) {
-        std::cerr << "# \033[1;31m******   ERROR coldim > 4   ******\033[0m\n"
-                  << "# \033[1;31mColumn dimension must be at most 4.\033[0m\n";
-        exit(-1);
-    }
 #ifdef VERBATIM_PARSING
     M.write(std::clog,FileFormat::Pretty);
 #endif
