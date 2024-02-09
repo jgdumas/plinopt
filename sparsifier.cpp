@@ -21,9 +21,9 @@ int Selector(std::istream& input,
     QMstream ms(QQ,input);
     Matrix M(ms); M.resize(M.rowdim(),M.coldim());
 
-    if (M.coldim() != 4) {
-        std::cerr << "# \033[1;31m******   ERROR coldim != 4   ******\033[0m\n"
-                  << "# \033[1;31mColumn dimension must be exactly 4.\033[0m\n";
+    if (M.coldim() > 4) {
+        std::cerr << "# \033[1;31m******   ERROR coldim > 4   ******\033[0m\n"
+                  << "# \033[1;31mColumn dimension must be at most 4.\033[0m\n";
         exit(-1);
     }
 #ifdef VERBATIM_PARSING
@@ -32,10 +32,6 @@ int Selector(std::istream& input,
 
 
     Matrix TM(QQ,M.coldim(),M.rowdim()); Transpose(TM, M);
-
-#ifdef DEBUG
-    Matrix TR(TM);
-#endif
 
         // ============================================================
         // Initialize TICoB to identity

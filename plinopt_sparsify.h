@@ -59,8 +59,16 @@ size_t SparseFactor(Matrix& TICoB, Matrix& TM,
 // ============================================================
 // Utilities
 
+    // Testing afor a potential better sparsity
+std::pair<int,int>& testLinComb(std::pair<int,int>& weight,
+                                Matrix& LCoB, Matrix& Cand,
+                                const size_t num,
+                                const QArray& w, const Matrix& TM);
+
+
     // Consistency check of M == R.C
-std::ostream& consistency(std::ostream& out, const Matrix& M,
+template<typename AMatrix>
+std::ostream& consistency(std::ostream& out, const AMatrix& M,
                           const Matrix& R, const DenseMatrix& C);
 
     // Prints out density profile of M
