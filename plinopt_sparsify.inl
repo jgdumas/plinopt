@@ -193,30 +193,41 @@ Matrix& Sparsifier(Matrix& TCoB, Matrix& TM, const size_t maxnumcoeff) {
 
         // ========================================
         // Try first 4 rows of TCoB, one at a time
-    const size_t firstcolumns(std::min(size_t(4u),LCoB.rowdim()));
+    const size_t numlargeblocks(TM.rowdim()>>2);
+    const size_t lastblock(TM.rowdim()-(numlargeblocks<<2));
+    const size_t numblocks(lastblock?numlargeblocks+1:numlargeblocks);
+    const size_t multiple(numblocks<<2);
 
-    for(size_t num=0; num<firstcolumns; ++num) {
-        QArray v(TM.coldim());
-        Matrix A(QQ); sparse2sparse(A, LCoB);
-        std::pair<int,int> weight{-1,-1}; // Best Hamming weight so far
+    QArray v(TM.coldim()), w(multiple);
+    Matrix A(QQ);
 
-            // ========================================
-            // Each row has 4 coefficients
-        for(size_t i=0; i<Coeffs.size(); ++i) {
-        for(size_t j=0; j<Coeffs.size(); ++j) {
-        for(size_t k=0; k<Coeffs.size(); ++k) {
-        for(size_t l=0; l<Coeffs.size(); ++l) {
-                // Try linear combination
-            QArray w{Coeffs[i],Coeffs[j],Coeffs[k],Coeffs[l]};
-            w.resize(TM.rowdim());
+    for(size_t block=0; block < numblocks; ++block) {
+        w.resize(0); w.resize(multiple);
+        const size_t firstcolumns(std::min(size_t(4u),LCoB.rowdim()-(block<<2)));
 
-            testLinComb(weight, LCoB, A, num, w, TM);
-        }}}}
-    }
+        for(size_t num=0; num<firstcolumns; ++num) {
 
-        // Set bottom-right to identity
-    for(size_t num=firstcolumns; num<LCoB.rowdim(); ++num) {
-        LCoB.setEntry(num,num,QQ.one);
+            sparse2sparse(A, LCoB);
+            std::pair<int,int> weight{-1,-1}; // Best Hamming weight so far
+
+                // ========================================
+                // Each row has 4 coefficients
+            for(size_t i=0; i<Coeffs.size(); ++i) {
+            for(size_t j=0; j<Coeffs.size(); ++j) {
+            for(size_t k=0; k<Coeffs.size(); ++k) {
+            for(size_t l=0; l<Coeffs.size(); ++l) {
+                    // Try linear combination
+
+                w.resize(multiple);
+                w[0+(block<<2)] = Coeffs[i];
+                w[1+(block<<2)] = Coeffs[j];
+                w[2+(block<<2)] = Coeffs[k];
+                w[3+(block<<2)] = Coeffs[l];
+
+                w.resize(TM.rowdim());
+                testLinComb(weight, LCoB, A, num+(block<<2), w, TM);
+            }}}}
+        }
     }
 
         // ========================================
@@ -327,7 +338,7 @@ std::ostream& consistency(std::ostream& out, const AMatrix& M,
     BMD.subin(A,M);
 
     if (BMD.isZero (A))
-        out <<"# \033[1;32mOK: consistent factorization!\033[0m";
+        out <<"# \033[1;32mSUCCESS: consistent factorization!\033[0m";
     else{
         std::cerr << "# \033[1;31m****** ERROR inconsistency ******\033[0m"
                   << std::endl;

@@ -108,7 +108,7 @@ int main(int argc, char ** argv) {
         // =============================================
         // Both computations should agree
     if (BMD.isZero (Mc))
-        std::clog <<"# \033[1;32mOK : correct Matrix-Multiplication!\033[0m" << std::endl;
+        std::clog <<"# \033[1;32mSUCCESS: correct Matrix-Multiplication!\033[0m" << std::endl;
     else{
         std::cerr << "# \033[1;31m****** ERROR, not a MM algorithm******\033[0m"
                   << std::endl;

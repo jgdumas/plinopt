@@ -51,20 +51,22 @@ int Selector(std::istream& input,
         // ============================================================
         // Print resulting matrices
 
+#ifdef VERBATIM_PARSING
         // Transposed Inverse change of basis to stdlog
     TICoB.write(std::clog, matformat)<< std::endl;
     std::clog << std::string(30,'#') << std::endl;
+#endif
 
         // change of basis to stdout
     size_t sc;
     densityProfile(std::clog << "# CoBasis profile: ", sc, CoB) << std::endl;
-    std::clog << "CoB:=" << std::flush;
-    CoB.write(std::cout, matformat) << std::flush;
-    std::clog << ';' << std::endl;
+    std::clog << "# Alternate basis:\n" << std::flush;
+    CoB.write(std::cout, matformat) << std::endl;
 
 
         // sparse matrix to stdlog
     Matrix TTM(QQ,TM.coldim(), TM.rowdim()); Transpose(TTM, TM);
+    std::clog << "# Sparse residuum:\n" << std::flush;
     TTM.write(std::clog, matformat)<< std::endl;
 
         // Final check that we computed a factorization M=TTM.CoB
@@ -78,6 +80,7 @@ int Selector(std::istream& input,
 // ============================================================
 // Main: select between file / std::cin
 //       -c # : sets the max number of coefficients per iteration
+//       -f 
 int main(int argc, char** argv) {
 
     FileFormat matformat = FileFormat::Pretty;
