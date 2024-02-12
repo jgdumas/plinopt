@@ -107,6 +107,68 @@ Matrix& inverseTranspose(Matrix& TI, const Matrix& A) {
     return TI;
 }
 
+
+	// Build block diagonal matrix from vector of blocks
+Matrix& diagonalMatrix(Matrix& M, const std::vector<Matrix>& V) {
+    M.resize(0,0);
+    for(const auto& mat: V) {
+        const size_t m(M.rowdim()), n(M.coldim());
+        M.resize(m+mat.rowdim(),n+mat.coldim());
+        for( auto indices = mat.IndexedBegin();
+             (indices != mat.IndexedEnd()) ; ++indices ) {
+            M.setEntry(m+indices.rowIndex(),
+                       n+indices.colIndex(),
+                       indices.value());
+        }
+    }
+    return M;
+}
+
+    // Append columns by blocks of columns
+Matrix& augmentedMatrix(Matrix& M, const std::vector<Matrix>& V) {
+    const size_t m(M.rowdim());
+    M.resize(m,0);
+    for(const auto& mat: V) {
+        const size_t n(M.coldim());
+        M.resize(m,n+mat.coldim());
+        for( auto indices = mat.IndexedBegin();
+             (indices != mat.IndexedEnd()) ; ++indices ) {
+            assert(m == mat.rowdim());
+            M.setEntry(indices.rowIndex(),
+                       n+indices.colIndex(),
+                       indices.value());
+        }
+    }
+    return M;
+}
+
+    // Cut matrix by blocks of columns
+std::vector<Matrix>& separateColumnBlocks(
+    std::vector<Matrix>& V, const Matrix& A, const size_t blocksize) {
+    static QRat QQ;
+    const size_t numlargeblocks(A.coldim()/blocksize);
+    const size_t lastblock(A.coldim()-numlargeblocks*blocksize);
+    const bool hassmallblock(lastblock>0);
+    const size_t numblocks(hassmallblock?numlargeblocks+1:numlargeblocks);
+
+    for(size_t i=0; i<numlargeblocks; ++i)
+        V.emplace_back(QQ,A.rowdim(),blocksize);
+    if (hassmallblock)
+        V.emplace_back(QQ,A.rowdim(),lastblock);
+
+    for( auto indices = A.IndexedBegin(); (indices != A.IndexedEnd()) ;
+         ++indices ) {
+        V[indices.colIndex()/blocksize].setEntry(
+            indices.rowIndex(),
+            indices.colIndex() % blocksize,
+            indices.value());
+    }
+
+    return V;
+}
+
+
+
     // Prints out density profile of M
     // returns total density
 std::ostream& densityProfile(std::ostream& out, size_t& ss, const Matrix& M) {
@@ -318,6 +380,58 @@ size_t SparseFactor(Matrix& TICoB, Matrix& TM,
 
     return s2;
 }
+
+
+
+
+
+// ============================================================
+// First:  FactorDiagonal
+// Second: SparseFactor with default parameters
+// Third:  SparseFactor with maxnumcoeff, 1, maxnumcoeff
+Givaro::Timer& sparseAlternate(
+    Givaro::Timer& chrono, Matrix& CoB, Matrix& Res, const Matrix& M,
+    const FileFormat& matformat, const size_t maxnumcoeff) {
+    chrono.start();
+
+    static QRat QQ;
+
+    Matrix TM(QQ,M.coldim(),M.rowdim()); Transpose(TM, M);
+
+        // ============================================================
+        // Initialize TICoB to identity
+    Matrix TICoB(QQ,TM.rowdim(), TM.rowdim());
+    for(size_t i=0; i<TICoB.coldim(); ++i) TICoB.setEntry(i,i,QQ.one);
+
+        // ============================================================
+        // Alternating sparsification and column factoring
+        //    start by diagonals
+    FactorDiagonals(TICoB, TM);
+        //    default alternate to sparsify/factor simple things first
+    SparseFactor(TICoB, TM);
+        //    now try harder (with more potential combination coeffs)
+    SparseFactor(TICoB, TM, maxnumcoeff, 1u, maxnumcoeff);
+
+        // ============================================================
+        // CoB = TICoB^{-T}, transposed inverse
+        // Res = TM^T
+    inverseTranspose(CoB, TICoB);
+    size_t sc;
+    densityProfile(std::clog << "# CoBasis profile: ", sc, CoB) << std::endl;
+
+    Transpose(Res, TM);
+    chrono.stop();
+
+#ifdef VERBATIM_PARSING
+        // Transposed Inverse change of basis to stdlog
+    TICoB.write(std::clog, matformat)<< std::endl;
+    std::clog << std::string(30,'#') << std::endl;
+#endif
+    return chrono;
+}
+
+
+
 
 
 // ============================================================

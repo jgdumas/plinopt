@@ -54,13 +54,23 @@ Matrix& FactorDiagonals(Matrix& TC, Matrix& TM);
 
 // ============================================================
 // Alternating sparsification and column factoring
-//   starting with only 3 coefficents (thus -1,0,1) ...
+//   starting with only start coefficents (at least -1,0,1) ...
 //   ... increasing this number by increment ...
 //   ... until threshold.
 size_t SparseFactor(Matrix& TICoB, Matrix& TM,
                     const size_t start=3u, const size_t increment=4u,
                     const size_t threshold=COEFFICIENT_SEARCH);
 // ============================================================
+
+// ============================================================
+// First:  FactorDiagonal
+// Second: SparseFactor with default parameters
+// Third:  SparseFactor with maxnumcoeff, 1, maxnumcoeff
+Givaro::Timer& sparseAlternate(
+    Givaro::Timer& chrono, Matrix& CoB, Matrix& Res, const Matrix& M,
+    const FileFormat& matformat, const size_t maxnumcoeff);
+// ============================================================
+
 
 
 // ============================================================
@@ -87,6 +97,16 @@ Matrix& inverseTranspose(Matrix& I, const Matrix& A);
 
 	// Computes the rank of A
 size_t& rank(size_t& r, const Matrix& A);
+
+    // Cut matrix by blocks of columns
+std::vector<Matrix>& separateColumnBlocks(std::vector<Matrix>&,
+                                          const Matrix&, const size_t);
+
+	// Build block diagonal matrix from vector of blocks
+Matrix& diagonalMatrix(Matrix& M, const std::vector<Matrix>& V);
+
+    // Append columns by blocks of columns
+Matrix& augmentedMatrix(Matrix& M, const std::vector<Matrix>& V);
 
     // Find most frequent Rational between begin and end
     // element is suppoded to be the second in a pair

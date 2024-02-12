@@ -13,14 +13,12 @@
 
 #include "plinopt_sparsify.h"
 
+
 // ============================================================
 // Sparsifying and reducing coefficient diversity of a matrix
 int Selector(std::istream& input,
              const FileFormat& matformat,
              const size_t maxnumcoeff) {
-
-    Givaro::Timer chrono;
-    chrono.start();
 
         // ============================================================
         // Read Matrix of Linear Transformation
@@ -32,53 +30,57 @@ int Selector(std::istream& input,
     M.write(std::clog,FileFormat::Pretty);
 #endif
 
+    Givaro::Timer elapsed,chrono;
 
-    Matrix TM(QQ,M.coldim(),M.rowdim()); Transpose(TM, M);
+    Matrix CoB(QQ,M.coldim(), M.coldim());
+    Matrix Res(QQ,M.rowdim(), M.coldim());
 
-        // ============================================================
-        // Initialize TICoB to identity
-    Matrix TICoB(QQ,TM.rowdim(), TM.rowdim());
-    for(size_t i=0; i<TICoB.coldim(); ++i) TICoB.setEntry(i,i,QQ.one);
-
-        // ============================================================
-        // Alternating sparsification and column factoring
-        //    start by diagonals
-    FactorDiagonals(TICoB, TM);
-        //    default alternate to sparsify/factor simple things first
-    SparseFactor(TICoB, TM);
-        //    now try harder (with more potential combination coeffs)
-    SparseFactor(TICoB, TM, maxnumcoeff, 1u, maxnumcoeff);
+//         // ============================================================
+//         // Sparsify matrix as a whole
+//     sparseAlternate(chrono, CoB, Res, M, matformat, maxnumcoeff);
 
         // ============================================================
-        // CoB = TICoB^{-T}, transposed inverse
-    Matrix CoB(QQ,TICoB.coldim(), TICoB.rowdim());
-    inverseTranspose(CoB, TICoB);
-    chrono.stop();
+        // Deal with blocks of columns
+    std::vector<Matrix> vC, vR, vM;
+    separateColumnBlocks(vM, M, 4);
+    for(const auto& mat: vM) {
+        vC.emplace_back(QQ,M.coldim(), M.coldim());
+        vR.emplace_back(QQ,M.rowdim(), M.coldim());
+
+        sparseAlternate(chrono, vC.back(), vR.back(), mat,
+                        matformat, maxnumcoeff);
+
+        elapsed += chrono;
+#ifdef DEBUG
+        std::clog << std::string(30,'#') << std::endl;
+        consistency(std::clog, mat, vR.back(), vC.back()) << ' ' << chrono << std::endl;
+#endif
+    }
+
+        // Build resulting matrices
+    diagonalMatrix(CoB, vC);
+    augmentedMatrix(Res, vR);
+
 
         // ============================================================
         // Print resulting matrices
 
-#ifdef VERBATIM_PARSING
-        // Transposed Inverse change of basis to stdlog
-    TICoB.write(std::clog, matformat)<< std::endl;
-    std::clog << std::string(30,'#') << std::endl;
-#endif
-
         // change of basis to stdout
     size_t sc;
-    densityProfile(std::clog << "# CoBasis profile: ", sc, CoB) << std::endl;
-    std::clog << "# Alternate basis:\n" << std::flush;
+    densityProfile(std::clog << "# Alternate basis profile: ", sc, CoB)
+                             << std::endl;
     CoB.write(std::cout, matformat) << std::endl;
 
 
-        // sparse matrix to stdlog
-    Matrix TTM(QQ,TM.coldim(), TM.rowdim()); Transpose(TTM, TM);
-    std::clog << "# Sparse residuum:\n" << std::flush;
-    TTM.write(std::clog, matformat)<< std::endl;
+        // residuum sparse matrix to stdlog
+    densityProfile(std::clog << "# Sparse residuum profile: ", sc, CoB)
+                             << std::endl;
+    Res.write(std::clog, matformat)<< std::endl;
 
-        // Final check that we computed a factorization M=TTM.CoB
+
+        // Final check that we computed a factorization M=Res.CoB
     std::clog << std::string(30,'#') << std::endl;
-    consistency(std::clog, M, TTM, CoB) << ' ' << chrono << std::endl;
+    consistency(std::clog, M, Res, CoB) << ' ' << elapsed << std::endl;
 
     return 0;
 }
@@ -87,7 +89,7 @@ int Selector(std::istream& input,
 // ============================================================
 // Main: select between file / std::cin
 //       -c # : sets the max number of coefficients per iteration
-//       -f 
+//       -f
 int main(int argc, char** argv) {
 
     FileFormat matformat = FileFormat::Pretty;
