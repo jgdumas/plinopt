@@ -3,6 +3,8 @@
 --------------------------------------------------------------------------------
 
 **Authors**:  Jean-Guillaume Dumas, Bruno Grenet, Clément Pernet, Alexandre Sedoglavic
+- [ J-G. Dumas, C. Pernet, A. Sedoglavic; Strassen's algorithm is not optimally accurate, Feb. 2024](https://hal.science/hal-04441653)
+- [ J-G. Dumas, B. Grenet; In-place accumulation of fast multiplication formulae, Jul. 2023](https://hal.science/hal-04167499)
 
 
 

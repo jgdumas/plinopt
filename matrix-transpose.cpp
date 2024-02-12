@@ -12,7 +12,7 @@
  *				- ends with: `0 0 0`
  * References:
  *   [ J-G. Dumas, C. Pernet, A. Sedoglavic; Feb. 2024
- *     Strassen's algorithm isnot optimally accurate
+ *     Strassen's algorithm is not optimally accurate
  *     (https://hal.science/hal-04441653) ]
  *   [ J-G. Dumas, B. Grenet; Jul. 2023
  *     In-place accumulation of fast multiplication formulae
