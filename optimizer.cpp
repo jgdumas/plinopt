@@ -11,6 +11,10 @@
  *				- Starts with: `m n 'R'`
  *				- then: `i j value`
  *				- ends with: `0 0 0`
+ * Reference:
+ *   [ J-G. Dumas, C. Pernet, A. Sedoglavic; Feb. 2024
+ *     Strassen's algorithm isnot optimally accurate
+ *     (https://hal.science/hal-04441653) ]
  *************************************************************************/
 
 // ============================================================

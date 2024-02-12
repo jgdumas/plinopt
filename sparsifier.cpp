@@ -3,8 +3,15 @@
 // Authors: J-G. Dumas, C. Pernet, A. Sedoglavic
 // ==========================================================================
 
-#include "plinopt_sparsify.h"
+/****************************************************************
+ * PLinOpt Library
+ * Reference:
+ *   [ J-G. Dumas, C. Pernet, A. Sedoglavic; Feb. 2024
+ *     Strassen's algorithm isnot optimally accurate
+ *     (https://hal.science/hal-04441653) ]
+ ****************************************************************/
 
+#include "plinopt_sparsify.h"
 
 // ============================================================
 // Sparsifying and reducing coefficient diversity of a matrix

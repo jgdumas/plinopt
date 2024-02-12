@@ -5,6 +5,13 @@
 
 /****************************************************************
  * PLinOpt Library, Sparsification definitions
+ * References:
+ *   [ G. Beniamini, N. Cheng, O. Holtz, E. Karstadt, O. Schwartz;
+ *     Sparsifying the Operators of Fast Matrix Multiplication
+ *     Algorithms (https://arxiv.org/abs/2008.03759) ]
+ *   [ J-G. Dumas, C. Pernet, A. Sedoglavic; Feb. 2024
+ *     Strassen's algorithm isnot optimally accurate
+ *     (https://hal.science/hal-04441653) ]
  ****************************************************************/
 
 // ============================================================

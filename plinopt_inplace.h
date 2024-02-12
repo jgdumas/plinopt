@@ -5,6 +5,10 @@
 
 /****************************************************************
  * PLinOpt Library, In-place definitions
+ * Reference:
+ *   [ J-G. Dumas, B. Grenet; Jul. 2023
+ *     In-place accumulation of fast multiplication formulae
+ *     (https://hal.science/hal-04167499) ]
  ****************************************************************/
 
 #include "plinopt_library.h"

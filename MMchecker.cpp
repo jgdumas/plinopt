@@ -15,6 +15,13 @@
  *          sq srep: if present srep represents sqrt(sq)
  *                  then results is correct up to srep^2=sq,
  *                  that is modulo remainder=(srep^2-sq)
+ * References:
+ *   [ J-G. Dumas, C. Pernet, A. Sedoglavic; Feb. 2024
+ *     Strassen's algorithm isnot optimally accurate
+ *     (https://hal.science/hal-04441653) ]
+ *   [ J-G. Dumas, B. Grenet; Jul. 2023
+ *     In-place accumulation of fast multiplication formulae
+ *     (https://hal.science/hal-04167499) ]
  ****************************************************************/
 
 #include "plinopt_library.h"

@@ -6,9 +6,13 @@
 /****************************************************************
  * Transposition of programs via Tellegen's principle
  * Program syntax: see main Tellegen function below
- * Reference: [ Tellegen's principle into practice.
- *              ISSAC'03:37-44, A. Bostan, G. Lecerf, É. Schost
- *              https://doi.org/10.1145/860854.860870 ]
+ * References:
+ *   [ Tellegen's principle into practice.
+ *     ISSAC'03:37-44, A. Bostan, G. Lecerf, É. Schost
+ *     https://doi.org/10.1145/860854.860870 ]
+ *   [ J-G. Dumas, C. Pernet, A. Sedoglavic; Feb. 2024
+ *     Strassen's algorithm isnot optimally accurate
+ *     (https://hal.science/hal-04441653) ]
  ****************************************************************/
 
 #include <fstream>

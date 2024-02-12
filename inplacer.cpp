@@ -16,7 +16,7 @@
  *        [ a11 a12 ]
  *        [ a21 a22 ] is vectorized as [a11 a12 a21 a22]
  *
- * References:
+ * Reference:
  *      [ In-place accumulation of fast multiplication formulae
  *        J-G. Dumas, B. Grenet
  *        https://hal.science/hal-04167499 ]
