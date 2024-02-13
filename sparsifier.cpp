@@ -16,15 +16,17 @@
 
 // ============================================================
 // Sparsifying and reducing coefficient diversity of a matrix
-int Selector(std::istream& input,
-             const FileFormat& matformat,
-             const size_t maxnumcoeff) {
+int Selector(std::istream& input, const FileFormat& matformat,
+             const size_t blocksize, const size_t maxnumcoeff) {
 
         // ============================================================
         // Read Matrix of Linear Transformation
     QRat QQ;
     QMstream ms(QQ,input);
     Matrix M(ms); M.resize(M.rowdim(),M.coldim());
+    size_t sc;
+    densityProfile(std::clog << "# Initial profile: ", sc, M)
+                             << std::endl;
 
 #ifdef VERBATIM_PARSING
     M.write(std::clog,FileFormat::Pretty);
@@ -35,45 +37,45 @@ int Selector(std::istream& input,
     Matrix CoB(QQ,M.coldim(), M.coldim());
     Matrix Res(QQ,M.rowdim(), M.coldim());
 
-//         // ============================================================
-//         // Sparsify matrix as a whole
-//     sparseAlternate(chrono, CoB, Res, M, matformat, maxnumcoeff);
-
         // ============================================================
-        // Deal with blocks of columns
-    std::vector<Matrix> vC, vR, vM;
-    separateColumnBlocks(vM, M, 4);
-    for(const auto& mat: vM) {
-        vC.emplace_back(QQ,M.coldim(), M.coldim());
-        vR.emplace_back(QQ,M.rowdim(), M.coldim());
+        // Sparsify matrix as a whole
+    if (blocksize <= 1) {
+        sparseAlternate(elapsed, CoB, Res, M, matformat, maxnumcoeff);
+    } else {
+            // ============================================================
+            // Deal with blocks of columns
+        std::vector<Matrix> vC, vR, vM;
+        separateColumnBlocks(vM, M, blocksize);
+        for(const auto& mat: vM) {
+            vC.emplace_back(QQ,M.coldim(), M.coldim());
+            vR.emplace_back(QQ,M.rowdim(), M.coldim());
 
-        sparseAlternate(chrono, vC.back(), vR.back(), mat,
+            sparseAlternate(chrono, vC.back(), vR.back(), mat,
                         matformat, maxnumcoeff);
 
-        elapsed += chrono;
+            elapsed += chrono;
 #ifdef DEBUG
-        std::clog << std::string(30,'#') << std::endl;
-        consistency(std::clog, mat, vR.back(), vC.back()) << ' ' << chrono << std::endl;
+            std::clog << std::string(30,'#') << std::endl;
+            consistency(std::clog, mat, vR.back(), vC.back()) << ' ' << chrono << std::endl;
 #endif
+        }
+
+            // Build resulting matrices
+        diagonalMatrix(CoB, vC);
+        augmentedMatrix(Res, vR);
     }
-
-        // Build resulting matrices
-    diagonalMatrix(CoB, vC);
-    augmentedMatrix(Res, vR);
-
 
         // ============================================================
         // Print resulting matrices
 
         // change of basis to stdout
-    size_t sc;
     densityProfile(std::clog << "# Alternate basis profile: ", sc, CoB)
                              << std::endl;
     CoB.write(std::cout, matformat) << std::endl;
 
 
         // residuum sparse matrix to stdlog
-    densityProfile(std::clog << "# Sparse residuum profile: ", sc, CoB)
+    densityProfile(std::clog << "# Sparse residuum profile: ", sc, Res)
                              << std::endl;
     Res.write(std::clog, matformat)<< std::endl;
 
@@ -95,6 +97,7 @@ int main(int argc, char** argv) {
     FileFormat matformat = FileFormat::Pretty;
     std::string filename;
     size_t maxnumcoeff(COEFFICIENT_SEARCH); // default max coefficients
+    size_t blocksize(4u);                   // default column block size
 
     for (int i = 1; i<argc; ++i) {
         std::string args(argv[i]);
@@ -106,14 +109,15 @@ int main(int argc, char** argv) {
         else if (args == "-P") { matformat = FileFormat(8); }
         else if (args == "-S") { matformat = FileFormat(5); }
         else if (args == "-c") { maxnumcoeff = atoi(argv[++i]); }
+        else if (args == "-b") { blocksize = atoi(argv[++i]); }
         else { filename = args; }
     }
 
     if (filename == "") {
-        return Selector(std::cin, matformat, maxnumcoeff);
+        return Selector(std::cin, matformat, blocksize, maxnumcoeff);
     } else {
         std::ifstream inputmatrix(filename);
-        return Selector(inputmatrix, matformat, maxnumcoeff);
+        return Selector(inputmatrix, matformat, blocksize, maxnumcoeff);
     }
 
     return -1;
