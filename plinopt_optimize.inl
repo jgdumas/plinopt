@@ -446,7 +446,7 @@ std::pair<size_t,size_t> Optimizer(Matrix& M,
 
 
 
-	// Postcondition _Matrix A is upper triangularized
+	// Postcondition _Matrix A is nullified
 std::pair<size_t,size_t> nullspacedecomp(Matrix& x, Matrix& A) {
     QRat::Element Det;
     size_t Rank;

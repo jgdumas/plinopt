@@ -10,18 +10,18 @@
 #include "plinopt_sparsify.h"
 
 
+auto zeroTest = [](const auto& e) { return isZero(e);};
+auto sizeSup = [](const auto& a, const auto& b) { return a.size() > b.size(); };
+auto secondInf = [](const auto& a, const auto& b) { return a.second < b.second;};
+
     // Find most frequent non-zero Rational between begin and end
     // element is suppoded to be the second in a pair
 template <typename Fwd>
 Givaro::Rational most_frequent_nonzero(const Fwd& begin, const Fwd& end)
 {
     std::map<Givaro::Rational, int> count;
-
     for (auto it = begin; it != end; ++it) ++count[it->second];
-
-    return std::max_element(
-        count.begin(), count.end(),
-        [](const auto& a, const auto& b) { return a.second < b.second;})->first;
+    return std::max_element(count.begin(), count.end(), secondInf)->first;
 }
 
 	// Replace row i of A, by v
@@ -97,7 +97,7 @@ Matrix& inverseTranspose(Matrix& TI, const Matrix& A) {
     QVector x(QQ,n), w(QQ,n), Iv(QQ, n);
     for(size_t i=0; i<Iv.size(); ++i) Iv[i] = QQ.zero;
 
-    for(int i=0; i<n; ++i) {
+    for(size_t i=0; i<n; ++i) {
         Iv[i] = QQ.one;
         GD.solve(x, w, Rank, Q, L, U, P, Iv);
         Iv[i] = QQ.zero;
@@ -149,7 +149,6 @@ std::vector<Matrix>& separateColumnBlocks(
     const size_t numlargeblocks(A.coldim()/blocksize);
     const size_t lastblock(A.coldim()-numlargeblocks*blocksize);
     const bool hassmallblock(lastblock>0);
-    const size_t numblocks(hassmallblock?numlargeblocks+1:numlargeblocks);
 
     for(size_t i=0; i<numlargeblocks; ++i)
         V.emplace_back(QQ,A.rowdim(),blocksize);
@@ -193,8 +192,7 @@ std::pair<int,int>& testLinComb(std::pair<int,int>& weight,
                                 const size_t num,
                                 const QArray& w, const Matrix& TM) {
     static QRat QQ;
-    static QArray v(TM.coldim());
-    static auto zeroTest = [](const auto& e) { return isZero(e);};
+    static QArray v(TM.coldim()); v.resize(TM.coldim());
 
         // Check independency
     setRow(Cand,num,w,QQ);
@@ -204,18 +202,18 @@ std::pair<int,int>& testLinComb(std::pair<int,int>& weight,
         TM.applyTranspose(v,w); // transpose of M.apply(v,w)
 
             // Count number of produced zeroes
-        int hwl = std::count_if(v.begin(), v.end(), zeroTest );
-        int vwl = std::count_if(w.begin(), w.end(), zeroTest );
+        int rlHw = std::count_if(v.begin(), v.end(), zeroTest );
+        int clHw = std::count_if(w.begin(), w.end(), zeroTest );
 
             // Find the best one so far
-        if ((hwl > weight.first) ||
-            ( (hwl==weight.first) && (vwl>weight.second) ) ) {
+        if ((rlHw > weight.first) ||
+            ( (rlHw==weight.first) && (clHw>weight.second) ) ) {
 #ifdef VERBATIM_PARSING
-            std::clog << "# Found(" << num << "): " << w << ' ' << hwl
+            std::clog << "# Found(" << num << "): " << w << ' ' << rlHw
                       << " >= " << weight.first << std::endl;
 #endif
-            weight.first = hwl;
-            weight.second = vwl;
+            weight.first = rlHw;
+            weight.second = clHw;
                 // Register best linear combination so far
             setRow(LCoB,num,w,QQ);
         }
@@ -224,20 +222,50 @@ std::pair<int,int>& testLinComb(std::pair<int,int>& weight,
 }
 
 
+
 // ============================================================
 // Sparsifying a Matrix TM
 //   uses a limited number of coefficients for the linear comb.
 //   (that is at most: maxnumcoeff)
 Matrix& Sparsifier(Matrix& TCoB, Matrix& TM, const size_t maxnumcoeff) {
     static QRat QQ;
+    static LinBox::GaussDomain<QRat> GD(QQ);
 
-    assert(TCoB.rowdim() == TCoB.coldim());
-    assert(TCoB.coldim() == TM.rowdim());
     const size_t n(TCoB.rowdim());
-
+    assert(n == TCoB.rowdim());
+    assert(n == TM.rowdim());
         // ========================================
         // Read Matrix of Linear Transformation
     Matrix LCoB(QQ,n,n);
+    int cnHw(-1),rnHw(-1);
+
+        // ========================================
+        // Start by computing a nullspace vector:
+        //   of the first denser rows
+    if (TM.rowdim()>1) {
+        Matrix N(QQ,TM.coldim(),TM.rowdim()); Transpose(N, TM);
+        std::sort(N.rowBegin(), N.rowEnd(), sizeSup);	// get denser rows
+        size_t r; while( (N.rowdim()>0) && (rank(r,N) == N.coldim())) {
+            N.resize(N.rowdim()-1,N.coldim());          // select rank-1
+        }
+        if (N.rowdim()>0) {
+            Matrix x(QQ, n, n), Tx(QQ,n,n);
+            GD.nullspacebasisin(x, N);						// nullspace vector
+            for(size_t i=0; i<n; ++i) {
+                const auto& value( x.refEntry(i,0) );
+                if (! QQ.isZero(value)) LCoB.setEntry(0,i,value);
+            }
+            QArray v(TM.coldim());
+            TM.applyTranspose(v, LCoB[0]);					// result Hamming weight
+            cnHw = LCoB[0].size();
+            rnHw = std::count_if(v.begin(), v.end(), zeroTest );
+
+#ifdef VERBATIM_PARSING
+            std::clog << "# nullspace vector (" << cnHw << "): " << LCoB[0] << std::endl;
+            std::clog << "# reduces residuum (" << rnHw << "): " << v << std::endl;
+#endif
+        }
+    }
 
         // ========================================
         // Try 0, 1, -1 and some coefficients in M
@@ -259,8 +287,8 @@ Matrix& Sparsifier(Matrix& TCoB, Matrix& TM, const size_t maxnumcoeff) {
     const size_t lastblock(TM.rowdim()-(numlargeblocks<<2));
     const size_t numblocks(lastblock?numlargeblocks+1:numlargeblocks);
     const size_t multiple(numblocks<<2);
+    QArray w(multiple);
 
-    QArray v(TM.coldim()), w(multiple);
     Matrix A(QQ);
 
     for(size_t block=0; block < numblocks; ++block) {
@@ -271,6 +299,10 @@ Matrix& Sparsifier(Matrix& TCoB, Matrix& TM, const size_t maxnumcoeff) {
 
             sparse2sparse(A, LCoB);
             std::pair<int,int> weight{-1,-1}; // Best Hamming weight so far
+            if (num ==0) {
+                weight.first=rnHw;
+                weight.second=cnHw;
+            }
 
                 // ========================================
                 // Each row has 4 coefficients
@@ -350,9 +382,9 @@ size_t SparseFactor(Matrix& TICoB, Matrix& TM,
 #ifdef DEBUG
     static QRat QQ;
     static LinBox::MatrixDomain<QRat> BMD(QQ);
-    static DenseMatrix TR(QQ,TM.rowdim(),TM.coldim());
-    static Matrix CoB(QQ,TICoB.rowdim(), TICoB.coldim());
-    static Matrix TCoB(QQ,CoB.coldim(), CoB.rowdim());
+    DenseMatrix TR(QQ,TM.rowdim(),TM.coldim());
+    Matrix CoB(QQ,TICoB.rowdim(), TICoB.coldim());
+    Matrix TCoB(QQ,CoB.coldim(), CoB.rowdim());
     inverseTranspose(CoB, TICoB); // CoB  == TICoB^{-T}
     Transpose(TCoB, CoB);         // TCoB == TICoB^{-1}
     BMD.mul(TR,TCoB,TM);          // TM == TICoB . TR
@@ -394,7 +426,6 @@ Givaro::Timer& sparseAlternate(
     chrono.start();
 
     static QRat QQ;
-
     Matrix TM(QQ,M.coldim(),M.rowdim()); Transpose(TM, M);
 
         // ============================================================
