@@ -55,8 +55,8 @@ int main(int argc, char ** argv) {
     QMstream ls(QQ, left), rs(QQ, right), ss(QQ, product);
     Matrix L(ls), R(rs), P(ss);
 
-	assert(L.coldim() == R.coldim());
-	assert(L.coldim() == P.rowdim());
+	assert(L.rowdim() == R.rowdim());
+	assert(L.rowdim() == P.coldim());
 
 
 #ifdef VERBATIM_PARSING

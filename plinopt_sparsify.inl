@@ -373,7 +373,6 @@ size_t SparseFactor(Matrix& TICoB, Matrix& TM,
 #ifdef DEBUG
             // Check that a factorization R=M.CoB is preserved
             //              via TM = TICoB.TR
-        static LinBox::MatrixDomain<QRat> BMD(QQ);
         consistency(std::clog, TM, TICoB, TR) << std::endl;
 #endif
     } while ( s2 < ss );
