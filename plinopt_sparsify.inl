@@ -17,42 +17,16 @@ auto secondInf = [](const auto& a, const auto& b) { return a.second < b.second;}
     // Find most frequent non-zero Rational between begin and end
     // element is suppoded to be the second in a pair
 template <typename Fwd>
-Givaro::Rational most_frequent_nonzero(const Fwd& begin, const Fwd& end)
+inline Givaro::Rational most_frequent_nonzero(const Fwd& begin, const Fwd& end)
 {
     std::map<Givaro::Rational, int> count;
     for (auto it = begin; it != end; ++it) ++count[it->second];
     return std::max_element(count.begin(), count.end(), secondInf)->first;
 }
 
-	// Replace row i of A, by v
-template<typename Vector>
-Matrix& setRow(Matrix& A, size_t i, const Vector& v, const QRat& QQ) {
-    A[i].resize(0);
-    for(size_t j=0; j<v.size(); ++j) {
-        if (! QQ.isZero(v[j])) A.setEntry(i,j,v[j]);
-    }
-    return A;
-}
-
-	// copy dense matrix M into sparse matrix A
-Matrix& dense2sparse(Matrix& A, const DenseMatrix& M, const QRat& QQ) {
-    A.resize(M.rowdim(), M.coldim());
-    for(size_t i=0; i<A.rowdim(); ++i) {
-        setRow(A,i,M[i],QQ);
-    }
-    return A;
-}
-
-	// copy sparse matrix B into sparse matrix A
-Matrix& sparse2sparse(Matrix& A, const Matrix& B) {
-    A.resize(B.rowdim(), B.coldim());
-    std::copy(B.rowBegin(), B.rowEnd(), A.rowBegin());
-    return A;
-}
-
 	// v is augmented by i, -i, 1/i and -1/i
 template<typename Vector>
-void augment(Vector& v, const Givaro::Integer& i, const QRat& QQ) {
+inline Vector& augment(Vector& v, const Givaro::Integer& i, const QRat& QQ) {
     const Givaro::Rational r(i);
     if (std::find(v.begin(), v.end(), r) == v.end()) {
         v.push_back(r);
@@ -63,10 +37,11 @@ void augment(Vector& v, const Givaro::Integer& i, const QRat& QQ) {
         QQ.negin(tmp);
         v.push_back(tmp);
     }
+    return v;
 }
 
 	// Computes the rank of A
-size_t& rank(size_t& r, const Matrix& A) {
+inline size_t& rank(size_t& r, const Matrix& A) {
     static QRat QQ;
     static LinBox::GaussDomain<QRat> GD(QQ);
     Matrix copyA(QQ); sparse2sparse(copyA, A);
@@ -76,7 +51,7 @@ size_t& rank(size_t& r, const Matrix& A) {
 
 
 	// Computes the transposed inverse of A
-Matrix& inverseTranspose(Matrix& TI, const Matrix& A) {
+inline Matrix& inverseTranspose(Matrix& TI, const Matrix& A) {
     assert(A.rowdim() == A.coldim());
     const size_t n(A.rowdim());
 
@@ -109,7 +84,7 @@ Matrix& inverseTranspose(Matrix& TI, const Matrix& A) {
 
 
 	// Build block diagonal matrix from vector of blocks
-Matrix& diagonalMatrix(Matrix& M, const std::vector<Matrix>& V) {
+inline Matrix& diagonalMatrix(Matrix& M, const std::vector<Matrix>& V) {
     M.resize(0,0);
     for(const auto& mat: V) {
         const size_t m(M.rowdim()), n(M.coldim());
@@ -125,7 +100,7 @@ Matrix& diagonalMatrix(Matrix& M, const std::vector<Matrix>& V) {
 }
 
     // Append columns by blocks of columns
-Matrix& augmentedMatrix(Matrix& M, const std::vector<Matrix>& V) {
+inline Matrix& augmentedMatrix(Matrix& M, const std::vector<Matrix>& V) {
     const size_t m(M.rowdim());
     M.resize(m,0);
     for(const auto& mat: V) {
@@ -143,7 +118,7 @@ Matrix& augmentedMatrix(Matrix& M, const std::vector<Matrix>& V) {
 }
 
     // Cut matrix by blocks of columns
-std::vector<Matrix>& separateColumnBlocks(
+inline std::vector<Matrix>& separateColumnBlocks(
     std::vector<Matrix>& V, const Matrix& A, const size_t blocksize) {
     static QRat QQ;
     const size_t numlargeblocks(A.coldim()/blocksize);
@@ -187,10 +162,10 @@ std::ostream& densityProfile(std::ostream& out, size_t& ss, const Matrix& M) {
 //    w has to be independent of Cand
 //    if sparsity is the same then test w's sparsity
 //    If w is better, then replaces the line #num of LCoB
-std::pair<int,int>& testLinComb(std::pair<int,int>& weight,
-                                Matrix& LCoB, Matrix& Cand,
-                                const size_t num,
-                                const QArray& w, const Matrix& TM) {
+inline std::pair<int,int>& testLinComb(
+    std::pair<int,int>& weight, Matrix& LCoB, Matrix& Cand,
+    const size_t num,const QArray& w, const Matrix& TM) {
+
     static QRat QQ;
     static QArray v(TM.coldim()); v.resize(TM.coldim());
 
@@ -343,10 +318,11 @@ Matrix& Sparsifier(Matrix& TCoB, Matrix& TM, const size_t maxnumcoeff) {
 }
 
 
+
 // ============================================================
 // Factoring out some coefficients:
 //    from most frequent in a row of TM, towards a column of TCoB
-Matrix& FactorDiagonals(Matrix& TCoB, Matrix& TM) {
+inline Matrix& FactorDiagonals(Matrix& TCoB, Matrix& TM) {
     static QRat QQ;
     for(size_t i=0; i<TM.rowdim(); ++i) {
         if (TM[i].size()>0) {
@@ -361,7 +337,6 @@ Matrix& FactorDiagonals(Matrix& TCoB, Matrix& TM) {
 
     return TCoB;
 }
-
 
 
 
@@ -414,8 +389,6 @@ size_t SparseFactor(Matrix& TICoB, Matrix& TM,
 
 
 
-
-
 // ============================================================
 // First:  FactorDiagonal
 // Second: SparseFactor with default parameters
@@ -459,8 +432,6 @@ Givaro::Timer& sparseAlternate(
 #endif
     return chrono;
 }
-
-
 
 
 

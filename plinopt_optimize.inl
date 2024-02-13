@@ -9,7 +9,7 @@
 
 #include "plinopt_optimize.h"
 
-bool operator==(const triple& u, const triple&v) {
+inline bool operator==(const triple& u, const triple&v) {
     return ( (std::get<0>(u) == std::get<0>(v)) &&
              (std::get<1>(u) == std::get<1>(v)) &&
              (std::get<2>(u) == std::get<2>(v)) );
@@ -41,7 +41,7 @@ std::ostream& operator<<(std::ostream& out, const std::map<T1,T2>& v) {
 
 // Build pairs of indices with normalized coefficient (ratio of the two values)
 template<typename Iter>
-VTriple listpairs(const Iter& start, const Iter& end) {
+inline VTriple listpairs(const Iter& start, const Iter& end) {
     std::vector<triple> v;
     if (start == end) return v;
     for(Iter iter = start; iter != end; ++iter) {
@@ -54,7 +54,7 @@ VTriple listpairs(const Iter& start, const Iter& end) {
 }
 
 // If cse is present in row, add square of row density to score
-size_t score(const std::vector<VTriple>& AllPairs,
+inline size_t score(const std::vector<VTriple>& AllPairs,
              const std::vector<size_t>& Density,
              const triple& cse) {
     size_t score(0);

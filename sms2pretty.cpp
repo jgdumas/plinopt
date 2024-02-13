@@ -26,8 +26,8 @@
 #include <linbox/util/matrix-stream.h>
 #include <linbox/matrix/sparse-matrix.h>
 
-using namespace LinBox;
-
+#include "plinopt_library.h"
+using LinBox::Tag::FileFormat;
 
 // ============================================================
 // Special latex formatting for matrices of rationals
@@ -60,16 +60,15 @@ std::ostream& latex_print(std::ostream& out, const Matrix& A) {
 // ============================================================
 // Pretty print SMS matrix, number of non-zero & Frobenius norm
 // ============================================================
-int PrettyPrint(std::istream& input, const Tag::FileFormat& matformat)
+int PrettyPrint(std::istream& input, const FileFormat& matformat)
 {
     Givaro::QField<Givaro::Rational> QQ;
-    MatrixStream<Givaro::QField<Givaro::Rational>> ms( QQ, input );
+    LinBox::MatrixStream<Givaro::QField<Givaro::Rational>> ms( QQ, input );
 
         // ====================================================
         // Read Matrix
     Givaro::Timer chrono; chrono.start();
-    SparseMatrix<Givaro::QField<Givaro::Rational>,
-        SparseMatrixFormat::SparseSeq> A ( ms );
+    Matrix A ( ms );
     chrono.stop();
 
         // ====================================================
@@ -85,10 +84,22 @@ int PrettyPrint(std::istream& input, const Tag::FileFormat& matformat)
 
         // ====================================================
         // Special latex for rationals or one of LinBox formats
-    if (matformat == Tag::FileFormat::LaTeX) {
+    if (matformat == FileFormat::LaTeX) {
         latex_print(std::cout, A) << std::endl;
     } else {
-        A.write(std::cout, matformat);
+
+        if ( (matformat == FileFormat::Plain) ||
+             (matformat == FileFormat::HTML)  ||
+             (matformat == FileFormat(6))||
+             (matformat == FileFormat::linalg)  ) {
+            DenseMatrix B(QQ,A.rowdim(),A.coldim()); sparse2dense(B,A);
+            if (matformat == FileFormat(6))
+                std::cout << B << std::endl;
+            else
+                B.write(std::cout, matformat);
+        } else {
+            A.write(std::cout, matformat);
+        }
     }
 
     return 0;
@@ -98,18 +109,23 @@ int PrettyPrint(std::istream& input, const Tag::FileFormat& matformat)
 
 // ============================================================
 // LinBox Matrix formats:
-/* Maple = 1,
+/* Plain = 0,
+ * Maple = 1,
+ * HTML = 2,
  * LaTeX = 3,
  * SMS = 5,
+ * Dense (column-major MatrixMarket) = 6,
  * Matlab = 7,
  * Pretty = 8,
+ * OneBased = 10,
+ * MatrixMarket = 11,
+ * linalg = 12,
  */
 int main(int argc, char ** argv) {
         // ====================================================
         // argv[i]: '-i' selects format 'i', otherwise filename
-
         // ====================================================
-    std::vector<Tag::FileFormat> matformats;
+    std::vector<FileFormat> matformats;
     std::vector<std::string> filenames;
 
     for(int i=1; i<argc; ++i) {
@@ -119,7 +135,7 @@ int main(int argc, char ** argv) {
                 std::clog << "Usage: " << argv[0] << " [stdin| ([-#] matrixfile.sms)*]\n";
                 exit(-1);
             } else {
-                matformats.push_back(Tag::FileFormat(-atoi(args.c_str())));
+                matformats.push_back(FileFormat(-atoi(args.c_str())));
             }
         } else {
             filenames.push_back(args);
@@ -128,14 +144,14 @@ int main(int argc, char ** argv) {
 
         // Pretty output by default
     if (matformats.size() == 0)
-        matformats.emplace_back(Tag::FileFormat::Pretty);
+        matformats.emplace_back(FileFormat::Pretty);
 
     if (filenames.size() > 0) {
         for(size_t i(0); i<filenames.size(); ++i) {
             std::ifstream input (filenames[i]);
-            PrettyPrint(input, 
-                        i<matformats.size() ? 
-                        matformats[i] : 
+            PrettyPrint(input,
+                        i<matformats.size() ?
+                        matformats[i] :
                         matformats.back());
         }
     } else {
