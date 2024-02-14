@@ -88,16 +88,17 @@ int main(int argc, char ** argv) {
 
         // =============================================
         // Compute the matrix product directly
-    size_t n(L.coldim()>>1);
-    LinBox::DenseMatrix<QRat> Ma(QQ,n,n), Mb(QQ,n,n), Mc(QQ,n,n);
+    const size_t n(std::sqrt(R.coldim()*P.rowdim()/L.coldim()));
+    const size_t m(P.rowdim()/n), k(R.coldim()/n);
+    LinBox::DenseMatrix<QRat> Ma(QQ,m,k), Mb(QQ,k,n), Mc(QQ,m,n);
 
         // row-major vectorization
-    for(size_t i=0; i<ua.size(); ++i) Ma.setEntry(i/n,i%n,ua[i]);
+    for(size_t i=0; i<ua.size(); ++i) Ma.setEntry(i/k,i%k,ua[i]);
     for(size_t i=0; i<ub.size(); ++i) Mb.setEntry(i/n,i%n,ub[i]);
     for(size_t i=0; i<wc.size(); ++i) Mc.setEntry(i/n,i%n,wc[i]);
 
     LinBox::MatrixDomain<QRat> BMD(QQ);
-    LinBox::DenseMatrix<QRat> Rc(QQ,n,n);
+    LinBox::DenseMatrix<QRat> Rc(QQ,m,n);
     BMD.mul(Rc,Ma,Mb); // Direct matrix multiplication
 
     BMD.subin(Mc, Rc);
@@ -106,7 +107,7 @@ int main(int argc, char ** argv) {
         // Computations should agree modulo (srep^2-sq)
         //              as 'srep' represents sqrt('sq')
     if(argc>6) {
-        for(size_t i=0; i<n; ++i) {
+        for(size_t i=0; i<m; ++i) {
             for(size_t j=0; j<n; ++j) {
                 Mc.refEntry(i,j) = (Mc.refEntry(i,j).nume() % modulus) / Mc.refEntry(i,j).deno();
             }
@@ -115,9 +116,13 @@ int main(int argc, char ** argv) {
         // =============================================
         // Both computations should agree
     if (BMD.isZero (Mc))
-        std::clog <<"# \033[1;32mSUCCESS: correct Matrix-Multiplication!\033[0m" << std::endl;
+        std::clog <<"# \033[1;32mSUCCESS: correct "
+                  << m << 'x' << k << 'x' << n
+                  << " Matrix-Multiplication!\033[0m" << std::endl;
     else{
-        std::cerr << "# \033[1;31m****** ERROR, not a MM algorithm******\033[0m"
+        std::cerr << "# \033[1;31m****** ERROR, not a "
+                  << m << 'x' << k << 'x' << n
+                  << " MM algorithm******\033[0m"
                   << std::endl;
 
         ua.write(std::clog << "Ua:=", LinBox::Tag::FileFormat::Maple ) << ';' << std::endl;
