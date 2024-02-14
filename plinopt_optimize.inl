@@ -67,7 +67,7 @@ inline size_t score(const std::vector<VTriple>& AllPairs,
 }
 
 // Removing one pair
-bool OneSub(Matrix& M, VTriple& multiples, size_t& nbmul,
+bool OneSub(std::ostream& sout, Matrix& M, VTriple& multiples, size_t& nbmul,
             const char tev, const char rav) {
 // M.write(std::clog << "# BEG OS\n",FileFormat::Pretty) << ';' << std::endl;
     size_t m(M.coldim());
@@ -184,27 +184,27 @@ bool OneSub(Matrix& M, VTriple& multiples, size_t& nbmul,
                 }
                 if (rindex == m) {
                     ++nbmul;
-                    std::cout << rav << m << ":="
-                              << tev << std::get<1>(cse);
+                    sout << rav << m << ":="
+                         << tev << std::get<1>(cse);
                     if (isOne(asgs.nume()))
-                        std::cout << '/' << asgs.deno();
+                        sout << '/' << asgs.deno();
                     else
-                        std::cout << '*' << asgs;
-                    std::cout << ';' << std::endl;
+                        sout << '*' << asgs;
+                    sout << ';' << std::endl;
                     multiples.emplace_back(m,std::get<1>(cse),asgs);
                 }
             }
 
 
                 // Outputs the factor into a temporary variable
-            std::cout << tev << m << ":="
-                      << tev << std::get<0>(cse)
-                      << (sign(std::get<2>(cse)) >= 0?'+':'-');
+            sout << tev << m << ":="
+                 << tev << std::get<0>(cse)
+                 << (sign(std::get<2>(cse)) >= 0?'+':'-');
             if (isOne(asgs))
-                std::cout << tev << std::get<1>(cse);
+                sout << tev << std::get<1>(cse);
             else
-                std::cout << rav << rindex;
-            std::cout << ';' << std::endl;
+                sout << rav << rindex;
+            sout << ';' << std::endl;
 
             ++m;
             M.resize(M.rowdim(), m);
@@ -217,7 +217,7 @@ bool OneSub(Matrix& M, VTriple& multiples, size_t& nbmul,
 
 // Factors out same coefficient in a column
 template<typename Iter>
-void FactorOutColumns(Matrix& T, VTriple& multiples, size_t& nbmul,
+void FactorOutColumns(std::ostream& sout, Matrix& T, VTriple& multiples, size_t& nbmul,
                       const char tev, const char rav,
                       const size_t j, const Iter& start, const Iter& end) {
     if (start == end) return;
@@ -247,19 +247,19 @@ void FactorOutColumns(Matrix& T, VTriple& multiples, size_t& nbmul,
             }
             if (rindex == m) {
                 ++nbmul;
-                std::cout << rav << m << ":="
+                sout << rav << m << ":="
                           << tev << j;
                 if (isOne(element.nume()))
-                    std::cout << '/' << element.deno();
+                    sout << '/' << element.deno();
                 else
-                    std::cout << '*' << element;
-                std::cout << ';' << std::endl;
+                    sout << '*' << element;
+                sout << ';' << std::endl;
                 multiples.emplace_back(m,j,element);
             }
 
                 // Outputs the coefficient into a temporary variable
-            std::cout << tev << m << ":=";
-            std::cout << rav << rindex << ';' << std::endl;
+            sout << tev << m << ":=";
+            sout << rav << rindex << ';' << std::endl;
             ++m;
             T.resize(m, T.coldim());
 
@@ -281,7 +281,7 @@ void FactorOutColumns(Matrix& T, VTriple& multiples, size_t& nbmul,
 
 // Factors out same coefficient in a row
 template<typename Iter>
-void FactorOutRows(Matrix& M, size_t& nbadd, const char tev,
+void FactorOutRows(std::ostream& sout, Matrix& M, size_t& nbadd, const char tev,
                    const size_t i, const Iter& start, const Iter& end) {
     if (start == end) return;
     std::map<Rational, size_t> MapVals;
@@ -296,7 +296,7 @@ void FactorOutRows(Matrix& M, size_t& nbadd, const char tev,
     for (const auto& [element, frequency] : MapVals) {
             // Found repeated coefficient
         if ((frequency>1) && (!isOne(element)) ) {
-            std::cout << tev << m << ":=";
+            sout << tev << m << ":=";
             ++m;
                 // Add a column with coefficient multiplying a new sum
             M.resize(M.rowdim(), m);
@@ -306,8 +306,8 @@ void FactorOutRows(Matrix& M, size_t& nbadd, const char tev,
             auto& row(M[i]);
             for(auto iter=row.begin(); iter != row.end(); ++iter) {
                 if (abs(iter->second) == element) {
-                    if (sign(iter->second) < 0) std::cout << '-';
-                    std::cout << tev << iter->first;
+                    if (sign(iter->second) < 0) sout << '-';
+                    sout << tev << iter->first;
                     row.erase(iter);
                     break;
                 }
@@ -317,33 +317,34 @@ void FactorOutRows(Matrix& M, size_t& nbadd, const char tev,
                 for(auto iter=row.begin(); iter != row.end(); ++iter) {
                     if (abs(iter->second) == element) {
                         ++nbadd;
-                        std::cout << (sign(iter->second) < 0 ? '-' : '+')
+                        sout << (sign(iter->second) < 0 ? '-' : '+')
                                   << tev << iter->first;
                         row.erase(iter);
                         break;
                     }
                 }
             }
-            std::cout << ';' << std::endl;
+            sout << ';' << std::endl;
         }
     }
 // M.write(std::clog << "END FOR\n",FileFormat::Pretty) << ';' << std::endl;
 }
 
 // Sets new temporaries with the input values
-void input2Temps(const size_t N, const char inv, const char tev) {
+void input2Temps(std::ostream& sout, const size_t N, const char inv, const char tev) {
     // Inputs to temporaries
     for(size_t i=0; i<N; ++i) {
-        std::cout << tev << i << ":="
+        sout << tev << i << ":="
                   << inv << i << ';' << std::endl;
     }
 }
 // Sets new temporaries with the input values
-void input2Temps(const size_t N, const char inv, const char tev, const Matrix& trsp) {
+void input2Temps(std::ostream& sout, const size_t N, const char inv, const char tev,
+                 const Matrix& trsp) {
     // Inputs to temporaries
     for(size_t i=0; i<N; ++i) {
         if (trsp[i].size()) {
-            std::cout << tev << i << ":="
+            sout << tev << i << ":="
                       << inv << i << ';' << std::endl;
         } // otherwise variable is not used
     }
@@ -351,27 +352,27 @@ void input2Temps(const size_t N, const char inv, const char tev, const Matrix& t
 
 
 // Global optimization function (pairs and factors)
-std::pair<size_t,size_t> Optimizer(Matrix& M,
+std::pair<size_t,size_t> Optimizer(std::ostream& sout, Matrix& M,
                                    const char inv, const char ouv,
                                    const char tev, const char rav) {
     size_t addcount(0), nbmul(0);
 
         // Factoring sums
     VTriple multiples;
-    for( ; OneSub(M, multiples, nbmul, tev, rav) ; ++addcount) { }
+    for( ; OneSub(sout, M, multiples, nbmul, tev, rav) ; ++addcount) { }
 
         // Factoring multiplier by colums
     Matrix T(M.field());
     Transpose(T, M);
     for(size_t j=0; j<M.coldim(); ++j) {
-        FactorOutColumns(T, multiples, nbmul, tev, rav,
+        FactorOutColumns(sout, T, multiples, nbmul, tev, rav,
                          j, T[j].begin(), T[j].end());
     }
     Transpose(M,T);
 
         // Factoring multiplier by rows
     for(size_t i=0; i<M.rowdim(); ++i) {
-        FactorOutRows(M, addcount, tev, i, M[i].begin(), M[i].end());
+        FactorOutRows(sout, M, addcount, tev, i, M[i].begin(), M[i].end());
     }
 
         // Computing remaining (simple) linear combinations
@@ -379,8 +380,8 @@ std::pair<size_t,size_t> Optimizer(Matrix& M,
         const auto& row(M[i]);
         if (row.size()>0) {
 
-            std::cout << ouv << i << ":=";
-            if ( sign(row.begin()->second) < 0) std::cout << '-';
+            sout << ouv << i << ":=";
+            if ( sign(row.begin()->second) < 0) sout << '-';
             auto arbs(abs(row.begin()->second));
 
                 // If already multiplied, reuse it
@@ -393,15 +394,15 @@ std::pair<size_t,size_t> Optimizer(Matrix& M,
                 }
             }
             if (rindex != M.coldim()) {
-                std::cout << rav << rindex;
+                sout << rav << rindex;
             } else {
-                std::cout << tev << row.begin()->first;
+                sout << tev << row.begin()->first;
                 if (!isOne(arbs)) {
                     ++nbmul;
                     if (isOne(arbs.nume()))
-                        std::cout << '/' << arbs.deno();
+                        sout << '/' << arbs.deno();
                     else
-                        std::cout << '*' << arbs;
+                        sout << '*' << arbs;
                 }
             }
 
@@ -409,7 +410,7 @@ std::pair<size_t,size_t> Optimizer(Matrix& M,
             auto iter(row.begin());
             for(++iter; iter!= row.end(); ++iter) {
                 ++addcount;
-                std::cout << (sign(iter->second) >= 0 ? '+' : '-');
+                sout << (sign(iter->second) >= 0 ? '+' : '-');
                 auto ais(abs(iter->second));
 
                     // If already multiplied, reuse it
@@ -422,19 +423,19 @@ std::pair<size_t,size_t> Optimizer(Matrix& M,
                     }
                 }
                 if (rindex != M.coldim()) {
-                    std::cout << rav << rindex;
+                    sout << rav << rindex;
                 } else {
-                    std::cout << tev << iter->first;
+                    sout << tev << iter->first;
                     if (!isOne(ais)) {
                         ++nbmul;
                         if (isOne(ais.nume()))
-                            std::cout << '/' << ais.deno();
+                            sout << '/' << ais.deno();
                         else
-                            std::cout << '*' << ais;
+                            sout << '*' << ais;
                     }
                 }
             }
-            std::cout << ';' << std::endl;
+            sout << ';' << std::endl;
         }
     }
 
@@ -447,7 +448,7 @@ std::pair<size_t,size_t> Optimizer(Matrix& M,
 
 
 	// Postcondition _Matrix A is nullified
-std::pair<size_t,size_t> nullspacedecomp(Matrix& x, Matrix& A) {
+std::pair<size_t,size_t> nullspacedecomp(std::ostream& sout, Matrix& x, Matrix& A) {
     QRat::Element Det;
     size_t Rank;
     size_t Ni(A.rowdim()),Nj(A.coldim());
@@ -572,8 +573,8 @@ std::pair<size_t,size_t> nullspacedecomp(Matrix& x, Matrix& A) {
 
             // ============================================
             // Optimize the set of independent rows
-        input2Temps(FreePart.coldim(), 'i', 't');
-        auto Fops( Optimizer(FreePart, 'i', 'o', 't', 'r') );
+        input2Temps(sout, FreePart.coldim(), 'i', 't');
+        auto Fops( Optimizer(sout, FreePart, 'i', 'o', 't', 'r') );
 
 
             // ============================================
@@ -585,16 +586,15 @@ std::pair<size_t,size_t> nullspacedecomp(Matrix& x, Matrix& A) {
         std::clog << std::string(30,'#') << std::endl;
         Tx.write(std::clog << "# Dependent:", FileFormat::Maple) << std::endl;
 #endif
-        std::clog << std::string(30,'#') << std::endl;
 
-        input2Temps(Tx.coldim(), 'o', 'v', x);
-        auto Kops( Optimizer(Tx, 'o', 'x', 'v', 'g') );
+        input2Temps(sout, Tx.coldim(), 'o', 'v', x);
+        auto Kops( Optimizer(sout, Tx, 'o', 'x', 'v', 'g') );
 
             // ============================================
             // Recover final output of NullSpace
             // Applying both permutations, P then Q
         for(size_t i=0; i<nullity; ++i) {
-            std::cout << 'o' << Q[ P.getStorage()[ Rank+i ] ] << ":=" << 'x' << i << ';' << std::endl;
+            sout << 'o' << Q[ P.getStorage()[ Rank+i ] ] << ":=" << 'x' << i << ';' << std::endl;
         }
 
             // ============================================
@@ -604,5 +604,5 @@ std::pair<size_t,size_t> nullspacedecomp(Matrix& x, Matrix& A) {
 
         return Fops;
     }
-    return std::pair<size_t,size_t>(0,0);
+    return std::pair<size_t,size_t>(-1,-1); // +infty,+infty
 }

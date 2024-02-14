@@ -35,12 +35,13 @@
 //         * otherwise random order
 // ============================================================
 
+#include <sstream>
 #include "plinopt_optimize.h"
 
 
 // ============================================================
 // Optimizing a linear program
-int Selector(std::istream& input,
+int Selector(std::istream& input, const size_t randomloops,
              const bool printMaple, const bool printPretty,
              const bool tryDirect, const bool tryKernel) {
 
@@ -49,18 +50,19 @@ int Selector(std::istream& input,
     QRat QQ;
     QMstream ms(QQ,input);
     Matrix M(ms); M.resize(M.rowdim(),M.coldim());
-    Matrix T(QQ);
-    Transpose(T,M);
 
+    Givaro::Timer chrono; chrono.start();
+
+    Matrix T(QQ); Transpose(T,M);
 
     if (printPretty) {
         M.write(std::clog,FileFormat::Pretty) << ';' << std::endl;
-        std::clog << std::string(30,'#') << std::endl;
+        std::clog << std::string(40,'#') << std::endl;
     }
 
     if (printMaple) {
         M.write(std::clog << "M:=",FileFormat::Maple) << ';' << std::endl;
-        std::clog << std::string(30,'#') << std::endl;
+        std::clog << std::string(40,'#') << std::endl;
     }
 
 
@@ -73,52 +75,85 @@ int Selector(std::istream& input,
     for(auto it = M.IndexedBegin(); it != M.IndexedEnd(); ++it)
         if (!isOne(abs(it.value()))) ++mulinit;
 
-    std::clog << std::string(30,'#') << std::endl;
+    std::clog << std::string(40,'#') << std::endl;
 
-
+    std::ostringstream ssout;
+    std::pair<size_t,size_t> nbops{addinit,mulinit};
 
         // ============================================================
         // First try: optimize the whole matrix
-
     if (tryDirect) {
-        input2Temps(M.coldim(), 'i', 't', T);
-
-            // Cancellation-free optimization
-        auto nbops( Optimizer(M, 'i', 'o', 't', 'r') );
-
-        std::clog << std::string(30,'#') << std::endl;
-        std::clog << "# " << nbops.first << "\tadditions\tinstead of " << addinit << std::endl;
-        std::clog << "# " << nbops.second << "\tmultiplications\tinstead of " << mulinit << std::endl;
-        std::clog << std::string(30,'#') << std::endl;
-
+        for(size_t i=0; i<randomloops; ++i) {
+            Matrix lM(QQ,M.rowdim(),M.coldim()); sparse2sparse(lM,M);
+            Matrix lT(QQ,T.rowdim(),T.coldim()); sparse2sparse(lT,T);
+            std::ostringstream lssout;
+                // Cancellation-free optimization
+            input2Temps(lssout, lM.coldim(), 'i', 't', lT);
+            auto lnbops( Optimizer(lssout, lM, 'i', 'o', 't', 'r') );
+#ifdef VERBATIM_PARSING
+            std::clog << "# Found, direct: " << lnbops.first << "\tadditions, "
+                       << lnbops.second << "\tmultiplications." << std::endl;
+#endif
+            if ( (ssout.tellp() == std::streampos(0)) ||
+                 (lnbops.first<nbops.first) ||
+                 ( (lnbops.first==nbops.first) && (lnbops.second<nbops.second) ) ) {
+                ssout.clear(); ssout.str(std::string());
+                ssout << lssout.str();
+                nbops = lnbops;
+            }
+        }
     }
-
-
 
         // ============================================================
         // Second try: separate independent and dependent rows
-
     if (tryKernel) {
-        Matrix NullSpace(QQ,T.coldim(),T.coldim());
-        auto Nops( nullspacedecomp(NullSpace, T) );
-
-        if ((Nops.first !=0 || Nops.second != 0)) {
-            std::clog << std::string(30,'#') << std::endl;
-            std::clog << "# " << Nops.first << "\tadditions\tinstead of " << addinit << std::endl;
-            std::clog << "# " << Nops.second << "\tmultiplications\tinstead of " << mulinit << std::endl;
-            std::clog << std::string(30,'#') << std::endl;
+        for(size_t i=0; i<randomloops; ++i) {
+            Matrix lT(QQ,T.rowdim(),T.coldim()); sparse2sparse(lT,T);
+            std::ostringstream lssout;
+            Matrix NullSpace(QQ,lT.coldim(),T.coldim());
+            auto lnbops( nullspacedecomp(lssout, NullSpace, lT) );
+#ifdef VERBATIM_PARSING
+            std::clog << "# Found, kernel: " << lnbops.first << "\tadditions, "
+                       << lnbops.second << "\tmultiplications." << std::endl;
+#endif
+            if ( (ssout.tellp() == std::streampos(0)) ||
+                 (lnbops.first<nbops.first) ||
+                 ( (lnbops.first==nbops.first) && (lnbops.second<nbops.second) ) ) {
+                ssout.clear(); ssout.str(std::string());
+                ssout << lssout.str();
+                nbops = lnbops;
+            }
         }
+    }
+
+    chrono.stop();
+
+    std::cout << ssout.str() << std::flush;
+
+    if ((nbops.first !=0 || nbops.second != 0)) {
+        std::clog << std::string(40,'#') << std::endl;
+        std::clog << "# " << nbops.first << "\tadditions\tinstead of " << addinit
+                  << ' ' << chrono << std::endl;
+        std::clog << "# " << nbops.second << "\tmultiplications\tinstead of " << mulinit << std::endl;
+        std::clog << std::string(40,'#') << std::endl;
     }
 
     return 0;
 }
 
+#ifdef RANDOM_TIES
+#  define DORANDOMSEARCH true
+#else
+#  define DORANDOMSEARCH false
+#endif
 
 
 // ============================================================
 // Main: select between file / std::cin
 // -D/-K options seect direct/kernel methods only (default is both)
 // -P/-M option choose the printing format
+// -O # search for reduced number of additions, then multiplications
+//      i.e. min of random # tries (requires RANDOM_TIES)
 int main(int argc, char** argv) {
 
         // ============================================================
@@ -127,6 +162,7 @@ int main(int argc, char** argv) {
         printPretty(false),
         directOnly(false),
         kernelOnly(false);
+    size_t randomloops(DEFAULT_RANDOM_LOOPS);
 
     std::string filename;
 
@@ -139,6 +175,14 @@ int main(int argc, char** argv) {
         else if (args == "-P") { printPretty = true; }
         else if (args == "-D") { directOnly = true; }
         else if (args == "-K") { kernelOnly = true; }
+        else if (args == "-O") {
+            randomloops = atoi(argv[++i]);
+            if ( (randomloops>1) && (!DORANDOMSEARCH) ) {
+                randomloops = 1;
+                std::cerr << "# WARNING: RANDOM_TIES not defined,"
+                          << " random loops disabled." << std::endl;
+            }
+        }
         else { filename = args; }
     }
 
@@ -148,11 +192,11 @@ int main(int argc, char** argv) {
     QRat QQ;
 
     if (filename == "") {
-        return Selector(std::cin, printMaple, printPretty, tryDirect, tryKernel);
+        return Selector(std::cin, randomloops, printMaple, printPretty, tryDirect, tryKernel);
     } else {
         std::ifstream inputmatrix(filename);
         if ( inputmatrix ) {
-            int rt=Selector(inputmatrix, printMaple, printPretty, tryDirect, tryKernel);
+            int rt=Selector(inputmatrix, randomloops, printMaple, printPretty, tryDirect, tryKernel);
             inputmatrix.close();
             return rt;
         }
