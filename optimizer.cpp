@@ -124,6 +124,13 @@ int Selector(std::istream& input, const size_t randomloops,
                 nbops = lnbops;
             }
         }
+
+        if (nbops == std::pair<size_t,size_t>{-1,-1}) {
+                // Zero dimensional kernel
+            std::cerr << "# Fail: zero dimensional kernel.\n"
+                      << "# --> try direct or transposing." << std::endl;
+            nbops = std::pair<size_t,size_t>{0,0};
+        }
     }
 
     chrono.stop();

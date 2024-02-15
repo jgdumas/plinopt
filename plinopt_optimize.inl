@@ -604,5 +604,5 @@ std::pair<size_t,size_t> nullspacedecomp(std::ostream& sout, Matrix& x, Matrix& 
 
         return Fops;
     }
-    return std::pair<size_t,size_t>(-1,-1); // +infty,+infty
+    return std::pair<size_t,size_t>{-1,-1}; // +infty,+infty
 }
