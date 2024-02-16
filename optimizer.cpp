@@ -84,8 +84,8 @@ int Selector(std::istream& input, const size_t randomloops,
         // First try: optimize the whole matrix
     if (tryDirect) {
         for(size_t i=0; i<randomloops; ++i) {
-            Matrix lM(QQ,M.rowdim(),M.coldim()); sparse2sparse(lM,M);
-            Matrix lT(QQ,T.rowdim(),T.coldim()); sparse2sparse(lT,T);
+            Matrix lM(QQ,M.rowdim(),M.coldim()); matrixCopy(lM,M,QQ);
+            Matrix lT(QQ,T.rowdim(),T.coldim()); matrixCopy(lT,T,QQ);
             std::ostringstream lssout;
                 // Cancellation-free optimization
             input2Temps(lssout, lM.coldim(), 'i', 't', lT);
@@ -108,7 +108,7 @@ int Selector(std::istream& input, const size_t randomloops,
         // Second try: separate independent and dependent rows
     if (tryKernel) {
         for(size_t i=0; i<randomloops; ++i) {
-            Matrix lT(QQ,T.rowdim(),T.coldim()); sparse2sparse(lT,T);
+            Matrix lT(QQ,T.rowdim(),T.coldim()); matrixCopy(lT,T,QQ);
             std::ostringstream lssout;
             Matrix NullSpace(QQ,lT.coldim(),T.coldim());
             auto lnbops( nullspacedecomp(lssout, NullSpace, lT) );

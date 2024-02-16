@@ -42,14 +42,11 @@ Matrix& Transpose(Matrix& T, const Matrix& A);
 
 Matrix& NegTranspose(Matrix& T, const Matrix& A);
 
-Matrix& dense2sparse(Matrix& A, const DenseMatrix& M, const QRat& QQ) ;
+template<typename _Mat1, typename _Mat2>
+_Mat1& matrixCopy(_Mat1&, const _Mat2&, const QRat&);
 
-DenseMatrix& sparse2dense(DenseMatrix& A, const Matrix& M);
-
-Matrix& sparse2sparse(Matrix& A, const Matrix& B);
-
-template<typename Vector>
-Matrix& setRow(Matrix& A, size_t i, const Vector& v, const QRat& QQ);
+template<typename _Mat, typename Vector>
+_Mat& setRow(_Mat& A, size_t i, const Vector& v, const QRat& QQ);
 
 #include "plinopt_library.inl"
 #endif

@@ -13,7 +13,6 @@
 
 #include "plinopt_sparsify.h"
 
-
 // ============================================================
 // Sparsifying and reducing coefficient diversity of a matrix
 int Selector(std::istream& input, const FileFormat& matformat,
@@ -32,51 +31,24 @@ int Selector(std::istream& input, const FileFormat& matformat,
     M.write(std::clog,FileFormat::Pretty);
 #endif
 
-    Givaro::Timer elapsed,chrono;
-
+    Givaro::Timer elapsed;
     Matrix CoB(QQ,M.coldim(), M.coldim());
     Matrix Res(QQ,M.rowdim(), M.coldim());
-
-        // ============================================================
-        // Sparsify matrix as a whole
-    if (blocksize <= 1) {
-        sparseAlternate(elapsed, CoB, Res, M, matformat, maxnumcoeff);
-    } else {
-            // ============================================================
-            // Deal with blocks of columns
-        std::vector<Matrix> vC, vR, vM;
-        separateColumnBlocks(vM, M, blocksize);
-        for(const auto& mat: vM) {
-            vC.emplace_back(QQ,M.coldim(), M.coldim());
-            vR.emplace_back(QQ,M.rowdim(), M.coldim());
-
-            sparseAlternate(chrono, vC.back(), vR.back(), mat,
-                        matformat, maxnumcoeff);
-
-            elapsed += chrono;
-#ifdef DEBUG
-            std::clog << std::string(30,'#') << std::endl;
-            consistency(std::clog, mat, vR.back(), vC.back()) << ' ' << chrono << std::endl;
-#endif
-        }
-
-            // Build resulting matrices
-        diagonalMatrix(CoB, vC);
-        augmentedMatrix(Res, vR);
-    }
+    blockSparsifier(elapsed, CoB, Res, M, blocksize,
+                    QQ, matformat, maxnumcoeff);
 
         // ============================================================
         // Print resulting matrices
 
         // change of basis to stdout
-    densityProfile(std::clog << "# Alternate basis profile: \033[1;36m", sc, CoB)
-                             << "\033[0m" << std::endl;
+    densityProfile(std::clog << "# Alternate basis profile: \033[1;36m",
+                   sc, CoB) << "\033[0m" << std::endl;
     CoB.write(std::cout, matformat) << std::endl;
 
 
         // residuum sparse matrix to stdlog
-    densityProfile(std::clog << "# Sparse residuum profile: \033[1;36m", sc, Res)
-                             << "\033[0m" << std::endl;
+    densityProfile(std::clog << "# Sparse residuum profile: \033[1;36m",
+                   sc, Res) << "\033[0m" << std::endl;
     Res.write(std::clog, matformat)<< std::endl;
 
 

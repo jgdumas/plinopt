@@ -72,6 +72,13 @@ Givaro::Timer& sparseAlternate(
 // ============================================================
 
 
+// ============================================================
+// Sparsifying and reducing coefficient diversity of a matrix
+// by sparse QLUP elimination, followed by block sparsification
+int blockSparsifier(Givaro::Timer& elapsed, Matrix& CoB, Matrix& Res,
+                    const Matrix& M, const size_t blocksize, const QRat& QQ,
+                    const FileFormat& matformat, const size_t maxnumcoeff);
+
 
 // ============================================================
 // Utilities
@@ -93,10 +100,35 @@ std::ostream& consistency(std::ostream& out, const AMatrix& M,
 std::ostream& densityProfile(std::ostream& out, size_t& s, const Matrix& M);
 
 	// Computes the transposed inverse of A
-Matrix& inverseTranspose(Matrix& I, const Matrix& A);
+template<typename _Mat1, typename _Mat2>
+_Mat1& inverseTranspose(_Mat1& TI, const _Mat2& A);
+
+    // ============================================================
+    // Compute R, s.t. A == T . R
+template<typename _Mat1, typename _Mat2>
+DenseMatrix& applyInverse(DenseMatrix& R, const _Mat1& T, const _Mat2& A,
+                          const QRat& QQ, const LinBox::MatrixDomain<QRat>& BMD);
 
 	// Computes the rank of A
 size_t& rank(size_t& r, const Matrix& A);
+
+
+// ============================================================
+// QLUP Gaussian elimination of A
+//    A  <-- (QL)^{-1} . A
+//    QL <-- Q.L
+// Updates QL and A only if resulting A = UP is sparser
+inline bool sparseLU(Matrix& QL, Matrix& A, const size_t sparsity);
+
+
+// ============================================================
+// QLUP Gaussian elimination of A
+//    A  <--  UP = (QL)^{-1} . A
+//    TC <--  (QL)^{-1} . TC
+// Updates TC and A only if resulting A is sparser
+inline bool sparseILU(Matrix& TC, Matrix& A, const size_t sparsity);
+
+
 
     // Cut matrix by blocks of columns
 std::vector<Matrix>& separateColumnBlocks(std::vector<Matrix>&,
@@ -106,7 +138,8 @@ std::vector<Matrix>& separateColumnBlocks(std::vector<Matrix>&,
 Matrix& diagonalMatrix(Matrix& M, const std::vector<Matrix>& V);
 
     // Append columns by blocks of columns
-Matrix& augmentedMatrix(Matrix& M, const std::vector<Matrix>& V);
+template<typename _Mat>
+Matrix& augmentedMatrix(Matrix&, const std::vector<_Mat>&, const QRat&);
 
     // Find most frequent Rational between begin and end
     // element is suppoded to be the second in a pair

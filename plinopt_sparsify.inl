@@ -44,14 +44,13 @@ inline Vector& augment(Vector& v, const Givaro::Integer& i, const QRat& QQ) {
 inline size_t& rank(size_t& r, const Matrix& A) {
     static QRat QQ;
     static LinBox::GaussDomain<QRat> GD(QQ);
-    Matrix copyA(QQ); sparse2sparse(copyA, A);
+    Matrix copyA(QQ); matrixCopy(copyA, A, QQ);
     return GD.rankInPlace(r, copyA);
 }
 
-
-
 	// Computes the transposed inverse of A
-inline Matrix& inverseTranspose(Matrix& TI, const Matrix& A) {
+template<typename _Mat1, typename _Mat2>
+inline _Mat1& inverseTranspose(_Mat1& TI, const _Mat2& A) {
     assert(A.rowdim() == A.coldim());
     const size_t n(A.rowdim());
 
@@ -59,7 +58,7 @@ inline Matrix& inverseTranspose(Matrix& TI, const Matrix& A) {
     static LinBox::GaussDomain<QRat> GD(QQ);
 
     TI.resize(n,n);
-    Matrix U(QQ); sparse2sparse(U, A);
+    Matrix U(QQ); matrixCopy(U, A, QQ);
 
     Givaro::Rational Det;
     size_t Rank;
@@ -100,7 +99,9 @@ inline Matrix& diagonalMatrix(Matrix& M, const std::vector<Matrix>& V) {
 }
 
     // Append columns by blocks of columns
-inline Matrix& augmentedMatrix(Matrix& M, const std::vector<Matrix>& V) {
+template<typename _Mat>
+inline Matrix& augmentedMatrix(Matrix& M, const std::vector<_Mat>& V,
+                               const QRat& QQ) {
     const size_t m(M.rowdim());
     M.resize(m,0);
     for(const auto& mat: V) {
@@ -109,9 +110,10 @@ inline Matrix& augmentedMatrix(Matrix& M, const std::vector<Matrix>& V) {
         for( auto indices = mat.IndexedBegin();
              (indices != mat.IndexedEnd()) ; ++indices ) {
             assert(m == mat.rowdim());
-            M.setEntry(indices.rowIndex(),
-                       n+indices.colIndex(),
-                       indices.value());
+            if (! QQ.isZero(indices.value()))
+                M.setEntry(indices.rowIndex(),
+                           n+indices.colIndex(),
+                           indices.value());
         }
     }
     return M;
@@ -141,7 +143,13 @@ inline std::vector<Matrix>& separateColumnBlocks(
     return V;
 }
 
-
+size_t density(const Matrix& M) {
+    size_t ss(0);
+    for(auto it=M.rowBegin();it!=M.rowEnd();++it) {
+        ss += it->size();
+    }
+    return ss;
+}
 
     // Prints out density profile of M
     // returns total density
@@ -272,7 +280,7 @@ Matrix& Sparsifier(Matrix& TCoB, Matrix& TM, const size_t maxnumcoeff) {
 
         for(size_t num=0; num<firstcolumns; ++num) {
 
-            sparse2sparse(A, LCoB);
+            matrixCopy(A, LCoB, QQ);
             std::pair<int,int> weight{-1,-1}; // Best Hamming weight so far
             if (num ==0) {
                 weight.first=rnHw;
@@ -340,6 +348,20 @@ inline Matrix& FactorDiagonals(Matrix& TCoB, Matrix& TM) {
 
 
 
+    // ============================================================
+    // Compute R, s.t. A == TICoB . R
+template<typename _Mat1, typename _Mat2>
+DenseMatrix& applyInverse(DenseMatrix& R, const _Mat1& TICoB, const _Mat2& A,
+                 const QRat& QQ, const LinBox::MatrixDomain<QRat>& BMD) {
+    Matrix CoB(QQ,TICoB.rowdim(), TICoB.coldim());
+    Matrix TCoB(QQ,CoB.coldim(), CoB.rowdim());
+    inverseTranspose(CoB, TICoB); // CoB  == TICoB^{-T}
+    Transpose(TCoB, CoB);         // TCoB == TICoB^{-1}
+    return BMD.mul(R,TCoB,A);     // A == TICoB . R
+}
+
+
+
 // ============================================================
 // Alternating sparsification and column factoring
 //   starting with only 3 coefficents (thus -1,0,1) ...
@@ -358,11 +380,7 @@ size_t SparseFactor(Matrix& TICoB, Matrix& TM,
     static QRat QQ;
     static LinBox::MatrixDomain<QRat> BMD(QQ);
     DenseMatrix TR(QQ,TM.rowdim(),TM.coldim());
-    Matrix CoB(QQ,TICoB.rowdim(), TICoB.coldim());
-    Matrix TCoB(QQ,CoB.coldim(), CoB.rowdim());
-    inverseTranspose(CoB, TICoB); // CoB  == TICoB^{-T}
-    Transpose(TCoB, CoB);         // TCoB == TICoB^{-1}
-    BMD.mul(TR,TCoB,TM);          // TM == TICoB . TR
+    applyInverse(TR, TICoB, TM, QQ, BMD);	// TM == TICoB . TR
 #endif
 
     size_t numcoeffs(start);
@@ -389,6 +407,88 @@ size_t SparseFactor(Matrix& TICoB, Matrix& TM,
 
 
 
+
+// ============================================================
+// QLUP Gaussian elimination of A
+//    A  <-- (QL)^{-1} . A
+//    QL <-- Q.L
+// Updates QL and A only if resulting A = UP is sparser
+inline bool sparseLU(Matrix& QL, Matrix& A, const size_t sparsity) {
+    static QRat QQ;
+    static LinBox::GaussDomain<QRat> GD(QQ);
+    static LinBox::MatrixDomain<QRat> BMD(QQ);
+
+    const size_t m(A.rowdim()), n(A.coldim());
+#ifdef DEBUG
+    DenseMatrix TR(QQ,m,n); matrixCopy(TR, A, QQ);
+#endif
+
+    Givaro::Rational Det;
+    size_t Rank;
+    Matrix U(QQ,m,n); matrixCopy(U, A, QQ);
+    Matrix L(QQ,m,m);
+    LinBox::Permutation<QRat> Q(QQ,m);
+    LinBox::Permutation<QRat> P(QQ,n);
+    GD.QLUPin(Rank, Det, Q, L, U, P, m, n );
+
+    bool sparser(density(U)<sparsity);
+
+    if (sparser) {
+            // use it
+        DenseMatrix R(QQ,U.rowdim(), U.coldim()), B(QQ,U.rowdim(), U.coldim()),
+            S(QQ, L.rowdim(),L.coldim()), C(QQ, L.rowdim(),L.coldim());
+        matrixCopy(R, U, QQ);
+        matrixCopy(S, L, QQ);
+        P.applyLeft(B, R);
+        Q.applyRight(C, S);
+
+        dense2sparse(A, B, QQ);
+        dense2sparse(QL, C, QQ);
+    }
+
+#ifdef DEBUG
+            // Check that the factorization is preserved
+            //              via TR = QL.A
+        consistency(std::clog, TR, QL, A) << std::endl;
+#endif
+    return sparser;
+}
+
+
+// ============================================================
+// QLUP Gaussian elimination of A
+//    A  <--  UP = (QL)^{-1} . A
+//    TC <--  (QL)^{-1} . TC
+// Updates TC and A only if resulting A is sparser
+inline bool sparseILU(Matrix& TC, Matrix& A, const size_t sparsity) {
+    static QRat QQ;
+    static LinBox::GaussDomain<QRat> GD(QQ);
+    static LinBox::MatrixDomain<QRat> BMD(QQ);
+
+    const size_t m(A.rowdim()), n(A.coldim());
+#ifdef DEBUG
+    DenseMatrix TR(QQ,m,n);
+    applyInverse(TR, TC, A, QQ, BMD);	// TR s.t., A == TC . TR
+#endif
+
+    Matrix QL(QQ,m,m); for(size_t i=0; i<m; ++i) QL.setEntry(i,i,QQ.one);
+    bool sparser( sparseLU(QL, A, sparsity) );
+    if (sparser) {
+        DenseMatrix K(QQ,m,m);
+        applyInverse(K, QL, TC, QQ, BMD);
+        dense2sparse(TC, K, QQ);
+    }
+
+#ifdef DEBUG
+            // Check that the factorization is preserved
+            //              via A = TC.TR
+        consistency(std::clog, A, TC, TR) << std::endl;
+#endif
+    return sparser;
+}
+
+
+
 // ============================================================
 // First:  FactorDiagonal
 // Second: SparseFactor with default parameters
@@ -399,17 +499,25 @@ Givaro::Timer& sparseAlternate(
     chrono.start();
 
     static QRat QQ;
-    Matrix TM(QQ,M.coldim(),M.rowdim()); Transpose(TM, M);
+    const size_t m(M.rowdim()), n(M.coldim());
+    Matrix TM(QQ,n,m); Transpose(TM, M);
 
         // ============================================================
         // Initialize TICoB to identity
-    Matrix TICoB(QQ,TM.rowdim(), TM.rowdim());
-    for(size_t i=0; i<TICoB.coldim(); ++i) TICoB.setEntry(i,i,QQ.one);
+    Matrix TICoB(QQ,n,n);
+    for(size_t i=0; i<n; ++i) TICoB.setEntry(i,i,QQ.one);
 
         // ============================================================
         // Alternating sparsification and column factoring
         //    start by diagonals
     FactorDiagonals(TICoB, TM);
+        //    Then use QLUP factorization, if result is sparser
+    bool reduced = sparseILU(TICoB, TM, density(TM));
+    if (reduced) {
+        size_t sl,su;
+        densityProfile(std::clog << "# GaussLo profile: ", sl, TICoB) << std::endl;
+        densityProfile(std::clog << "# GaussUp profile: ", su, TM) << std::endl;
+    }
         //    default alternate to sparsify/factor simple things first
     SparseFactor(TICoB, TM);
         //    now try harder (with more potential combination coeffs)
@@ -436,9 +544,88 @@ Givaro::Timer& sparseAlternate(
 
 
 // ============================================================
+// Sparsifying and reducing coefficient diversity of a matrix
+// by sparse QLUP elimination, followed by block sparsification
+int blockSparsifier(Givaro::Timer& elapsed, Matrix& CoB, Matrix& Res,
+                    const Matrix& M, const size_t blocksize, const QRat& QQ,
+                    const FileFormat& matformat, const size_t maxnumcoeff) {
+
+        // ============================================================
+        // Sparsify matrix as a whole
+    if (blocksize <= 1) {
+        sparseAlternate(elapsed, CoB, Res, M, matformat, maxnumcoeff);
+    } else {
+        Givaro::Timer chrono; chrono.start();
+
+        const size_t m(M.rowdim()), n(M.coldim());
+        Matrix U(QQ,n,m); Transpose(U, M);
+
+        // ============================================================
+        // Initialize L to identity
+        Matrix L(QQ,n,n);
+        for(size_t i=0; i<n; ++i) L.setEntry(i,i,QQ.one);
+
+        bool reduced = sparseLU(L, U, density(U));
+
+        size_t sl,su;
+        densityProfile(std::clog << "# IGaussL profile: ", sl, L) << std::endl;
+        densityProfile(std::clog << "# IGaussU profile: ", su, U) << std::endl;
+
+        Matrix TU(QQ,m,n);
+        const Matrix& A( reduced? Transpose(TU,U) : M);
+
+        chrono.stop();
+        elapsed += chrono;
+
+            // ============================================================
+            // Deal with blocks of columns
+        std::vector<Matrix> vC, vR, vA;
+        separateColumnBlocks(vA, A, blocksize);
+        for(const auto& mat: vA) {
+            vC.emplace_back(QQ,mat.coldim(), mat.coldim());
+            vR.emplace_back(QQ,mat.rowdim(), mat.coldim());
+
+            sparseAlternate(chrono, vC.back(), vR.back(), mat,
+                            matformat, maxnumcoeff);
+
+            elapsed += chrono;
+#ifdef DEBUG
+            std::clog << std::string(30,'#') << std::endl;
+            consistency(std::clog, mat, vR.back(), vC.back()) << ' ' << chrono << std::endl;
+#endif
+        }
+
+            // Build resulting matrices
+        augmentedMatrix(Res, vR, QQ);
+
+        if (reduced) {
+            LinBox::MatrixDomain<QRat> BMD(QQ);
+            std::vector<Matrix> vL;
+            std::vector<DenseMatrix> vB;
+            separateColumnBlocks(vL, L, blocksize);
+            for(size_t i=0; i<vL.size(); ++i) {
+                vB.emplace_back(QQ,vL[i].rowdim(), vL[i].coldim());
+                Matrix TvC(QQ, vC[i].coldim(), vC[i].rowdim());
+                Transpose(TvC, vC[i]);
+                BMD.mul(vB.back(),vL[i],TvC);
+            }
+            Matrix TCoB(QQ,CoB.coldim(), CoB.rowdim());
+            augmentedMatrix(TCoB, vB,QQ);
+            Transpose(CoB, TCoB);
+        } else {
+            diagonalMatrix(CoB, vC);
+        }
+    }
+
+    return 0;
+}
+
+
+
+// ============================================================
 // Consistency check of M == R.C
-template<typename AMatrix>
-std::ostream& consistency(std::ostream& out, const AMatrix& M,
+template<typename _Mat>
+std::ostream& consistency(std::ostream& out, const _Mat& M,
                           const Matrix& R, const DenseMatrix& C) {
     static QRat QQ;
     static LinBox::MatrixDomain<QRat> BMD(QQ);

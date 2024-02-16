@@ -26,6 +26,26 @@ inline Matrix& NegTranspose(Matrix& T, const Matrix& A) {
     return T;
 }
 
+	// Replace row i of A, by v
+template<typename Vector>
+inline Matrix& setRow(Matrix& A, size_t i, const Vector& v, const QRat& QQ) {
+    A[i].resize(0);
+    for(size_t j=0; j<v.size(); ++j) {
+        if (! QQ.isZero(v[j])) A.setEntry(i,j,v[j]);
+    }
+    return A;
+}
+
+template<typename Vector>
+inline DenseMatrix& setRow(DenseMatrix& A, size_t i,
+                           const Vector& v, const QRat& QQ) {
+    for(size_t j=0; j<v.size(); ++j) {
+        A.setEntry(i,j,v[j]);
+    }
+    return A;
+}
+
+
 	// copy dense matrix M into sparse matrix A
 inline Matrix& dense2sparse(Matrix& A, const DenseMatrix& M, const QRat& QQ) {
     A.resize(M.rowdim(), M.coldim());
@@ -51,12 +71,18 @@ inline Matrix& sparse2sparse(Matrix& A, const Matrix& B) {
     return A;
 }
 
-	// Replace row i of A, by v
-template<typename Vector>
-inline Matrix& setRow(Matrix& A, size_t i, const Vector& v, const QRat& QQ) {
-    A[i].resize(0);
-    for(size_t j=0; j<v.size(); ++j) {
-        if (! QQ.isZero(v[j])) A.setEntry(i,j,v[j]);
-    }
-    return A;
+
+template<>
+inline Matrix& matrixCopy(Matrix& C, const Matrix& A, const QRat& QQ) {
+    return sparse2sparse(C,A);
+}
+
+template<>
+inline Matrix& matrixCopy(Matrix& C, const DenseMatrix& A, const QRat& QQ) {
+    return dense2sparse(C,A,QQ);
+}
+
+template<>
+inline DenseMatrix& matrixCopy(DenseMatrix& C, const Matrix& A, const QRat& QQ) {
+    return sparse2dense(C,A);
 }
