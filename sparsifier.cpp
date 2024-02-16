@@ -69,14 +69,14 @@ int Selector(std::istream& input, const FileFormat& matformat,
         // Print resulting matrices
 
         // change of basis to stdout
-    densityProfile(std::clog << "# Alternate basis profile: ", sc, CoB)
-                             << std::endl;
+    densityProfile(std::clog << "# Alternate basis profile: \033[1;36m", sc, CoB)
+                             << "\033[0m" << std::endl;
     CoB.write(std::cout, matformat) << std::endl;
 
 
         // residuum sparse matrix to stdlog
-    densityProfile(std::clog << "# Sparse residuum profile: ", sc, Res)
-                             << std::endl;
+    densityProfile(std::clog << "# Sparse residuum profile: \033[1;36m", sc, Res)
+                             << "\033[0m" << std::endl;
     Res.write(std::clog, matformat)<< std::endl;
 
 

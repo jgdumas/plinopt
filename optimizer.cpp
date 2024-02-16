@@ -127,7 +127,7 @@ int Selector(std::istream& input, const size_t randomloops,
 
         if (nbops == std::pair<size_t,size_t>{-1,-1}) {
                 // Zero dimensional kernel
-            std::cerr << "# Fail: zero dimensional kernel.\n"
+            std::cerr << "# \033[1;36mFail: zero dimensional kernel.\033[0m\n"
                       << "# --> try direct or transposing." << std::endl;
             nbops = std::pair<size_t,size_t>{0,0};
         }
@@ -139,9 +139,9 @@ int Selector(std::istream& input, const size_t randomloops,
 
     if ((nbops.first !=0 || nbops.second != 0)) {
         std::clog << std::string(40,'#') << std::endl;
-        std::clog << "# " << nbops.first << "\tadditions\tinstead of " << addinit
-                  << ' ' << chrono << std::endl;
-        std::clog << "# " << nbops.second << "\tmultiplications\tinstead of " << mulinit << std::endl;
+        std::clog << "# \033[1;32m" << nbops.first << "\tadditions\tinstead of " << addinit
+                  << "\033[0m " << chrono << std::endl;
+        std::clog << "# \033[1;32m" << nbops.second << "\tmultiplications\tinstead of " << mulinit << "\033[0m" << std::endl;
         std::clog << std::string(40,'#') << std::endl;
     }
 

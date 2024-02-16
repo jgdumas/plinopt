@@ -80,7 +80,7 @@ int PrettyPrint(std::istream& input, const FileFormat& matformat)
             FNormSq += (iter.second)*(iter.second); // Square of Frobenius norm
     }
 
-    std::clog << "[READ]: " << A.rowdim() << 'x' << A.coldim() << ' ' << nnz << ' ' << FNormSq << ' ' << chrono << std::endl;
+    std::clog << "# [READ]: \033[1;32m" << A.rowdim() << 'x' << A.coldim() << ' ' << nnz << ' ' << FNormSq << "\033[0m " << chrono << std::endl;
 
         // ====================================================
         // Special latex for rationals or one of LinBox formats

@@ -343,11 +343,12 @@ int Tellegen(std::istream& input) {
 
 
     std::clog << std::string(30,'#') << std::endl;
-    std::clog << "# " << Nops.first << "\tadditions ("
+    std::clog << "# \033[1;32m" << Nops.first << "\tadditions ("
               << (Nops.first-dimOffset)
               << (dimOffset<0?'-':'+') << abs(dimOffset)
-              << ')' << std::endl;
-    std::clog << "# " << Nops.second << "\tmultiplications" << std::endl;
+              << ")\033[0m" << std::endl;
+    std::clog << "# \033[1;32m" << Nops.second << "\tmultiplications"
+              << "\033[0m" << std::endl;
     std::clog << std::string(30,'#') << std::endl;
 
     return 0;
