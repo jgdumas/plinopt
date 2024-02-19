@@ -24,7 +24,7 @@ int Selector(std::istream& input, const FileFormat& matformat,
     QRat QQ;
     QMstream ms(QQ,input);
     Matrix M(ms); M.resize(M.rowdim(),M.coldim());
-    size_t sc;
+    size_t sc,sb,sr;
     densityProfile(std::clog << "# Initial profile: ", sc, M)
                              << std::endl;
 
@@ -43,19 +43,22 @@ int Selector(std::istream& input, const FileFormat& matformat,
 
         // change of basis to stdout
     densityProfile(std::clog << "# Alternate basis profile: \033[1;36m",
-                   sc, CoB) << "\033[0m" << std::endl;
+                   sb, CoB) << "\033[0m" << std::endl;
     CoB.write(std::cout, matformat) << std::endl;
 
 
         // residuum sparse matrix to stdlog
     densityProfile(std::clog << "# Sparse residuum profile: \033[1;36m",
-                   sc, Res) << "\033[0m" << std::endl;
+                   sr, Res) << "\033[0m" << std::endl;
     Res.write(std::clog, matformat)<< std::endl;
 
 
         // Final check that we computed a factorization M=Res.CoB
     std::clog << std::string(30,'#') << std::endl;
-    consistency(std::clog, M, Res, CoB) << ' ' << elapsed << std::endl;
+    consistency(std::clog, M, Res, CoB)
+        << " \033[1;36m"
+        << sr << " non-zeroes (" << sb << " alt.) instead of " << sc
+        << "\033[0m:" << ' ' << elapsed << std::endl;
 
     return 0;
 }
