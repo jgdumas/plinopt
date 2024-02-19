@@ -84,10 +84,8 @@ int blockSparsifier(Givaro::Timer& elapsed, Matrix& CoB, Matrix& Res,
 // Utilities
 
     // Testing afor a potential better sparsity
-std::pair<int,int>& testLinComb(std::pair<int,int>& weight,
-                                Matrix& LCoB, Matrix& Cand,
-                                const size_t num,
-                                const QArray& w, const Matrix& TM);
+bool testLinComb(std::pair<int,int>& weight, Matrix& LCoB, Matrix& Cand,
+                 const size_t num, const QArray& w, const Matrix& TM);
 
 
     // Consistency check of M == R.C

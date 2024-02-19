@@ -170,10 +170,8 @@ std::ostream& densityProfile(std::ostream& out, size_t& ss, const Matrix& M) {
 //    w has to be independent of Cand
 //    if sparsity is the same then test w's sparsity
 //    If w is better, then replaces the line #num of LCoB
-inline std::pair<int,int>& testLinComb(
-    std::pair<int,int>& weight, Matrix& LCoB, Matrix& Cand,
-    const size_t num,const QArray& w, const Matrix& TM) {
-
+inline bool testLinComb(std::pair<int,int>& weight, Matrix& LCoB, Matrix& Cand,
+                        const size_t num,const QArray& w, const Matrix& TM) {
     static QRat QQ;
     static QArray v(TM.coldim()); v.resize(TM.coldim());
 
@@ -199,9 +197,10 @@ inline std::pair<int,int>& testLinComb(
             weight.second = clHw;
                 // Register best linear combination so far
             setRow(LCoB,num,w,QQ);
+            return true;
         }
     }
-    return weight;
+    return false;
 }
 
 
@@ -283,13 +282,15 @@ Matrix& Sparsifier(Matrix& TCoB, Matrix& TM, const size_t maxnumcoeff) {
 
     for(size_t block=0; block < numblocks; ++block) {
         w.resize(0); w.resize(multiple);
-        const size_t firstcolumns(std::min(size_t(4u),LCoB.rowdim()-(block<<2)));
+        const size_t offsetblock(block<<2);
+        const size_t firstcolumns(std::min(size_t(4u),
+                                           LCoB.rowdim()-(offsetblock)));
 
         for(size_t num=0; num<firstcolumns; ++num) {
-
             matrixCopy(A, LCoB, QQ);
             std::pair<int,int> weight{-1,-1}; // Best Hamming weight so far
-            if (num ==0) {
+            bool found((block == 0) && (num == 0));
+            if (found) {
                 weight.first=rnHw;
                 weight.second=cnHw;
             }
@@ -303,14 +304,26 @@ Matrix& Sparsifier(Matrix& TCoB, Matrix& TM, const size_t maxnumcoeff) {
                     // Try linear combination
 
                 w.resize(multiple);
-                w[0+(block<<2)] = Coeffs[i];
-                w[1+(block<<2)] = Coeffs[j];
-                w[2+(block<<2)] = Coeffs[k];
-                w[3+(block<<2)] = Coeffs[l];
+                w[0+(offsetblock)] = Coeffs[i];
+                w[1+(offsetblock)] = Coeffs[j];
+                w[2+(offsetblock)] = Coeffs[k];
+                w[3+(offsetblock)] = Coeffs[l];
 
                 w.resize(TM.rowdim());
-                testLinComb(weight, LCoB, A, num+(block<<2), w, TM);
+                found |= testLinComb(weight, LCoB, A, num+(offsetblock), w, TM);
             }}}}
+
+                // If not enough lin. comb. just add an indep. canonical one
+            for(size_t p=0; ! found; ++p) {
+                weight = {-1,-1};
+                w.resize(0); w.resize(TM.rowdim());
+                w[p]=1;
+                found |= testLinComb(weight, LCoB, A, num+(offsetblock), w, TM);
+#ifdef VERBATIM_PARSING
+                if (found) std::clog << "# Using canonical " << p << std::endl;
+#endif
+            }
+
         }
     }
 
