@@ -72,10 +72,10 @@
 - `./matrix-transpose data/Pw.sms`: the transposed matrix
 - `./MMchecker data/Lw.sms data/Rw.sms data/Pw.sms`: probabilistically checking Strassen-Winograd's matrix-multiplication algorithm
 - `./MMchecker data/Lo.sms data/Ro.sms data/Po.sms 32 3 1013`: probabilistically checking matrix-multiplication algorithm using 32 bits random elements and 1013 as a placeholder for sqrt(3)
-- `./optimizer data/cyclic.sms`: two programs computing that matrix-vector product
+- `./optimizer data/cyclic.sms`: a program computing that matrix-vector product
 - `./transpozer data/test.prg`: a program computing the transposed program
 - `./optimizer -D data/Pi.sms`: a program computing that matrix-vector product
 - `./matrix-transpose data/Pi.sms | ./optimizer -K | ./transpozer`: a program computing that matrix-vector product
-- `./sparsifier -c 4 data/Lr.sms`: a factorization of that matrix into a sparsest one (also with many 1s) by a alternate change of basis(CoB) 4x4 matrix
+- `./sparsifier -c 4 data/Lr.sms`: a factorization of that matrix into a sparsest one (also with many 1s) by an alternate change of basis(CoB) 4x4 matrix
 - `./inplacer data/Lw.sms data/Rw.sms data/Pw.sms`: in-place version of Strassen-Winograd's fast 2x2 accumulating multiplication
 - `./inplacer data/Lk.sms data/Rk.sms data/Pk.sms e`: in-place version of Karatsuba's fast accumulating polynomial multiplication
