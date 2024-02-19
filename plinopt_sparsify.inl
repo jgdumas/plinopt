@@ -260,9 +260,16 @@ Matrix& Sparsifier(Matrix& TCoB, Matrix& TM, const size_t maxnumcoeff) {
          }
     }
 
+    for(size_t i=2; Coeffs.size() < maxnumcoeff; ++i) {
+        augment(Coeffs, Givaro::Integer(i), QQ);
+    }
         // ========================================
         // reduce to at most maxnumcoeff
     if (Coeffs.size()>maxnumcoeff) Coeffs.resize(maxnumcoeff);
+
+#ifdef VERBATIM_PARSING
+    std::clog << "# linear combination coefficients: " << Coeffs << std::endl;
+#endif
 
         // ========================================
         // Try first 4 rows of TCoB, one at a time
