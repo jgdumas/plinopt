@@ -16,7 +16,8 @@
 // ============================================================
 // Sparsifying and reducing coefficient diversity of a matrix
 int Selector(std::istream& input, const FileFormat& matformat,
-             const size_t blocksize, const size_t maxnumcoeff) {
+             const size_t blocksize, const size_t maxnumcoeff,
+             const bool initialElimination) {
 
         // ============================================================
         // Read Matrix of Linear Transformation
@@ -35,7 +36,7 @@ int Selector(std::istream& input, const FileFormat& matformat,
     Matrix CoB(QQ,M.coldim(), M.coldim());
     Matrix Res(QQ,M.rowdim(), M.coldim());
     blockSparsifier(elapsed, CoB, Res, M, blocksize,
-                    QQ, matformat, maxnumcoeff);
+                    QQ, matformat, maxnumcoeff, initialElimination);
 
         // ============================================================
         // Print resulting matrices
@@ -62,14 +63,17 @@ int Selector(std::istream& input, const FileFormat& matformat,
 
 // ============================================================
 // Main: select between file / std::cin
-//       -c # : sets the max number of coefficients per iteration
-//       -f
+//       -c #: sets the max number of coefficients per iteration
+//       -M/-P/-S: selects the ouput format
+//       -b #: stes the blocking dimension
+//       -U [1|0]: uses an initial LU factorization | or not
 int main(int argc, char** argv) {
 
     FileFormat matformat = FileFormat::Pretty;
     std::string filename;
     size_t maxnumcoeff(COEFFICIENT_SEARCH); // default max coefficients
     size_t blocksize(4u);                   // default column block size
+    bool initialElimination(true);
 
     for (int i = 1; i<argc; ++i) {
         std::string args(argv[i]);
@@ -77,19 +81,22 @@ int main(int argc, char** argv) {
             std::clog << "Usage: " << argv[0] << " [-h|-M|-P|-S|-c #] [stdin|matrixfile.sms]\n";
             exit(-1);
         }
-        else if (args == "-M") { matformat = FileFormat(1); }
-        else if (args == "-P") { matformat = FileFormat(8); }
-        else if (args == "-S") { matformat = FileFormat(5); }
+        else if (args == "-M") { matformat = FileFormat(1); } // Maple
+        else if (args == "-S") { matformat = FileFormat(5); } // SMS
+        else if (args == "-P") { matformat = FileFormat(8); } // Pretty
         else if (args == "-c") { maxnumcoeff = atoi(argv[++i]); }
         else if (args == "-b") { blocksize = atoi(argv[++i]); }
+        else if (args == "-U") { initialElimination = atoi(argv[++i]); }
         else { filename = args; }
     }
 
     if (filename == "") {
-        return Selector(std::cin, matformat, blocksize, maxnumcoeff);
+        return Selector(std::cin, matformat,
+                        blocksize, maxnumcoeff, initialElimination);
     } else {
         std::ifstream inputmatrix(filename);
-        return Selector(inputmatrix, matformat, blocksize, maxnumcoeff);
+        return Selector(inputmatrix, matformat,
+                        blocksize, maxnumcoeff, initialElimination);
     }
 
     return -1;

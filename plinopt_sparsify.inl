@@ -463,7 +463,7 @@ inline bool sparseLU(Matrix& QL, Matrix& A, const size_t sparsity) {
 
 
 // ============================================================
-// QLUP Gaussian elimination of A
+// QLUP Gaussian elimination of A with pre-application of TC
 //    A  <--  UP = (QL)^{-1} . A
 //    TC <--  (QL)^{-1} . TC
 // Updates TC and A only if resulting A is sparser
@@ -555,7 +555,8 @@ Givaro::Timer& sparseAlternate(
 // by sparse QLUP elimination, followed by block sparsification
 int blockSparsifier(Givaro::Timer& elapsed, Matrix& CoB, Matrix& Res,
                     const Matrix& M, const size_t blocksize, const QRat& QQ,
-                    const FileFormat& matformat, const size_t maxnumcoeff) {
+                    const FileFormat& matformat, const size_t maxnumcoeff,
+                    const bool initialElimination) {
 
         // ============================================================
         // Sparsify matrix as a whole
@@ -565,18 +566,20 @@ int blockSparsifier(Givaro::Timer& elapsed, Matrix& CoB, Matrix& Res,
         Givaro::Timer chrono; chrono.start();
 
         const size_t m(M.rowdim()), n(M.coldim());
-        Matrix U(QQ,n,m); Transpose(U, M);
+        Matrix U(QQ,n,m), L(QQ,n,n);
+        bool reduced(initialElimination);
 
-        // ============================================================
-        // Initialize L to identity
-        Matrix L(QQ,n,n);
-        for(size_t i=0; i<n; ++i) L.setEntry(i,i,QQ.one);
+        if (initialElimination) {
+            Transpose(U, M);
+                // ============================================================
+                // Initialize L to identity
+            for(size_t i=0; i<n; ++i) L.setEntry(i,i,QQ.one);
+            reduced = sparseLU(L, U, density(U));
 
-        bool reduced = sparseLU(L, U, density(U));
-
-        size_t sl,su;
-        densityProfile(std::clog << "# IGaussL profile: ", sl, L) << std::endl;
-        densityProfile(std::clog << "# IGaussU profile: ", su, U) << std::endl;
+            size_t sl,su;
+            densityProfile(std::clog << "# IGaussL profile: ", sl, L) << std::endl;
+            densityProfile(std::clog << "# IGaussU profile: ", su, U) << std::endl;
+        }
 
         Matrix TU(QQ,m,n);
         const Matrix& A( reduced? Transpose(TU,U) : M);
@@ -606,6 +609,11 @@ int blockSparsifier(Givaro::Timer& elapsed, Matrix& CoB, Matrix& Res,
         augmentedMatrix(Res, vR, QQ);
 
         if (reduced) {
+//             Matrix TIL(QQ,n,n);
+//             inverseTranspose(TIL, L);
+//             Transpose(L, TIL);
+
+
             LinBox::MatrixDomain<QRat> BMD(QQ);
             std::vector<Matrix> vL;
             std::vector<DenseMatrix> vB;

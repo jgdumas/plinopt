@@ -60,7 +60,8 @@ std::ostream& latex_print(std::ostream& out, const Matrix& A) {
 // ============================================================
 // Pretty print SMS matrix, number of non-zero & Frobenius norm
 // ============================================================
-int PrettyPrint(std::istream& input, const FileFormat& matformat)
+std::ostream& PrettyPrint(std::ostream& out, std::istream& input,
+                const FileFormat& matformat)
 {
     Givaro::QField<Givaro::Rational> QQ;
     LinBox::MatrixStream<Givaro::QField<Givaro::Rational>> ms( QQ, input );
@@ -85,7 +86,7 @@ int PrettyPrint(std::istream& input, const FileFormat& matformat)
         // ====================================================
         // Special latex for rationals or one of LinBox formats
     if (matformat == FileFormat::LaTeX) {
-        latex_print(std::cout, A) << std::endl;
+        latex_print(out, A) << std::endl;
     } else {
 
         if ( (matformat == FileFormat::Plain) ||
@@ -94,15 +95,15 @@ int PrettyPrint(std::istream& input, const FileFormat& matformat)
              (matformat == FileFormat::linalg)  ) {
             DenseMatrix B(QQ,A.rowdim(),A.coldim()); matrixCopy(B,A,QQ);
             if (matformat == FileFormat(6))
-                std::cout << B << std::endl;
+                out << B << std::endl;
             else
-                B.write(std::cout, matformat);
+                B.write(out, matformat);
         } else {
-            A.write(std::cout, matformat);
+            A.write(out, matformat);
         }
     }
 
-    return 0;
+    return out;
 }
 // ============================================================
 
@@ -134,12 +135,31 @@ int main(int argc, char ** argv) {
             if (args[1] == 'h') {
                 std::clog << "Usage: " << argv[0] << " [stdin| ([-#] matrixfile.sms)*]\n";
                 exit(-1);
-            } else {
-                matformats.push_back(FileFormat(-atoi(args.c_str())));
             }
-        } else {
-            filenames.push_back(args);
+                // Maple
+            else if (args[1] == 'M') { matformats.push_back(FileFormat(1)); }
+                // HTML
+            else if (args[1] == 'H') { matformats.push_back(FileFormat(2)); }
+                // TeX
+            else if (args[1] == 'T') { matformats.push_back(FileFormat(3)); }
+                // SMS
+            else if (args[1] == 'S') { matformats.push_back(FileFormat(5)); }
+                // Dense
+            else if (args[1] == 'D') { matformats.push_back(FileFormat(6)); }
+                // Matlab
+            else if (args[1] == 'B') { matformats.push_back(FileFormat(7)); }
+                // Pretty
+            else if (args[1] == 'P') { matformats.push_back(FileFormat(8)); }
+                // OneBased
+            else if (args[1] == 'O') { matformats.push_back(FileFormat(10)); }
+                // MatrixMarket
+            else if (args[1] == 'X') { matformats.push_back(FileFormat(11)); }
+                // Linalg
+            else if (args[1] == 'L') { matformats.push_back(FileFormat(12)); }
+                // Directly by number
+            else { matformats.push_back(FileFormat(-atoi(args.c_str()))); }
         }
+        else { filenames.push_back(args); }
     }
 
         // Pretty output by default
@@ -149,13 +169,13 @@ int main(int argc, char ** argv) {
     if (filenames.size() > 0) {
         for(size_t i(0); i<filenames.size(); ++i) {
             std::ifstream input (filenames[i]);
-            PrettyPrint(input,
+            PrettyPrint(std::cout, input,
                         i<matformats.size() ?
                         matformats[i] :
-                        matformats.back());
+                        matformats.back()) << std::flush;
         }
     } else {
-        return PrettyPrint(std::cin, matformats.front());
+        PrettyPrint(std::cout, std::cin, matformats.front()) << std::flush;
     }
 
     return 0;
