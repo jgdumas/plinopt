@@ -19,6 +19,11 @@
 
 #include <iostream>
 
+#ifndef DEBUG
+// otherwise DenseMatrix.resize issues a warning when resizing a matrix
+#  define NDEBUG
+#endif
+
 #include <givaro/givrational.h>
 #include <linbox/matrix/sparse-matrix.h>
 #include <linbox/util/matrix-stream.h>
@@ -38,7 +43,8 @@ typedef std::vector<Givaro::Rational> QArray;
 typedef LinBox::DenseVector<QRat> QVector;
 
 
-Matrix& Transpose(Matrix& T, const Matrix& A);
+template<typename _Mat1, typename _Mat2>
+inline _Mat1& Transpose(_Mat1& T, const _Mat2& A);
 
 Matrix& NegTranspose(Matrix& T, const Matrix& A);
 

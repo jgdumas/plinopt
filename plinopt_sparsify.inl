@@ -561,8 +561,6 @@ Givaro::Timer& sparseAlternate(
     return chrono;
 }
 
-
-
 // ============================================================
 // Sparsifying and reducing coefficient diversity of a matrix
 // by sparse QLUP elimination, followed by block sparsification
@@ -622,11 +620,6 @@ int blockSparsifier(Givaro::Timer& elapsed, Matrix& CoB, Matrix& Res,
         augmentedMatrix(Res, vR, QQ);
 
         if (reduced) {
-//             Matrix TIL(QQ,n,n);
-//             inverseTranspose(TIL, L);
-//             Transpose(L, TIL);
-
-
             LinBox::MatrixDomain<QRat> BMD(QQ);
             std::vector<Matrix> vL;
             std::vector<DenseMatrix> vB;
@@ -647,7 +640,6 @@ int blockSparsifier(Givaro::Timer& elapsed, Matrix& CoB, Matrix& Res,
 
     return 0;
 }
-
 
 
 // ============================================================
@@ -672,11 +664,13 @@ std::ostream& consistency(std::ostream& out, const _Mat& M,
     else{
         std::cerr << "# \033[1;31m****** ERROR inconsistency ******\033[0m"
                   << std::endl;
-        M.write(out,FileFormat::Maple) << std::endl;
+        DenseMatrix dM(QQ, M.rowdim(), M.coldim()); matrixCopy(dM,M,QQ);
+        dM.write(out,FileFormat::linalg) << std::endl;
         out << " != " << std::endl;
-        R.write(out,FileFormat::Maple) << std::endl;
+        DenseMatrix dR(QQ, R.rowdim(), R.coldim()); matrixCopy(dR,R,QQ);
+        dR.write(out,FileFormat::linalg) << std::endl;
         out << " * " << std::endl;
-        C.write(out,FileFormat::Maple) << std::endl;
+        C.write(out,FileFormat::linalg) << std::endl;
         out << std::string(30,'#') << std::endl;
     }
 

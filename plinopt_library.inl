@@ -9,7 +9,8 @@
 
 #include "plinopt_library.h"
 
-inline Matrix& Transpose(Matrix& T, const Matrix& A) {
+template<typename _Mat1, typename _Mat2>
+inline _Mat1& Transpose(_Mat1& T, const _Mat2& A) {
     T.resize(0,0);
     T.resize(A.coldim(), A.rowdim());
     for(auto it = A.IndexedBegin(); it != A.IndexedEnd(); ++it)
@@ -56,7 +57,8 @@ inline Matrix& dense2sparse(Matrix& A, const DenseMatrix& M, const QRat& QQ) {
 }
 
 	// copy sparse matrix M into dense matrix A
-inline DenseMatrix& sparse2dense(DenseMatrix& A, const Matrix& M) {
+template<typename _Mat>
+inline DenseMatrix& sparse2dense(DenseMatrix& A, const _Mat& M) {
     A.resize(M.rowdim(), M.coldim());
     for(auto indices = M.IndexedBegin(); indices != M.IndexedEnd(); ++indices) {
         A.setEntry(indices.rowIndex(), indices.colIndex(), indices.value());
@@ -84,5 +86,11 @@ inline Matrix& matrixCopy(Matrix& C, const DenseMatrix& A, const QRat& QQ) {
 
 template<>
 inline DenseMatrix& matrixCopy(DenseMatrix& C, const Matrix& A, const QRat& QQ) {
+    return sparse2dense(C,A);
+}
+
+
+template<>
+inline DenseMatrix& matrixCopy(DenseMatrix& C, const DenseMatrix& A, const QRat& QQ) {
     return sparse2dense(C,A);
 }
