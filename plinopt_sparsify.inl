@@ -641,6 +641,90 @@ int blockSparsifier(Givaro::Timer& elapsed, Matrix& CoB, Matrix& Res,
     return 0;
 }
 
+// ============================================================
+// Decomposing the matrix into:
+//   (Res=[identity,lower part])*(CoB=[upperpart])
+//   with prescribed inner dimension
+int backSolver(Matrix& CoB, Matrix& Res, const Matrix& iM, const QRat& QQ) {
+
+    Matrix M(QQ, iM.rowdim(), iM.coldim()); matrixCopy(M,iM,QQ);
+    const size_t r(M.rowdim()), n(M.coldim()), k(CoB.rowdim());
+    const size_t s(r-k);
+    assert( Res.rowdim() == r );  // Res is (r x k)
+    assert( Res.coldim() == k );
+    assert( CoB.coldim() == n );  // CoB is (k x n)
+
+    LinBox::Permutation<QRat> T(QQ,r);
+
+        // Select n independent rows
+    Matrix A2(QQ,s,n);
+    size_t t(0);
+    for(size_t i=0; i<n; ++i) {
+        for(size_t j=i+t;j<r;++j) {
+            setRow(CoB, i, M, j, QQ);
+            size_t r;
+            if (rank(r,CoB) == (i+1)) {
+                if (i != j) {
+                    T.permute(i,j);
+                    std::swap(M[i],M[j]);
+                }
+                break;
+            }
+        }
+    }
+        // Add up to k rows
+    for(size_t j=n; j<k; ++j) {
+        setRow(CoB,j, M, j, QQ);
+    }
+        // Other rows to be solved for
+    for(size_t j=k+t; j<r; ++j)
+        setRow(A2,t++, M, j, QQ);
+
+#ifdef VERBATIM_PARSING
+    T.write(std::clog << "# Initial permutation: ") << std::endl;
+    CoB.write(std::clog << "# Full row rank: ", FileFormat::Pretty) << std::endl;
+    A2.write(std::clog << "# Free profile : ", FileFormat::Pretty) << std::endl;
+#endif
+
+    Matrix U(QQ,n,k); Transpose(U, CoB); // U is (n x k)
+    Matrix B(QQ,n,s); Transpose(B, A2);  // B is (n x s)
+
+    Givaro::Rational Det;
+    size_t Rank;
+    Matrix L(QQ, n, n);
+    LinBox::Permutation<QRat> P(QQ,n);
+    LinBox::Permutation<QRat> Q(QQ,k);
+
+        // Gaussian elimination of the CoB upper part
+    static LinBox::GaussDomain<QRat> GD(QQ);
+    GD.QLUPin(Rank, Det, P, L, U, Q, n, k );
+
+
+#ifdef VERBATIM_PARSING
+    P.write(std::clog << "CoB P: ") << std::endl;
+    L.write(std::clog << "CoB L: ", FileFormat::Pretty) << std::endl;
+    U.write(std::clog << "CoB U: ", FileFormat::Pretty) << std::endl;
+    Q.write(std::clog << "CoB Q: ") << std::endl;
+#endif
+
+        // Upper part is identity
+    for(size_t i=0; i<k; ++i) Res.setEntry(i,i,QQ.one);
+
+        // Solving for each vector of the lower part
+    DenseMatrix TY(QQ,s,n); Transpose(TY,B);
+    QVector x(QQ,k), w(QQ,k), bi(QQ,n);
+    for(size_t i=0; i<s; ++i) {
+        for(size_t j=0; j<n; ++j)
+            bi[j] = TY[i][j];
+        GD.solve(x, w, r, P, L, U, Q, bi);
+        setRow(Res, k+i, x, QQ);
+    }
+
+    DenseMatrix R(QQ, r, k);
+    T.solveRight(R, Res);
+    dense2sparse(Res, R, QQ);
+    return 0;
+}
 
 // ============================================================
 // Consistency check of M == R.C

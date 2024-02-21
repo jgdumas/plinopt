@@ -15,11 +15,6 @@ inline bool operator==(const triple& u, const triple&v) {
              (std::get<2>(u) == std::get<2>(v)) );
 }
 
-
-std::ostream& operator<<(std::ostream& out, const std::pair<long unsigned int, Givaro::Rational>& p) {
-    return out << '(' << p.first << '|' << p.second << ')';
-}
-
 std::ostream& operator<<(std::ostream& out, const triple& t) {
     return out << '<' << std::get<0>(t) << ':' << std::get<1>(t) << '|' << std::get<2>(t) << '>';
 }
@@ -121,7 +116,8 @@ bool OneSub(std::ostream& sout, Matrix& M, VTriple& multiples, size_t& nbmul,
                     const size_t newscore(score(AllPairs,Density,element));
                     if (newscore == maxscore) {
                             // Tie breaking by multiplier
-                        if (isOne(std::get<2>(element)) ||isMOne(std::get<2>(element)) ) {
+                        if (Givaro::isOne(std::get<2>(element)) ||
+                            Givaro::isMOne(std::get<2>(element)) ) {
                             cse = element;
                         }
                     }
@@ -151,7 +147,7 @@ bool OneSub(std::ostream& sout, Matrix& M, VTriple& multiples, size_t& nbmul,
             for(size_t i=0; i<AllPairs.size(); ++i) {
                 const auto& rows(AllPairs[i]);
                 if (std::find(rows.begin(), rows.end(), cse) != rows.end()) {
-                    Rational coeff;
+                    Givaro::Rational coeff;
                     for(auto iter=M[i].begin(); iter!= M[i].end(); ++iter) {
                         if (iter->first==std::get<0>(cse)) {
                             coeff = iter->second;
@@ -174,7 +170,7 @@ bool OneSub(std::ostream& sout, Matrix& M, VTriple& multiples, size_t& nbmul,
                 //    else put it in a temporary for future reuse
             auto asgs(abs(std::get<2>(cse)));
             size_t rindex(m);
-            if (!isOne(asgs)) {
+            if (!Givaro::isOne(asgs)) {
                 for(const auto& iter: multiples) {
                     if ((std::get<1>(iter) == std::get<1>(cse)) &&
                         (std::get<2>(iter) == asgs)) {
@@ -186,7 +182,7 @@ bool OneSub(std::ostream& sout, Matrix& M, VTriple& multiples, size_t& nbmul,
                     ++nbmul;
                     sout << rav << m << ":="
                          << tev << std::get<1>(cse);
-                    if (isOne(asgs.nume()))
+                    if (Givaro::isOne(asgs.nume()))
                         sout << '/' << asgs.deno();
                     else
                         sout << '*' << asgs;
@@ -200,7 +196,7 @@ bool OneSub(std::ostream& sout, Matrix& M, VTriple& multiples, size_t& nbmul,
             sout << tev << m << ":="
                  << tev << std::get<0>(cse)
                  << (sign(std::get<2>(cse)) >= 0?'+':'-');
-            if (isOne(asgs))
+            if (Givaro::isOne(asgs))
                 sout << tev << std::get<1>(cse);
             else
                 sout << rav << rindex;
@@ -221,7 +217,7 @@ void FactorOutColumns(std::ostream& sout, Matrix& T, VTriple& multiples, size_t&
                       const char tev, const char rav,
                       const size_t j, const Iter& start, const Iter& end) {
     if (start == end) return;
-    std::map<Rational, size_t> MapVals;
+    std::map<Givaro::Rational, size_t> MapVals;
     for(Iter iter = start; iter != end; ++iter) {
         MapVals[abs(iter->second)]++;
     }
@@ -233,7 +229,7 @@ void FactorOutColumns(std::ostream& sout, Matrix& T, VTriple& multiples, size_t&
         size_t m(T.rowdim());
 
             // Found repeated coefficient
-        if ((frequency>1) && (!isOne(element)) ) {
+        if ((frequency>1) && (!Givaro::isOne(element)) ) {
             size_t rindex(m);
                 // If coefficient was already applied
                 //    then reuse the multiplication
@@ -249,7 +245,7 @@ void FactorOutColumns(std::ostream& sout, Matrix& T, VTriple& multiples, size_t&
                 ++nbmul;
                 sout << rav << m << ":="
                           << tev << j;
-                if (isOne(element.nume()))
+                if (Givaro::isOne(element.nume()))
                     sout << '/' << element.deno();
                 else
                     sout << '*' << element;
@@ -284,7 +280,7 @@ template<typename Iter>
 void FactorOutRows(std::ostream& sout, Matrix& M, size_t& nbadd, const char tev,
                    const size_t i, const Iter& start, const Iter& end) {
     if (start == end) return;
-    std::map<Rational, size_t> MapVals;
+    std::map<Givaro::Rational, size_t> MapVals;
     for(Iter iter = start; iter != end; ++iter) {
         MapVals[abs(iter->second)]++;
     }
@@ -295,7 +291,7 @@ void FactorOutRows(std::ostream& sout, Matrix& M, size_t& nbadd, const char tev,
     size_t m(M.coldim());
     for (const auto& [element, frequency] : MapVals) {
             // Found repeated coefficient
-        if ((frequency>1) && (!isOne(element)) ) {
+        if ((frequency>1) && (!Givaro::isOne(element)) ) {
             sout << tev << m << ":=";
             ++m;
                 // Add a column with coefficient multiplying a new sum
@@ -397,9 +393,9 @@ std::pair<size_t,size_t> Optimizer(std::ostream& sout, Matrix& M,
                 sout << rav << rindex;
             } else {
                 sout << tev << row.begin()->first;
-                if (!isOne(arbs)) {
+                if (!Givaro::isOne(arbs)) {
                     ++nbmul;
-                    if (isOne(arbs.nume()))
+                    if (Givaro::isOne(arbs.nume()))
                         sout << '/' << arbs.deno();
                     else
                         sout << '*' << arbs;
@@ -426,9 +422,9 @@ std::pair<size_t,size_t> Optimizer(std::ostream& sout, Matrix& M,
                     sout << rav << rindex;
                 } else {
                     sout << tev << iter->first;
-                    if (!isOne(ais)) {
+                    if (!Givaro::isOne(ais)) {
                         ++nbmul;
-                        if (isOne(ais.nume()))
+                        if (Givaro::isOne(ais.nume()))
                             sout << '/' << ais.deno();
                         else
                             sout << '*' << ais;
@@ -531,7 +527,7 @@ std::pair<size_t,size_t> nullspacedecomp(std::ostream& sout, Matrix& x, Matrix& 
             A.field().negin(*u2it);
 
             // Compute the basis vector by vector
-        typedef LinBox::Sparse_Vector< Rational > SparseVect;
+        typedef LinBox::Sparse_Vector< Givaro::Rational > SparseVect;
         for(size_t i=0; i<nullity; ++i) {
             SparseVect W1Ti;
                 // Solve for upper part of basis

@@ -35,21 +35,14 @@
 #ifndef _PLINOPT_LIBRARY_OPTIMIZE_H_
 #define _PLINOPT_LIBRARY_OPTIMIZE_H_
 
-
-typedef std::tuple<size_t, size_t, Rational> triple;
+typedef std::tuple<size_t, size_t, Givaro::Rational> triple;
 typedef std::vector<triple> VTriple;
 typedef std::map<triple,size_t> STriple;
 
 bool operator==(const triple& u, const triple&v);
 
-
-std::ostream& operator<<(std::ostream& out, const std::pair<long unsigned int, Givaro::Rational>& p);
-
 std::ostream& operator<<(std::ostream& out, const triple& t);
-
-
 std::ostream& operator<<(std::ostream& out, const VTriple& v);
-
 
 template<typename T1, typename T2>
 std::ostream& operator<<(std::ostream& out, const std::map<T1,T2>& v);

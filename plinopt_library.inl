@@ -27,6 +27,17 @@ inline Matrix& NegTranspose(Matrix& T, const Matrix& A) {
     return T;
 }
 
+
+	// Replace row i of A, by row j of B
+inline Matrix& setRow(Matrix& A, size_t i, const Matrix& B, size_t j,
+                      const QRat& QQ) {
+    A[i].resize(0);
+    for(const auto& iter: B[j]) {
+        if (! QQ.isZero(iter.second)) A.setEntry(i,iter.first,iter.second);
+    }
+    return A;
+}
+
 	// Replace row i of A, by v
 template<typename Vector>
 inline Matrix& setRow(Matrix& A, size_t i, const Vector& v, const QRat& QQ) {

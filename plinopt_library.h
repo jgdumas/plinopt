@@ -28,7 +28,6 @@
 #include <linbox/matrix/sparse-matrix.h>
 #include <linbox/util/matrix-stream.h>
 
-using Givaro::Rational;
 using LinBox::Tag::FileFormat;
 
 typedef Givaro::QField<Givaro::Rational> QRat;
@@ -43,16 +42,25 @@ typedef std::vector<Givaro::Rational> QArray;
 typedef LinBox::DenseVector<QRat> QVector;
 
 
+
+	// Copy the transposed  matrix
 template<typename _Mat1, typename _Mat2>
 inline _Mat1& Transpose(_Mat1& T, const _Mat2& A);
 
+	// Copy the negation of the transposed  matrix
 Matrix& NegTranspose(Matrix& T, const Matrix& A);
 
+	// Copy (and convert) a matrix
 template<typename _Mat1, typename _Mat2>
 _Mat1& matrixCopy(_Mat1&, const _Mat2&, const QRat&);
 
+	// Replace row i of A, by row j of B
+Matrix& setRow(Matrix& A, size_t i, const Matrix& B, size_t j, const QRat&);
+
+	// Replace row i of A, by v
 template<typename _Mat, typename Vector>
 _Mat& setRow(_Mat& A, size_t i, const Vector& v, const QRat& QQ);
+
 
 #include "plinopt_library.inl"
 #endif
