@@ -83,6 +83,7 @@ int Selector(std::istream& input, const size_t randomloops,
         // ============================================================
         // First try: optimize the whole matrix
     if (tryDirect) {
+#pragma omp parallel for shared(M,T,ssout,nbops)
         for(size_t i=0; i<randomloops; ++i) {
             Matrix lM(QQ,M.rowdim(),M.coldim()); matrixCopy(lM,M,QQ);
             Matrix lT(QQ,T.rowdim(),T.coldim()); matrixCopy(lT,T,QQ);
@@ -107,6 +108,7 @@ int Selector(std::istream& input, const size_t randomloops,
         // ============================================================
         // Second try: separate independent and dependent rows
     if (tryKernel) {
+#pragma omp parallel for shared(T,ssout,nbops)
         for(size_t i=0; i<randomloops; ++i) {
             Matrix lT(QQ,T.rowdim(),T.coldim()); matrixCopy(lT,T,QQ);
             std::ostringstream lssout;
@@ -148,19 +150,12 @@ int Selector(std::istream& input, const size_t randomloops,
     return 0;
 }
 
-#ifdef RANDOM_TIES
-#  define DORANDOMSEARCH true
-#else
-#  define DORANDOMSEARCH false
-#endif
-
-
 // ============================================================
 // Main: select between file / std::cin
 // -D/-K options seect direct/kernel methods only (default is both)
 // -P/-M option choose the printing format
 // -O # search for reduced number of additions, then multiplications
-//      i.e. min of random # tries (requires RANDOM_TIES)
+//      i.e. min of random # tries (requires definition of RANDOM_TIES)
 int main(int argc, char** argv) {
 
         // ============================================================
@@ -169,7 +164,7 @@ int main(int argc, char** argv) {
         printPretty(false),
         directOnly(false),
         kernelOnly(false);
-    size_t randomloops(DEFAULT_RANDOM_LOOPS);
+    size_t randomloops(DORANDOMSEARCH?DEFAULT_RANDOM_LOOPS:1);
 
     std::string filename;
 
@@ -186,8 +181,8 @@ int main(int argc, char** argv) {
             randomloops = atoi(argv[++i]);
             if ( (randomloops>1) && (!DORANDOMSEARCH) ) {
                 randomloops = 1;
-                std::cerr << "# WARNING: RANDOM_TIES not defined,"
-                          << " random loops disabled." << std::endl;
+                std::cerr << "#  \033[1;36mWARNING: RANDOM_TIES not defined,"
+                          << " random loops disabled\033[0m." << std::endl;
             }
         }
         else { filename = args; }

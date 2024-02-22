@@ -22,10 +22,7 @@
 //     by default via a score
 //     otherwise define the following for random choice
 //#define RANDOM_TIES
-//     with the following for the default random loops
-#ifndef DEFAULT_RANDOM_LOOPS
-#  define DEFAULT_RANDOM_LOOPS 100u
-#endif
+//     with DEFAULT_RANDOM_LOOPS for the default random loops
 // ============================================================
 
 

@@ -24,6 +24,16 @@
 #  define NDEBUG
 #endif
 
+#ifdef RANDOM_TIES
+#  define DORANDOMSEARCH true
+#else
+#  define DORANDOMSEARCH false
+#endif
+
+#ifndef DEFAULT_RANDOM_LOOPS
+#  define DEFAULT_RANDOM_LOOPS 100u
+#endif
+
 #include <givaro/givrational.h>
 #include <linbox/matrix/sparse-matrix.h>
 #include <linbox/util/matrix-stream.h>

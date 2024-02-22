@@ -107,8 +107,8 @@ bool OneSub(std::ostream& sout, Matrix& M, VTriple& multiples, size_t& nbmul,
             if (MaxCSE.size()>1) {
                     // Tie breaking heuristics
 #ifdef RANDOM_TIES
-                const unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-                std::shuffle ( MaxCSE.begin(), MaxCSE.end(), std::default_random_engine(seed));
+                std::shuffle ( MaxCSE.begin(), MaxCSE.end(),
+                               std::default_random_engine(Givaro::BaseTimer::seed()) );
                 cse = MaxCSE.front();
 #else
                 size_t maxscore(0);
@@ -461,8 +461,8 @@ std::pair<size_t,size_t> nullspacedecomp(std::ostream& sout, Matrix& x, Matrix& 
         // Randomly swap initial rows of FreePart
     std::vector<size_t> l(Nj);
     std::iota(l.begin(), l.end(), 0); // Q will be this permutation
-    const unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-    std::shuffle ( l.begin(), l.end(), std::default_random_engine(seed));
+    std::shuffle ( l.begin(), l.end(),
+                   std::default_random_engine(Givaro::BaseTimer::seed()));
 
     for(size_t i=1; i<Nj; ++i) {
         if (i != l[i]) {

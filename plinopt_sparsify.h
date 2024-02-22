@@ -84,7 +84,8 @@ int blockSparsifier(Givaro::Timer& elapsed, Matrix& CoB, Matrix& Res,
 // Decomposing the matrix into:
 //   (Res=[identity,lower part])*(CoB=[upperpart])
 //   with prescribed inner dimension
-int backSolver(Matrix& CoB, Matrix& Res, const Matrix& iM, const QRat& QQ);
+std::pair<size_t,size_t> backSolver(Matrix& CoB, Matrix& Res,
+                                    const Matrix& iM, const QRat& QQ);
 
 
 // ============================================================

@@ -645,14 +645,26 @@ int blockSparsifier(Givaro::Timer& elapsed, Matrix& CoB, Matrix& Res,
 // Decomposing the matrix into:
 //   (Res=[identity,lower part])*(CoB=[upperpart])
 //   with prescribed inner dimension
-int backSolver(Matrix& CoB, Matrix& Res, const Matrix& iM, const QRat& QQ) {
+// precondition: upper part is full-rank
+std::pair<size_t,size_t> backSolver(Matrix& CoB, Matrix& Res,
+                                    const Matrix& iM, const QRat& QQ) {
 
-    Matrix M(QQ, iM.rowdim(), iM.coldim()); matrixCopy(M,iM,QQ);
-    const size_t r(M.rowdim()), n(M.coldim()), k(CoB.rowdim());
+    const size_t r(iM.rowdim()), n(iM.coldim()), k(CoB.rowdim());
     const size_t s(r-k);
     assert( Res.rowdim() == r );  // Res is (r x k)
     assert( Res.coldim() == k );
     assert( CoB.coldim() == n );  // CoB is (k x n)
+
+    Matrix M(QQ, iM.rowdim(), iM.coldim());
+#ifdef RANDOM_TIES
+    DenseMatrix dM(QQ, iM.rowdim(), iM.coldim());
+    LinBox::Permutation<QRat> S(QQ,r);
+    S.random(Givaro::BaseTimer::seed());
+    S.applyRight(dM, iM);
+    matrixCopy(M,dM,QQ);
+#else
+    matrixCopy(M,iM,QQ);
+#endif
 
     LinBox::Permutation<QRat> T(QQ,r);
 
@@ -722,8 +734,14 @@ int backSolver(Matrix& CoB, Matrix& Res, const Matrix& iM, const QRat& QQ) {
 
     DenseMatrix R(QQ, r, k);
     T.solveRight(R, Res);
+#ifdef RANDOM_TIES
+    DenseMatrix R2(QQ, r, k);
+    S.solveRight(R2, R);
+    dense2sparse(Res, R2, QQ);
+#else
     dense2sparse(Res, R, QQ);
-    return 0;
+#endif
+    return std::pair<size_t,size_t>{density(Res),density(CoB)};
 }
 
 // ============================================================

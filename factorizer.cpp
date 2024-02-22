@@ -16,7 +16,7 @@
 
 // ============================================================
 int Factorizer(std::istream& input, const FileFormat& matformat,
-             const size_t selectinnerdim) {
+               const size_t selectinnerdim, const size_t randomloops) {
 
         // ============================================================
         // Read Matrix of Linear Transformation
@@ -40,9 +40,26 @@ int Factorizer(std::istream& input, const FileFormat& matformat,
     Givaro::Timer elapsed;
     Matrix CoB(QQ, innerdim, M.coldim());
     Matrix Res(QQ, M.rowdim(), innerdim);
+    std::pair<size_t,size_t> nbops{backSolver(CoB, Res, M, QQ)};
 
     elapsed.start();
-    backSolver(CoB, Res, M, QQ);
+#pragma omp parallel for shared(Res,CoB,M,QQ,nbops,innerdim)
+    for(size_t i=0; i<randomloops; ++i) {
+        Matrix lCoB(QQ, innerdim, M.coldim());
+        Matrix lRes(QQ, M.rowdim(), innerdim);
+        auto bSops{backSolver(lCoB, lRes, M, QQ)};
+#ifdef VERBATIM_PARSING
+        std::clog << "# Res/CoB profile[" << i << "]: " << bSops << std::endl;
+#endif
+        if ( (bSops.first<nbops.first) ||
+             ( (bSops.first==nbops.first)
+               && (bSops.second<nbops.second) ) ) {
+            nbops = bSops;
+            std::clog << "# Found [" << i << "], R/CB profile: " << bSops << std::endl;
+            matrixCopy(CoB, lCoB, QQ);
+            matrixCopy(Res, lRes, QQ);
+        }
+    }
     elapsed.stop();
 
         // ============================================================
@@ -75,11 +92,14 @@ int Factorizer(std::istream& input, const FileFormat& matformat,
 // Main: select between file / std::cin
 //       -k #: sets the inner dimension (default is column dimension)
 //       -M/-P/-S/-L: selects the ouput format
+// -O # search for reduced randomized sparsity
+//      i.e. min of random # tries (requires definition of RANDOM_TIES)
 int main(int argc, char** argv) {
 
     FileFormat matformat = FileFormat::Pretty;
     std::string filename;
     size_t innerdim(0);					// will default to columndimension
+    size_t randomloops(DORANDOMSEARCH?DEFAULT_RANDOM_LOOPS:1);
 
     for (int i = 1; i<argc; ++i) {
         std::string args(argv[i]);
@@ -92,14 +112,22 @@ int main(int argc, char** argv) {
         else if (args == "-P") { matformat = FileFormat(8); } // Pretty
         else if (args == "-L") { matformat = FileFormat(12); }// Linalg
         else if (args == "-k") { innerdim = atoi(argv[++i]); }
+        else if (args == "-O") {
+            randomloops = atoi(argv[++i]);
+            if ( (randomloops>1) && (!DORANDOMSEARCH) ) {
+                randomloops = 1;
+                std::cerr << "#  \033[1;36mWARNING: RANDOM_TIES not defined,"
+                          << " random loops disabled\033[0m." << std::endl;
+            }
+        }
         else { filename = args; }
     }
 
     if (filename == "") {
-        return Factorizer(std::cin, matformat, innerdim);
+        return Factorizer(std::cin, matformat, innerdim, randomloops);
     } else {
         std::ifstream inputmatrix(filename);
-        return Factorizer(inputmatrix, matformat, innerdim);
+        return Factorizer(inputmatrix, matformat, innerdim, randomloops);
     }
 
     return -1;
