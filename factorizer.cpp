@@ -80,7 +80,8 @@ int Factorizer(std::istream& input, const FileFormat& matformat,
         // Final check that we computed a factorization M=Res.CoB
     std::clog << std::string(30,'#') << std::endl;
     consistency(std::clog, M, Res, CoB)
-        << " \033[1;36m"
+        << " \033[1;36m" << Res.rowdim() << 'x' << Res.coldim()
+        << " by " << CoB.rowdim() << 'x' << CoB.coldim() << " with "
         << sr << " non-zeroes (" << sb << " alt.) instead of " << sc
         << "\033[0m:" << ' ' << elapsed << std::endl;
 
