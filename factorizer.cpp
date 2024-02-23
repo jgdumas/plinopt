@@ -13,6 +13,13 @@
 
 #include "plinopt_sparsify.h"
 
+/****************************************************************
+ * Sparse decomposition of matrices
+ * Reference:
+ *   [ Gal Beniamini, Oded Schwartz;
+ *     Faster Matrix Multiplication via Sparse Decomposition.
+ *     SPAA 2019: 11-22]
+ ****************************************************************/
 
 // ============================================================
 int Factorizer(std::istream& input, const FileFormat& matformat,

@@ -9,6 +9,9 @@
  *   [ G. Beniamini, N. Cheng, O. Holtz, E. Karstadt, O. Schwartz;
  *     Sparsifying the Operators of Fast Matrix Multiplication
  *     Algorithms (https://arxiv.org/abs/2008.03759) ]
+ *   [ Gal Beniamini, Oded Schwartz;
+ *     Faster Matrix Multiplication via Sparse Decomposition.
+ *     SPAA 2019: 11-22]
  *   [ J-G. Dumas, C. Pernet, A. Sedoglavic; Feb. 2024
  *     Strassen's algorithm is not optimally accurate
  *     (https://hal.science/hal-04441653) ]
