@@ -88,8 +88,8 @@ int main(int argc, char ** argv) {
 
         // =============================================
         // Compute the matrix product directly
-    const size_t n(std::sqrt(R.coldim()*P.rowdim()/L.coldim()));
-    const size_t m(P.rowdim()/n), k(R.coldim()/n);
+    Tricounter mkn(LRP2MM(L,R,P));
+    const size_t& n(std::get<0>(mkn)), k(std::get<1>(mkn)), m(std::get<2>(mkn));
     LinBox::DenseMatrix<QRat> Ma(QQ,m,k), Mb(QQ,k,n), Mc(QQ,m,n);
 
         // row-major vectorization

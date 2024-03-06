@@ -51,7 +51,7 @@ typedef LinBox::DenseMatrix<QRat> DenseMatrix;
 typedef std::vector<Givaro::Rational> QArray;
 typedef LinBox::DenseVector<QRat> QVector;
 
-
+typedef std::tuple<size_t, size_t, size_t> Tricounter;
 
 	// Copy the transposed  matrix
 template<typename _Mat1, typename _Mat2>
@@ -71,6 +71,12 @@ Matrix& setRow(Matrix& A, size_t i, const Matrix& B, size_t j, const QRat&);
 template<typename _Mat, typename Vector>
 _Mat& setRow(_Mat& A, size_t i, const Vector& v, const QRat& QQ);
 
+    // From HM representation(L,R,P) to represented matrix-multiplication
+template<typename _Mat>
+Tricounter LRP2MM(const _Mat& L, const _Mat& R, const _Mat& P) {
+    const size_t n(std::sqrt(R.coldim()*P.rowdim()/L.coldim()));
+    return Tricounter { n, R.coldim()/n, P.rowdim()/n };
+}
 
 #include "plinopt_library.inl"
 #endif

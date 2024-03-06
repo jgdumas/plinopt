@@ -16,9 +16,6 @@
 #ifndef _PLINOPT_LIBRARY_INPLACE_H_
 #define _PLINOPT_LIBRARY_INPLACE_H_
 
-typedef std::tuple<size_t, size_t, size_t> Tricounter; // 0:ADD, 1:SCA, 2:MUL
-
-
 // ===============================================================
 // In-place program realizing a bilinear function
 Tricounter BiLinearAlgorithm(std::ostream& out,
@@ -63,6 +60,7 @@ void DoubleExpand(Matrix& AA, Matrix& BB, Matrix& TT,
 
 
 // ===============================================================
+
 
 #include "plinopt_inplace.inl"
 
