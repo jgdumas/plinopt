@@ -16,10 +16,19 @@ Matrix::Row::const_iterator nextindex(const size_t preci, const Matrix::Row& L) 
                             [preci](const auto&a) { return a.first == preci; } )
                );
 
-        // Otherwise, prefer One
+        // Otherwise, prefer a variable with coefficient One
     if (nexti == L.end()) {
-        nexti = std::find_if(L.begin(),L.end(),
-                             [](const auto&a) { return isOne(a.second); } );
+        std::vector<Matrix::Row::const_iterator> vnext;
+        for(auto iter=L.begin(); iter!=L.end(); ++iter) {
+            if (isOne(iter->second)) vnext.push_back(iter);
+        }
+        if (vnext.size()>0) {
+#ifdef RANDOM_TIES
+            std::shuffle (vnext.begin(), vnext.end(),
+                          std::default_random_engine(Givaro::BaseTimer::seed()));
+#endif
+            nexti = vnext.front();
+        }
     }
 
 #ifdef VERBATIM_PARSING
@@ -34,9 +43,7 @@ Matrix::Row::const_iterator nextindex(const size_t preci, const Matrix::Row& L) 
 
 std::string rmnl(const std::string& str) {
     std::string s(str);
-//     std::clog << std::endl << "## RMNL1, str: " << str << ", s: " << s  << std::endl << std::endl;
-    s.erase(std::remove(s.begin(), s.end(), '\n'), s.end());
-//     std::clog << std::endl << "## RMNL2, str: " << str << ", s: " << s  << std::endl << std::endl;
+    s.erase(std::remove(s.begin(), s.end(), '\n'), s.cend());
     return s;
 }
 
@@ -78,9 +85,9 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
 #endif
 
     Tricounter opcount; // 0:ADD, 1:SCA, 2:MUL
-    size_t preci(0), precj(0), preck(0);
+    size_t preci(A.coldim()), precj(B.coldim()), preck(T.coldim());
 
-    std::ostringstream saout, sbout;
+    std::ostringstream saout, sbout, scout;
 
 //     std::map<Matrix::Row::const_iterator,std::ostringstream> maaout;
 
@@ -95,8 +102,8 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
         if ( (i == preci) && (l>0) && (aiter->second == A.getEntry(l-1,i)) ) {
             if (! QQ.isOne(aiter->second)) {
 #ifdef VERBATIM_PARSING
-                std::clog << "# scalar div then mul optimized out: "
-                          << 'a' << i << "/*" << aiter->second << std::endl;
+                std::clog << "# Optimized out: scalar div then mul, "
+                          << 'a' << i << " /* " << VALPAR(aiter->second) << std::endl;
 #endif
                 --std::get<1>(opcount);
             }
@@ -114,7 +121,7 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
                      (std::find(A[l-1].begin(), A[l-1].end(), *iter ) != A[l-1].end()) ) {
 #ifdef VERBATIM_PARSING
             std::clog << "# add then sub could be optimized out: "
-                      << 'a' << i << "+-"
+                      << 'a' << i << " +- "
                       << VALPAR(iter->second) << 'a' << iter->first << std::endl;
 #endif
                 }
@@ -130,8 +137,8 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
         if ( (j == precj) && (l>0) && (bjter->second == B.getEntry(l-1,j)) ) {
             if (! QQ.isOne(bjter->second)) {
 #ifdef VERBATIM_PARSING
-                std::clog << "# scalar div then mul optimized out: "
-                          << 'b' << j << "/*" << bjter->second << std::endl;
+                std::clog << "# Optimized out, scalar div then mul: "
+                          << 'b' << j << " /* " << VALPAR(bjter->second) << std::endl;
 #endif
                 --std::get<1>(opcount);
             }
@@ -147,7 +154,7 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
                      (std::find(B[l-1].begin(), B[l-1].end(), *jter ) != B[l-1].end()) ) {
 #ifdef VERBATIM_PARSING
             std::clog << "# add then sub could be optimized out: "
-                      << 'b' << j << "+-"
+                      << 'b' << j << " +- "
                       << VALPAR(jter->second) << 'b' << jter->first << std::endl;
 #endif
                 }
@@ -160,10 +167,30 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
         const size_t k(ckter->first);
 
         if ( (!QQ.isOne(ckter->second)) && (!QQ.isMOne(ckter->second))) {
-            SCA(out, 'c', k, '/', ckter->second, opcount);
+            if ( (k == preck) && (l>0) && (ckter->second == T.getEntry(l-1,k)) ) {
+#ifdef VERBATIM_PARSING
+                std::clog << "# Optimized out, scalar div then mul: "
+                          << 'c' << k << " /* " << VALPAR(ckter->second) << std::endl;
+#endif
+                --std::get<1>(opcount);
+            } else {
+                out << scout.str(); // print previous DIV
+                SCA(out, 'c', k, '/', ckter->second, opcount);
+            }
         }
+        scout.clear(); scout.str(std::string());
+
+
         for(auto kter = T[l].begin(); kter != T[l].end(); ++kter) {
             if (kter != ckter) {
+                if ( (k == preck) && (l>0) &&
+                     (std::find(T[l-1].begin(), T[l-1].end(), *kter ) != T[l-1].end()) ) {
+#ifdef VERBATIM_PARSING
+                    std::clog << "# add then sub could be optimized out: "
+                              << 'c' << kter->first << " +- "
+                              << VALPAR(kter->second) << 'c' << k << std::endl;
+#endif
+                }
                 ADD(out, 'c', kter->first, MONEOP('-',ckter->second),
                     kter->second, k, opcount);
             }
@@ -181,7 +208,7 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
             }
         }
         if ( (!QQ.isOne(ckter->second)) && (!QQ.isMOne(ckter->second))) {
-            SCA(out, 'c', ckter->first, '*', ckter->second, opcount);
+            SCA(scout, 'c', ckter->first, '*', ckter->second, opcount);
         }
 
             /* RESTORE: Right hand side */
@@ -204,6 +231,8 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
 
         preci=i; precj=j; preck=k;
     }
+
+    out << scout.str() << sbout.str() << saout.str();
 
 
 #ifdef INPLACE_CHECKER

@@ -33,10 +33,9 @@ void DoubleExpand(Matrix& AA, Matrix& BB, Matrix& TT,
 // Definition of ADD, SCA, MUL atomic operations
 // Switch (__INPLOP__) between explicit/in-place operator notation
 
+#define VALPAR(v) '(' << v << ')'
 #define SWAPOP(op) (op=='+'?'-':'+')
 #define MONEOP(op,val) (QQ.isMOne(val)?SWAPOP(op):op)
-#define MTWOOP(op,v1,v2) (QQ.isMOne(v1)? (QQ.isMOne(v2)? op : SWAPOP(op) ) : \
-                                         (QQ.isMOne(v2)? SWAPOP(op) : op ) )
 
 // n is operation count, 0:ADD, 1:SCA, 2:MUL
 #ifdef __INPLOP__
@@ -50,7 +49,6 @@ void DoubleExpand(Matrix& AA, Matrix& BB, Matrix& TT,
 
 #else
 #define OPSYNT(o) ' ' << o << ' '
-#define VALPAR(v) '(' << v << ')'
 #define UNITSOP(out,op,val,n) out << OPSYNT(MONEOP(op,val)); ++std::get<0>(n); if ((!QQ.isOne(val)) && (!QQ.isMOne(val))) { out << VALPAR(val) << '*'; ++std::get<1>(n); }
 
 #define SCA(out,c,i,op,val,n) if (! QQ.isOne(val)) { out << c << i << ":=" << c << i << OPSYNT(op) << VALPAR(val) << ';' << std::endl; ++std::get<1>(n); }
