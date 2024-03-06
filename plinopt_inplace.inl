@@ -9,8 +9,28 @@
 
 #include "plinopt_inplace.h"
 
-bool BiLinearAlgorithm(const Matrix& A, const Matrix& B,
-                       const Matrix& T) {
+
+Matrix::Row::const_iterator nextindex(const size_t preci, const Matrix::Row& L) {
+    const auto nexti(std::find_if(L.begin(),L.end(),
+                            [preci](const auto&a) { return a.first == preci; } )
+               );
+
+    if ( (nexti != L.end()) && (nexti != L.begin()) ) {
+        std::clog << "# Prefered " << nexti->first
+                  << " to " << L.begin()->first << std::endl;
+    }
+
+    return (nexti != L.end()) ? nexti : L.begin() ;
+}
+
+
+
+
+
+
+Tricounter BiLinearAlgorithm(std::ostream& out,
+                             const Matrix& A, const Matrix& B,
+                             const Matrix& T) {
 
 
     if ( (A.rowdim() != B.rowdim())
@@ -23,7 +43,7 @@ bool BiLinearAlgorithm(const Matrix& A, const Matrix& B,
 		std::cerr << "B is " << B.rowdim() << " by " << B.coldim() << std::endl;
 		std::cerr << "C is " << T.coldim() << " by " << T.rowdim() << std::endl;
 
-        return false;
+        return Tricounter{0,0,0};
     }
 
 
@@ -32,6 +52,7 @@ bool BiLinearAlgorithm(const Matrix& A, const Matrix& B,
 
 
 #ifdef VERBATIM_PARSING
+    const size_t m(A.rowdim()), n(B.coldim()), s(T.coldim());
     for(size_t h=0; h<m; ++h)
         std::clog << 'a' << h << ":=L[" << (h+1) << "];";
     std::clog << std::endl;
@@ -44,63 +65,80 @@ bool BiLinearAlgorithm(const Matrix& A, const Matrix& B,
     std::clog << std::string(30,'#') << std::endl;
 #endif
 
-
+    Tricounter opcount; // 0:ADD, 1:SCA, 2:MUL
+    size_t preci(0), precj(0), preck(0);
 
     for(size_t l=0; l<t; ++l) {
             /* Left hand side */
-        auto iter(A[l].begin());
-        const size_t i(iter->first);
-        SCA('a',i,'*',iter->second);
-        for(++iter; iter != A[l].end(); ++iter) {
-            ADD('a',i,'+',iter->second, iter->first);
+//         const auto aiter { nextindex(preci, A[l]) };
+        const auto aiter { A[l].begin() };
+        const size_t i(aiter->first); preci=i;
+        SCA(out, 'a',i,'*',aiter->second, opcount);
+        for(auto iter = A[l].begin(); iter != A[l].end(); ++iter) {
+            if (iter != aiter) {
+                ADD(out, 'a',i,'+',iter->second, iter->first, opcount);
+            }
         }
 
             /* Right hand side */
-        auto jter(B[l].begin());
-        const size_t j(jter->first);
-        SCA('b',j,'*',jter->second);
-        for(++jter; jter != B[l].end(); ++jter) {
-            ADD('b',j,'+',jter->second, jter->first);
+//         const auto bjter( nextindex(precj, B[l]) );
+        const auto bjter( B[l].begin() );
+        const size_t j(bjter->first); precj = j;
+        SCA(out, 'b',j,'*',bjter->second, opcount);
+        for(auto jter = B[l].begin(); jter != B[l].end(); ++jter) {
+            if (jter != bjter) {
+                ADD(out, 'b',j,'+',jter->second, jter->first, opcount);
+            }
         }
 
             /* Product */
-        const auto ckter(T[l].begin());
-        const size_t k(ckter->first);
+//         const auto ckter( nextindex(preck, T[l]) );
+        const auto ckter( T[l].begin() );
+        const size_t k(ckter->first); preck = k;
 
-        if ( (!QQ.isOne(ckter->second)) && (!QQ.isMOne(ckter->second)))
-            SCA('c', k, '/', ckter->second);
-        auto kter(T[l].begin());
-        for(++kter; kter != T[l].end(); ++kter) {
-            ADD('c', kter->first, MONEOP('-',kter->second), kter->second, k);
+        if ( (!QQ.isOne(ckter->second)) && (!QQ.isMOne(ckter->second))) {
+            SCA(out, 'c', k, '/', ckter->second, opcount);
+        }
+        for(auto kter = T[l].begin(); kter != T[l].end(); ++kter) {
+            if (kter != ckter) {
+                ADD(out, 'c', kter->first, MONEOP('-',ckter->second),
+                    kter->second, k, opcount);
+            }
         }
 
             /* the recursive (multiplicative) calls */
-        MUL('c',k,MONEOP('+',ckter->second),'a',i,'b',j);
+        MUL(out, 'c',k,MONEOP('+',ckter->second),'a',i,'b',j, opcount);
 
 
             /* RESTORE: Product */
-        kter = T[l].begin();
-        for(++kter; kter != T[l].end(); ++kter) {
-            ADD('c', kter->first, MONEOP('+',kter->second),  kter->second, k);
+        for(auto kter = T[l].begin(); kter != T[l].end(); ++kter) {
+            if (kter != ckter) {
+                ADD(out, 'c', kter->first, MONEOP('+',ckter->second),
+                    kter->second, k, opcount);
+            }
         }
-        if ( (!QQ.isOne(ckter->second)) && (!QQ.isMOne(ckter->second)))
-            SCA('c', ckter->first, '*', ckter->second);
+        if ( (!QQ.isOne(ckter->second)) && (!QQ.isMOne(ckter->second))) {
+            SCA(out, 'c', ckter->first, '*', ckter->second, opcount);
+        }
 
             /* RESTORE: Right hand side */
-        jter = B[l].begin();
-        for(++jter; jter != B[l].end(); ++jter) {
-            ADD('b',j,'-',jter->second, jter->first);
+        for(auto jter = B[l].begin(); jter != B[l].end(); ++jter) {
+            if (jter != bjter) {
+                ADD(out, 'b',j,'-',jter->second, jter->first, opcount);
+            }
         }
-        SCA('b',j,'/',B[l].begin()->second);
+        SCA(out, 'b',j,'/',bjter->second, opcount);
 
             /* RESTORE: Left hand side */
-        iter = A[l].begin();
-        for(++iter; iter != A[l].end(); ++iter) {
-            ADD('a',i,'-',iter->second, iter->first);
+        for(auto iter = A[l].begin(); iter != A[l].end(); ++iter) {
+            if (iter != aiter) {
+                ADD(out, 'a',i,'-',iter->second, iter->first, opcount);
+            }
         }
-        SCA('a',i,'/',A[l].begin()->second);
+        SCA(out, 'a',i,'/',aiter->second, opcount);
 
     }
+
 
 #ifdef VERBATIM_PARSING
     std::clog << std::string(30,'#') << std::endl;
@@ -117,7 +155,7 @@ bool BiLinearAlgorithm(const Matrix& A, const Matrix& B,
 #endif
 
 
-    return true;
+    return opcount;
 }
 
 

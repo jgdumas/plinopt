@@ -74,6 +74,7 @@ int main(int argc, char ** argv) {
     T.write(std::clog << "T:=",FileFormat::Maple) << ';' << std::endl;
     std::clog << std::string(30,'#') << std::endl;
 #endif
+    Tricounter opcount; // 0:ADD, 1:SCA, 2:MUL
 
     if (argc>4) {
             // ================================
@@ -81,12 +82,18 @@ int main(int argc, char ** argv) {
             // to group them 2 by 2
         Matrix AA(QQ), BB(QQ), TT(QQ);
         DoubleExpand(AA,BB,TT, A,B,T);
-        BiLinearAlgorithm(AA, BB, TT);
+        opcount = BiLinearAlgorithm(std::cout, AA, BB, TT);
     } else {
             // ================================
             // Direct computation
-        BiLinearAlgorithm(A, B, T);
+        opcount = BiLinearAlgorithm(std::cout, A, B, T);
     }
+
+    std::clog << std::string(40,'#') << std::endl;
+    std::clog << "# \033[1;32m" << std::get<0>(opcount) << "\tADD" << "\033[0m" << std::endl;
+    std::clog << "# \033[1;32m" << std::get<1>(opcount)  << "\tSCA" << "\033[0m" << std::endl;
+    std::clog << "# \033[1;32m" << std::get<2>(opcount)  << "\tAXPY" << "\033[0m" << std::endl;
+    std::clog << std::string(40,'#') << std::endl;
 
 #ifdef INPLACE_CHECKER
         // Enables checking If algorithm is 2x2 matrix product

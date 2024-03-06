@@ -16,10 +16,14 @@
 #ifndef _PLINOPT_LIBRARY_INPLACE_H_
 #define _PLINOPT_LIBRARY_INPLACE_H_
 
+typedef std::tuple<size_t, size_t, size_t> Tricounter; // 0:ADD, 1:SCA, 2:MUL
+
+
 // ===============================================================
 // In-place program realizing a bilinear function
-bool BiLinearAlgorithm(const Matrix& A, const Matrix& B,
-                       const Matrix& T);
+Tricounter BiLinearAlgorithm(std::ostream& out,
+                             const Matrix& A, const Matrix& B,
+                             const Matrix& T);
 
 
 // ===============================================================
@@ -34,25 +38,27 @@ void DoubleExpand(Matrix& AA, Matrix& BB, Matrix& TT,
 
 #define SWAPOP(op) (op=='+'?'-':'+')
 #define MONEOP(op,val) (QQ.isMOne(val)?SWAPOP(op):op)
+#define MTWOOP(op,v1,v2) (QQ.isMOne(v1)? (QQ.isMOne(v2)? op : SWAPOP(op) ) : \
+                                         (QQ.isMOne(v2)? SWAPOP(op) : op ) )
 
+// n is operation count, 0:ADD, 1:SCA, 2:MUL
 #ifdef __INPLOP__
 #define INOPSYNT(op) ' ' << op << '=' << ' '
-#define UNITSOP(op,val) std::cout << INOPSYNT(MONEOP(op,val)); if ((!QQ.isOne(val)) && (!QQ.isMOne(val))) std::cout << val << '*';
+#define UNITSOP(out,op,val,n) out << INOPSYNT(MONEOP(op,val)); ++std::get<0>(n); if ((!QQ.isOne(val)) && (!QQ.isMOne(val))) { out << val << '*'; ++std::get<1>(n); }
 
 
-#define SCA(c,i,op,val) if (! QQ.isOne(val)) std::cout << c << i << INOPSYNT(op) << val << ';' << std::endl;
-#define ADD(c,i,op,val,h) std::cout << c << i; UNITSOP(op,val); std::cout << c << h << ';' << std::endl;
-#define MUL(c,k,op,a,i,b,j) std::cout << c << k << INOPSYNT(op) << a << i << " . " << b << j << ';' << std::endl;
+#define SCA(out,c,i,op,val,n) if (! QQ.isOne(val)) { out << c << i << INOPSYNT(op) << val << ';' << std::endl; ++std::get<1>(n); }
+#define ADD(out,c,i,op,val,h,n) out << c << i; UNITSOP(out,op,val,n); out << c << h << ';' << std::endl;
+#define MUL(out,c,k,op,a,i,b,j,n) out << c << k << INOPSYNT(op) << a << i << " . " << b << j << ';' << std::endl; ++std::get<2>(n);
 
 #else
 #define OPSYNT(o) ' ' << o << ' '
 #define VALPAR(v) '(' << v << ')'
-#define UNITSOP(op,val) std::cout << OPSYNT(MONEOP(op,val)); if ((!QQ.isOne(val)) && (!QQ.isMOne(val))) std::cout << VALPAR(val) << '*';
+#define UNITSOP(out,op,val,n) out << OPSYNT(MONEOP(op,val)); ++std::get<0>(n); if ((!QQ.isOne(val)) && (!QQ.isMOne(val))) { out << VALPAR(val) << '*'; ++std::get<1>(n); }
 
-
-#define SCA(c,i,op,val) if (! QQ.isOne(val)) std::cout << c << i << ":=" << c << i << OPSYNT(op) << VALPAR(val) << ';' << std::endl;
-#define ADD(c,i,op,val,h) std::cout << c << i << ":=" << c << i; UNITSOP(op,val); std::cout << c << h << ';' << std::endl;
-#define MUL(c,k,op,a,i,b,j) std::cout << c << k << ":=" << c << k << OPSYNT(op) << a << i << " * " << b << j << ';' << std::endl;
+#define SCA(out,c,i,op,val,n) if (! QQ.isOne(val)) { out << c << i << ":=" << c << i << OPSYNT(op) << VALPAR(val) << ';' << std::endl; ++std::get<1>(n); }
+#define ADD(out,c,i,op,val,h,n) out << c << i << ":=" << c << i; UNITSOP(out,op,val,n); out << c << h << ';' << std::endl;
+#define MUL(out,c,k,op,a,i,b,j,n) out << c << k << ":=" << c << k << OPSYNT(op) << a << i << " * " << b << j << ';' << std::endl; ++std::get<2>(n);
 #endif
 
 

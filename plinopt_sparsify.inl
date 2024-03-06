@@ -10,9 +10,9 @@
 #include "plinopt_sparsify.h"
 
 
-auto zeroTest = [](const auto& e) { return isZero(e);};
-auto sizeSup = [](const auto& a, const auto& b) { return a.size() > b.size(); };
-auto secondInf = [](const auto& a, const auto& b) { return a.second < b.second;};
+auto zeroTest { [](const auto& e) { return isZero(e);} };
+auto sizeSup { [](const auto& a, const auto& b) { return a.size() > b.size();} };
+auto secondInf {[](const auto& a, const auto& b) { return a.second < b.second;}};
 
     // Find most frequent non-zero Rational between begin and end
     // element is suppoded to be the second in a pair
