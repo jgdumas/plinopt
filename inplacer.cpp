@@ -96,11 +96,28 @@ int main(int argc, char ** argv) {
     std::clog << std::string(40,'#') << std::endl;
 
 #ifdef INPLACE_CHECKER
-        // Enables checking If algorithm is 2x2 matrix product
-    std::clog << "<H[1]*L[1] + H[3]*L[2] + F[1] - R[1]," << std::endl;
-    std::clog << "H[2]*L[1] + H[4]*L[2] + F[2] - R[2]," << std::endl;
-    std::clog << "H[1]*L[3] + H[3]*L[4] + F[3] - R[3]," << std::endl;
-    std::clog << "H[2]*L[3] + H[4]*L[4] + F[4] - R[4]>;" << std::endl;
+        // =============================================
+        // Checking, when algorithm is a matrix product
+    Tricounter mkn(LRP2MM(A,B,C));
+    const size_t& n(std::get<0>(mkn)), t(std::get<1>(mkn)), m(std::get<2>(mkn));
+    std::clog <<"# code-checking for "
+              << m << 'x' << t << 'x' << n
+              << " Matrix-Multiplication" << std::endl;
+    std::clog << '<';
+    for(size_t i=0; i<m; ++i) {
+        if (i!=0) std::clog << ',' << std::endl;
+        std::clog << '<';
+        for(size_t j=0; j<n; ++j) {
+            if (j!=0) std::clog << '|';
+            for(size_t k=0; k<t; ++k) {
+                if (k!=0) std::clog << '+';
+                std::clog << "L[" << (i*t+k+1) << "]*H[" << (k*n+j+1) << ']';
+            }
+            std::clog << " + F[" << (i*n+j+1) << "] - R[" << (i*n+j+1) << ']';
+        }
+        std::clog << '>';
+    }
+    std::clog << ">;" << std::endl;
 #endif
 
 
