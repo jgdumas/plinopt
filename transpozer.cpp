@@ -363,7 +363,7 @@ int main(int argc, char** argv) {
     if ( argc > 1 ) {
         std::string args(argv[1]);
         if (args == "-h") {
-            std::clog << "Usage: " << argv[0] << "[stdin|matrixfile.sms]\n";
+            std::clog << "Usage: " << argv[0] << " [stdin|matrixfile.sms]\n";
             exit(-1);
         }
 

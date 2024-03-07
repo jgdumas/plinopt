@@ -135,7 +135,7 @@ int main(int argc, char ** argv) {
             if (args[1] == 'h') {
                 std::clog << "Usage: " << argv[0] << " [stdin| ([-#] matrixfile.sms)*]\n";
 
-                std::clog << "  # is the matrix format among:\n";
+                std::clog << "  # is the matrix format among:";
                 std::clog << "  Plain = 0, Maple = 1, HTML = 2, LaTeX = 3, SMS = 5, Dense = 6, Matlab = 7, Pretty = 8, OneBased = 10, MatrixMarket = 11, linalg = 12, etc.\n";
 
                 exit(-1);

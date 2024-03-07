@@ -48,13 +48,18 @@
 
 void usage(int argc, char ** argv) {
     std::clog << "Usage: " << argv[0] << " L.sms R.sms P.sms [-e] [-O #]\n";
+
+    std::clog << "  -e: double expands the intermediate result\n"
+              << "  -O #: randomized search with that many loops\n";
     exit(-1);
 }
 
 
 // ===============================================================
 // argv[1-3]: L.sms R.sms P.sms
-// argv[4]: if present, double expand intermediate result
+//   -e: double expand the intermediate result
+//   -O # randomized search of that many loops
+//        looks for reduced number of additions, then multiplications
 int main(int argc, char ** argv) {
 
     size_t randomloops(DORANDOMSEARCH?DEFAULT_RANDOM_LOOPS:1);
