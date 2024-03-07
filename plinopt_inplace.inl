@@ -16,8 +16,8 @@ Matrix::Row::const_iterator nextindex(const size_t preci, const Matrix::Row& L) 
                             [preci](const auto&a) { return a.first == preci; } )
                );
 
-        // Otherwise, prefer a variable with coefficient One
-    if (nexti == L.end()) {
+        // But prefer a variable with coefficient One
+    if ( (nexti == L.end()) || (! isOne(nexti->second)) ) {
         std::vector<Matrix::Row::const_iterator> vnext;
         for(auto iter=L.begin(); iter!=L.end(); ++iter) {
             if (isOne(iter->second)) vnext.push_back(iter);
