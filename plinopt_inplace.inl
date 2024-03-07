@@ -89,78 +89,96 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
 
     std::ostringstream saout, sbout, scout;
 
-//     std::map<Matrix::Row::const_iterator,std::ostringstream> maaout;
+    std::map<std::pair<size_t,Givaro::Rational>,std::ostringstream> maaout, mabout, macout;
 
     const size_t m(A.rowdim());
     for(size_t l=0; l<m; ++l) {
 // std::clog << "# BEG row: " << l << ", astr: " << rmnl(saout.str()) << ", bstr: " <<  rmnl(sbout.str()) << std::endl;
 
-            /* Left hand side */
+           /* Left hand side */
         const auto aiter { nextindex(preci, A[l]) };
         const size_t i(aiter->first);
-
         if ( (i == preci) && (l>0) && (aiter->second == A.getEntry(l-1,i)) ) {
             if (! QQ.isOne(aiter->second)) {
 #ifdef VERBATIM_PARSING
-                std::clog << "# Optimized out: scalar div then mul, "
+                std::clog << "# Optimized out: scalar (div;mul), "
                           << 'a' << i << " /* " << VALPAR(aiter->second) << std::endl;
 #endif
                 --std::get<1>(opcount);
+                saout.clear(); saout.str(std::string());
             }
-
         } else {
-            out << saout.str(); // print previous DIV
-            SCA(out, 'a',i,'*',aiter->second, opcount);
+            SCA(saout, 'a',i,'*',aiter->second, opcount);
         }
-        saout.clear(); saout.str(std::string());
+        const bool aSCA(saout.tellp() != std::streampos(0));
 
         for(auto iter = A[l].begin(); iter != A[l].end(); ++iter) {
             if (iter != aiter) {
-
-                if ( (i == preci) && (l>0) &&
+                if ( (i == preci) && (l>0) && (! aSCA) &&
                      (std::find(A[l-1].begin(), A[l-1].end(), *iter ) != A[l-1].end()) ) {
 #ifdef VERBATIM_PARSING
-            std::clog << "# add then sub could be optimized out: "
-                      << 'a' << i << " +- "
-                      << VALPAR(iter->second) << 'a' << iter->first << std::endl;
+                    std::clog << "# Optimized out: (add;sub), "
+                              << 'a' << i << " +- "
+                              << VALPAR(iter->second) << 'a' << iter->first << std::endl;
 #endif
+                    maaout.erase(maaout.find(*iter));
+                    --std::get<0>(opcount);
+                } else {
+                    ADD(saout, 'a',i,'+',iter->second, iter->first, opcount);
                 }
-
-                ADD(out, 'a',i,'+',iter->second, iter->first, opcount);
             }
         }
+//         std::clog << "### AFT maaout" << std::endl;
+        for(const auto& [key,value]: maaout) {
+            out << value.str() << std::flush;
+        }
+        maaout.clear();
+//         std::clog << "### AFT saout" << std::endl;
+        out << saout.str() << std::flush;
+        saout.clear(); saout.str(std::string());
 
             /* Right hand side */
         const auto bjter( nextindex(precj, B[l]) );
         const size_t j(bjter->first);
-
         if ( (j == precj) && (l>0) && (bjter->second == B.getEntry(l-1,j)) ) {
             if (! QQ.isOne(bjter->second)) {
 #ifdef VERBATIM_PARSING
-                std::clog << "# Optimized out, scalar div then mul: "
+                std::clog << "# Optimized out, scalar (div;mul): "
                           << 'b' << j << " /* " << VALPAR(bjter->second) << std::endl;
 #endif
                 --std::get<1>(opcount);
+                sbout.clear(); sbout.str(std::string());
             }
         } else {
-            out << sbout.str(); // print previous DIV
-            SCA(out, 'b',j,'*',bjter->second, opcount);
+            SCA(sbout, 'b',j,'*',bjter->second, opcount);
         }
-        sbout.clear(); sbout.str(std::string());
+        const bool bSCA(sbout.tellp() != std::streampos(0));
 
         for(auto jter = B[l].begin(); jter != B[l].end(); ++jter) {
             if (jter != bjter) {
-                if ( (j == precj) && (l>0) &&
+                if ( (j == precj) && (l>0) && (! bSCA) &&
                      (std::find(B[l-1].begin(), B[l-1].end(), *jter ) != B[l-1].end()) ) {
 #ifdef VERBATIM_PARSING
-            std::clog << "# add then sub could be optimized out: "
-                      << 'b' << j << " +- "
-                      << VALPAR(jter->second) << 'b' << jter->first << std::endl;
+                    std::clog << "# Optimized out: (add;sub), "
+                              << 'b' << j << " +- "
+                              << VALPAR(jter->second) << 'b' << jter->first << std::endl;
 #endif
+                    mabout.erase(mabout.find(*jter));
+                    --std::get<0>(opcount);
+                } else {
+                    ADD(sbout, 'b',j,'+',jter->second, jter->first, opcount);
                 }
-                ADD(out, 'b',j,'+',jter->second, jter->first, opcount);
             }
         }
+//         std::clog << "### AFT mabout" << std::endl;
+        for(const auto& [key,value]: mabout) {
+            out << value.str() << std::flush;
+        }
+        mabout.clear();
+//         std::clog << "### AFT sbout" << std::endl;
+        out << sbout.str() << std::flush;
+        sbout.clear(); sbout.str(std::string());
+
 
             /* Product */
         const auto ckter( nextindex(preck, T[l]) );
@@ -168,33 +186,45 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
 
         if ( (!QQ.isOne(ckter->second)) && (!QQ.isMOne(ckter->second))) {
             if ( (k == preck) && (l>0) && (ckter->second == T.getEntry(l-1,k)) ) {
+                if (! QQ.isOne(ckter->second)) {
 #ifdef VERBATIM_PARSING
-                std::clog << "# Optimized out, scalar div then mul: "
-                          << 'c' << k << " /* " << VALPAR(ckter->second) << std::endl;
+                    std::clog << "# Optimized out, scalar (div;mul): "
+                              << 'c' << k << " /* " << VALPAR(ckter->second) << std::endl;
 #endif
-                --std::get<1>(opcount);
+                    --std::get<1>(opcount);
+                    scout.clear(); scout.str(std::string());
+               }
             } else {
-                out << scout.str(); // print previous DIV
-                SCA(out, 'c', k, '/', ckter->second, opcount);
+                SCA(scout, 'c', k, '/', ckter->second, opcount);
             }
         }
-        scout.clear(); scout.str(std::string());
-
+        const bool cSCA(scout.tellp() != std::streampos(0));
 
         for(auto kter = T[l].begin(); kter != T[l].end(); ++kter) {
             if (kter != ckter) {
-                if ( (k == preck) && (l>0) &&
+                if ( (k == preck) && (l>0) && (! cSCA) &&
                      (std::find(T[l-1].begin(), T[l-1].end(), *kter ) != T[l-1].end()) ) {
 #ifdef VERBATIM_PARSING
-                    std::clog << "# add then sub could be optimized out: "
+                    std::clog << "# Optimized out: (add;sub), "
                               << 'c' << kter->first << " +- "
                               << VALPAR(kter->second) << 'c' << k << std::endl;
 #endif
+                    macout.erase(macout.find(*kter));
+                    --std::get<0>(opcount);
+                } else {
+                    ADD(scout, 'c', kter->first, MONEOP('-',ckter->second),
+                        kter->second, k, opcount);
                 }
-                ADD(out, 'c', kter->first, MONEOP('-',ckter->second),
-                    kter->second, k, opcount);
             }
         }
+//         std::clog << "### AFT macout" << std::endl;
+        for(const auto& [key,value]: macout) {
+            out << value.str() << std::flush;
+        }
+        macout.clear();
+//         std::clog << "### AFT scout" << std::endl;
+        out << scout.str() << std::flush;
+        scout.clear(); scout.str(std::string());
 
             /* the recursive (multiplicative) calls */
         MUL(out, 'c',k,MONEOP('+',ckter->second),'a',i,'b',j, opcount);
@@ -203,7 +233,7 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
             /* RESTORE: Product */
         for(auto kter = T[l].begin(); kter != T[l].end(); ++kter) {
             if (kter != ckter) {
-                ADD(out, 'c', kter->first, MONEOP('+',ckter->second),
+                ADD(macout[*kter], 'c', kter->first, MONEOP('+',ckter->second),
                     kter->second, k, opcount);
             }
         }
@@ -214,7 +244,7 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
             /* RESTORE: Right hand side */
         for(auto jter = B[l].begin(); jter != B[l].end(); ++jter) {
             if (jter != bjter) {
-                ADD(out, 'b',j,'-',jter->second, jter->first, opcount);
+                ADD(mabout[*jter], 'b',j,'-',jter->second, jter->first, opcount);
             }
         }
         SCA(sbout, 'b',j,'/',bjter->second, opcount);
@@ -222,7 +252,7 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
             /* RESTORE: Left hand side */
         for(auto iter = A[l].begin(); iter != A[l].end(); ++iter) {
             if (iter != aiter) {
-                ADD(out, 'a',i,'-',iter->second, iter->first, opcount);
+                ADD(maaout[*iter], 'a',i,'-',iter->second, iter->first, opcount);
             }
         }
         SCA(saout, 'a',i,'/',aiter->second, opcount);
@@ -232,7 +262,28 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
         preci=i; precj=j; preck=k;
     }
 
-    out << scout.str() << sbout.str() << saout.str();
+//     std::clog << "### END macout" << std::endl;
+    for(const auto& [key,value]: macout) {
+        out << value.str() << std::flush;
+    }
+//     std::clog << "### END scout" << std::endl;
+    out << scout.str() << std::flush;
+
+
+//     std::clog << "### END mabout" << std::endl;
+    for(const auto& [key,value]: mabout) {
+        out << value.str() << std::flush;
+    }
+//     std::clog << "### END sbout" << std::endl;
+    out << sbout.str() << std::flush;
+
+
+//     std::clog << "### END maaout" << std::endl;
+    for(const auto& [key,value]: maaout) {
+        out << value.str() << std::flush;
+    }
+//     std::clog << "### END saout" << std::endl;
+    out << saout.str() << std::flush;
 
 
 #ifdef INPLACE_CHECKER

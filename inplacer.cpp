@@ -68,10 +68,10 @@ int main(int argc, char ** argv) {
 
 
 #ifdef VERBATIM_PARSING
-    A.write(std::clog << "A:=",FileFormat::Maple) << ';' << std::endl;
-    B.write(std::clog << "B:=",FileFormat::Maple) << ';' << std::endl;
-    C.write(std::clog << "C:=",FileFormat::Maple) << ';' << std::endl;
-    T.write(std::clog << "T:=",FileFormat::Maple) << ';' << std::endl;
+    A.write(std::clog << "A:=Matrix(",FileFormat::Maple) << ");" << std::endl;
+    B.write(std::clog << "B:=Matrix(",FileFormat::Maple) << ");" << std::endl;
+    C.write(std::clog << "C:=Matrix(",FileFormat::Maple) << ");" << std::endl;
+    T.write(std::clog << "T:=Matrix(",FileFormat::Maple) << ");" << std::endl;
     std::clog << std::string(30,'#') << std::endl;
 #endif
     Tricounter opcount; // 0:ADD, 1:SCA, 2:MUL
