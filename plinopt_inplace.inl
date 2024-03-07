@@ -52,37 +52,7 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
                              const Matrix& A, const Matrix& B,
                              const Matrix& T) {
 
-
-    if ( (A.rowdim() != B.rowdim())
-         ||
-         (A.rowdim() != T.rowdim())
-         ) {
-
-        std::cerr << "Incorrect dimensions :" << std::endl;
-		std::cerr << "A is " << A.rowdim() << " by " << A.coldim() << std::endl;
-		std::cerr << "B is " << B.rowdim() << " by " << B.coldim() << std::endl;
-		std::cerr << "C is " << T.coldim() << " by " << T.rowdim() << std::endl;
-
-        return Tricounter{0,0,0};
-    }
-
-
     const QRat& QQ = T.field();
-
-
-#ifdef INPLACE_CHECKER
-    const size_t tt(A.coldim()), n(B.coldim()), s(T.coldim());
-    for(size_t h=0; h<tt; ++h)
-        std::clog << 'a' << h << ":=L[" << (h+1) << "];";
-    std::clog << std::endl;
-    for(size_t h=0; h<n; ++h)
-        std::clog << 'b' << h << ":=H[" << (h+1) << "];";
-    std::clog << std::endl;
-    for(size_t h=0; h<s; ++h)
-        std::clog << 'c' << h << ":=F[" << (h+1) << "];";
-    std::clog << std::endl;
-    std::clog << std::string(30,'#') << std::endl;
-#endif
 
     Tricounter opcount; // 0:ADD, 1:SCA, 2:MUL
     size_t preci(A.coldim()), precj(B.coldim()), preck(T.coldim());
@@ -285,22 +255,6 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
 //     std::clog << "### END saout" << std::endl;
     out << saout.str() << std::flush;
 
-
-#ifdef INPLACE_CHECKER
-    std::clog << std::string(30,'#') << std::endl;
-    for(size_t h=0; h<s; ++h)
-        std::clog << "R[" << (h+1) << "]:=simplify(" << 'c' << h << ",symbolic);";
-    std::clog << std::endl;
-    for(size_t h=0; h<n; ++h)
-        std::clog << 'b' << h << "-H[" << (h+1) << "],";
-    std::clog << "0;" << std::endl;
-    for(size_t h=0; h<tt; ++h)
-        std::clog << 'a' << h << "-L[" << (h+1) << "],";
-    std::clog << "0;" << std::endl;
-    std::clog << std::string(30,'#') << std::endl;
-#endif
-
-
     return opcount;
 }
 
@@ -353,7 +307,36 @@ Tricounter SearchBiLinearAlgorithm(std::ostream& out,
                                    const Matrix& A, const Matrix& B,
                                    const Matrix& T, size_t randomloops) {
 
-    static QRat QQ;
+    if ( (A.rowdim() != B.rowdim())
+         ||
+         (A.rowdim() != T.rowdim())
+         ) {
+
+        std::cerr << "Incorrect dimensions :" << std::endl;
+		std::cerr << "A is " << A.rowdim() << " by " << A.coldim() << std::endl;
+		std::cerr << "B is " << B.rowdim() << " by " << B.coldim() << std::endl;
+		std::cerr << "C is " << T.coldim() << " by " << T.rowdim() << std::endl;
+
+        return Tricounter{0,0,0};
+    }
+
+    const QRat& QQ = T.field();
+
+
+#ifdef INPLACE_CHECKER
+    const size_t tt(A.coldim()), n(B.coldim()), s(T.coldim());
+    for(size_t h=0; h<tt; ++h)
+        std::clog << 'a' << h << ":=L[" << (h+1) << "];";
+    std::clog << std::endl;
+    for(size_t h=0; h<n; ++h)
+        std::clog << 'b' << h << ":=H[" << (h+1) << "];";
+    std::clog << std::endl;
+    for(size_t h=0; h<s; ++h)
+        std::clog << 'c' << h << ":=F[" << (h+1) << "];";
+    std::clog << std::endl;
+    std::clog << std::string(30,'#') << std::endl;
+#endif
+
     Givaro::Timer elapsed;
     std::ostringstream sout;
     Tricounter nbops(BiLinearAlgorithm(sout, A, B, T));
@@ -399,5 +382,22 @@ Tricounter SearchBiLinearAlgorithm(std::ostream& out,
     }
 
     out << res << std::flush;
+
+
+#ifdef INPLACE_CHECKER
+    std::clog << std::string(30,'#') << std::endl;
+    for(size_t h=0; h<s; ++h)
+        std::clog << "R[" << (h+1) << "]:=simplify(" << 'c' << h << ",symbolic);";
+    std::clog << std::endl;
+    for(size_t h=0; h<n; ++h)
+        std::clog << 'b' << h << "-H[" << (h+1) << "],";
+    std::clog << "0;" << std::endl;
+    for(size_t h=0; h<tt; ++h)
+        std::clog << 'a' << h << "-L[" << (h+1) << "],";
+    std::clog << "0;" << std::endl;
+    std::clog << std::string(30,'#') << std::endl;
+#endif
+
+
     return nbops;
 }
