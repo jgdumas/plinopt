@@ -86,6 +86,8 @@ int main(int argc, char ** argv) {
         if (args[0] == '-') {
             if (args[1] == 'h') {
                 std::clog << "Usage: " << argv[0] << " [-#] [stdin|matrixfile.sms]\n";
+                std::clog << "  #: matrix format (e.g. Maple = 1, SMS = 5, Matlab = 7, Pretty = 8, etc.\n";
+
                 exit(-1);
             } else {
                 matformat = LinBox::Tag::FileFormat(-atoi(argv[1]));

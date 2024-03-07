@@ -34,6 +34,10 @@ int main(int argc, char ** argv) {
 
     if ((argc <=3) || (std::string(argv[1]) == "-h")) {
         std::clog << "Usage: " << argv[0] << " L.sms R.sms P.sms [bitsize [sq srep]]\n";
+
+        std::clog << "  [bitsize]: random check with values of size 'bitsize'\n"
+                  << "  [sq srep]: check is performed modulo (srep-sq^2)\n";
+
         exit(-1);
     }
 

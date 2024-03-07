@@ -152,7 +152,7 @@ int Selector(std::istream& input, const size_t randomloops,
 
 // ============================================================
 // Main: select between file / std::cin
-// -D/-K options seect direct/kernel methods only (default is both)
+// -D/-K options select direct/kernel methods only (default is both)
 // -P/-M option choose the printing format
 // -O # search for reduced number of additions, then multiplications
 //      i.e. min of random # tries (requires definition of RANDOM_TIES)
@@ -171,7 +171,14 @@ int main(int argc, char** argv) {
     for (int i = 1; argc>i; ++i) {
         std::string args(argv[i]);
         if (args == "-h") {
-            std::clog << "Usage: " << argv[0] << " [-h|-M|-P|-K|-D] [stdin|matrixfile.sms]\n";
+            std::clog << "Usage: " << argv[0]
+                      << " [-h|-M|-P|-K|-D] [stdin|matrixfile.sms]\n";
+
+            std::clog
+                << "  -D/-K options: select direct/kernel methods only (default is both)\n"
+                << "  -P/-M options: choose the printing format\n"
+                << "  -O #: search for reduced number of additions, then multiplications\n";
+
             exit(-1);
         } else if (args == "-M") { printMaple = true; }
         else if (args == "-P") { printPretty = true; }

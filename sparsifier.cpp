@@ -68,7 +68,7 @@ int Selector(std::istream& input, const FileFormat& matformat,
 // Main: select between file / std::cin
 //       -c #: sets the max number of coefficients per iteration
 //       -M/-P/-S: selects the ouput format
-//       -b #: stes the blocking dimension
+//       -b #: states the blocking dimension
 //       -U [1|0]: uses an initial LU factorization | or not
 int main(int argc, char** argv) {
 
@@ -82,6 +82,12 @@ int main(int argc, char** argv) {
         std::string args(argv[i]);
         if (args == "-h") {
             std::clog << "Usage: " << argv[0] << " [-h|-M|-P|-S|-c #] [stdin|matrixfile.sms]\n";
+
+            std::clog << "  -c #: max number of coefficients per iteration\n"
+                      << "  -b #: states the blocking dimension\n"
+                      << "  -U [1|0]: initial LU factorization | or not\n"
+                      << "  -M/-P/-S: selects the ouput format\n";
+
             exit(-1);
         }
         else if (args == "-M") { matformat = FileFormat(1); } // Maple

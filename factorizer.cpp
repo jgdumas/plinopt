@@ -100,7 +100,7 @@ int Factorizer(std::istream& input, const FileFormat& matformat,
 // Main: select between file / std::cin
 //       -k #: sets the inner dimension (default is column dimension)
 //       -M/-P/-S/-L: selects the ouput format
-// -O # search for reduced randomized sparsity
+//       -O # search for reduced randomized sparsity
 //      i.e. min of random # tries (requires definition of RANDOM_TIES)
 int main(int argc, char** argv) {
 
@@ -112,7 +112,14 @@ int main(int argc, char** argv) {
     for (int i = 1; i<argc; ++i) {
         std::string args(argv[i]);
         if (args == "-h") {
-            std::clog << "Usage: " << argv[0] << " [-h|-M|-P|-S|-c #] [stdin|matrixfile.sms]\n";
+            std::clog << "Usage: " << argv[0]
+                      << " [-h|-M|-P|-S|-L|-k #|-O #] [stdin|matrixfile.sms]\n";
+
+            std::clog
+                << "  -k #: inner dimension (default is column dimension)\n"
+                << "  -M/-P/-S/-L: selects the ouput format\n"
+                << "  -O #: search for reduced randomized sparsity\n";
+
             exit(-1);
         }
         else if (args == "-M") { matformat = FileFormat(1); } // Maple
