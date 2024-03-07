@@ -19,8 +19,10 @@ Matrix::Row::const_iterator orientindex(const size_t preci, const Matrix::Row& L
                             [preci](const auto&a) { return a.first == preci; } )
                );
 
-        // But prefer a variable with coefficient One
-    if ( (nexti == L.end()) || (! isOne(nexti->second)) ) {
+//         // But always prefer a variable with coefficient One
+//     if ( (nexti == L.end()) || (! isOne(nexti->second)) ) {
+//         // Otherwise, prefer a variable with coefficient One
+    if (nexti == L.end()) {
         std::vector<Matrix::Row::const_iterator> vnext;
         for(auto iter=L.begin(); iter!=L.end(); ++iter) {
             if (isOne(iter->second)) vnext.push_back(iter);
@@ -383,9 +385,9 @@ Tricounter SearchBiLinearAlgorithm(std::ostream& out,
         }
 
         std::ostringstream lout;
-        Tricounter lops(BiLinearAlgorithm(lout, pA, pB, pT));
+        Tricounter lops(BiLinearAlgorithm(lout, pA, pB, pT,false));
 #ifdef VERBATIM_PARSING
-        std::clog << "# Inplace operations[" << i << "]: " << lops << std::endl;
+        std::clog << "# Inplace algorithm operations[" << i << "]: " << lops << std::endl;
 #endif
         if ( (std::get<0>(lops)<std::get<0>(nbops)) ||
              ( (std::get<0>(lops)==std::get<0>(nbops))
@@ -393,6 +395,17 @@ Tricounter SearchBiLinearAlgorithm(std::ostream& out,
             nbops = lops;
             res = lout.str();
             std::clog << "# Found algorithm[" << i << "], operations: " << lops << std::endl;
+        }
+        lops = BiLinearAlgorithm(lout, pA, pB, pT, true);
+#ifdef VERBATIM_PARSING
+        std::clog << "# Inplace oriented operations [" << i << "]: " << lops << std::endl;
+#endif
+        if ( (std::get<0>(lops)<std::get<0>(nbops)) ||
+             ( (std::get<0>(lops)==std::get<0>(nbops))
+               && (std::get<1>(lops)<std::get<1>(nbops)) ) ) {
+            nbops = lops;
+            res = lout.str();
+            std::clog << "# Found oriented [" << i << "], operations: " << lops << std::endl;
         }
     }
 
