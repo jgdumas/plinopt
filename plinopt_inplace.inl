@@ -345,3 +345,59 @@ void DoubleExpand(Matrix& AA, Matrix& BB, Matrix& TT,
 #endif
 
 }
+
+
+// ===============================================================
+// Searching the space of in-place bilinear programs
+Tricounter SearchBiLinearAlgorithm(std::ostream& out,
+                                   const Matrix& A, const Matrix& B,
+                                   const Matrix& T, size_t randomloops) {
+
+    static QRat QQ;
+    Givaro::Timer elapsed;
+    std::ostringstream sout;
+    Tricounter nbops(BiLinearAlgorithm(sout, A, B, T));
+    std::string res(sout.str());
+    std::clog << "# Initial number of operations: " << nbops << std::endl;
+
+#pragma omp parallel for shared(A,B,T,res,nbops)
+    for(size_t i=0; i<randomloops; ++i) {
+
+
+        LinBox::Permutation<QRat> P(QQ,A.rowdim());
+        Givaro::GivRandom generator;
+
+        P.random(generator.seed());
+
+        Matrix pA(QQ,A.rowdim(), A.coldim()),
+            pB(QQ,B.rowdim(), B.coldim()),
+            pT(QQ,T.rowdim(), T.coldim());
+        permuteRows(pA,P,A,QQ);
+        permuteRows(pB,P,B,QQ);
+        permuteRows(pT,P,T,QQ);
+
+
+        for(size_t i=0; i<pA.rowdim(); ++i) {
+            const bool negA( generator.brand() ), negB( generator.brand() );
+            if (negA) negRow(pA, i, QQ);
+            if (negB) negRow(pB, i, QQ);
+            if (negA != negB) negRow(pT, i, QQ);
+        }
+
+        std::ostringstream lout;
+        Tricounter lops(BiLinearAlgorithm(lout, pA, pB, pT));
+#ifdef VERBATIM_PARSING
+        std::clog << "# Inplace operations[" << i << "]: " << lops << std::endl;
+#endif
+        if ( (std::get<0>(lops)<std::get<0>(nbops)) ||
+             ( (std::get<0>(lops)==std::get<0>(nbops))
+               && (std::get<1>(lops)<std::get<1>(nbops)) ) ) {
+            nbops = lops;
+            res = lout.str();
+            std::clog << "# Found algorithm[" << i << "], operations: " << lops << std::endl;
+        }
+    }
+
+    out << res << std::flush;
+    return nbops;
+}

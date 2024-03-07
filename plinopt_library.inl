@@ -58,6 +58,14 @@ inline DenseMatrix& setRow(DenseMatrix& A, size_t i,
 }
 
 
+	// Negate row i of A
+inline Matrix& negRow(Matrix& A, size_t i, const QRat& QQ) {
+    for(auto& iter: A[i]) {
+        QQ.negin(iter.second);
+    }
+    return A;
+}
+
 	// copy dense matrix M into sparse matrix A
 inline Matrix& dense2sparse(Matrix& A, const DenseMatrix& M, const QRat& QQ) {
     A.resize(M.rowdim(), M.coldim());
@@ -104,4 +112,36 @@ inline DenseMatrix& matrixCopy(DenseMatrix& C, const Matrix& A, const QRat& QQ) 
 template<>
 inline DenseMatrix& matrixCopy(DenseMatrix& C, const DenseMatrix& A, const QRat& QQ) {
     return sparse2dense(C,A);
+}
+
+
+	// permute rows
+template<>
+inline DenseMatrix& permuteRows(DenseMatrix& R, const Permutation& P,
+                         const DenseMatrix& A, const QRat& QQ) {
+    return P.applyRight(R,A);
+}
+
+template<>
+inline DenseMatrix& permuteRows(DenseMatrix& R, const Permutation& P,
+                         const Matrix& A, const QRat& QQ) {
+    DenseMatrix dA(QQ,A.rowdim(),A.coldim()); matrixCopy(dA, A, QQ);
+    return P.applyRight(R,dA);
+}
+
+template<>
+inline Matrix& permuteRows(Matrix& R, const Permutation& P,
+                    const DenseMatrix& A, const QRat& QQ) {
+    DenseMatrix dR(QQ,A.rowdim(),A.coldim());
+    P.applyRight(dR, A);
+    return dense2sparse(R, dR, QQ);
+}
+
+template<>
+inline Matrix& permuteRows(Matrix& R, const Permutation& P,
+                    const Matrix& A, const QRat& QQ) {
+    DenseMatrix dA(QQ,A.rowdim(),A.coldim()); matrixCopy(dA, A, QQ);
+    DenseMatrix dR(QQ,A.rowdim(),A.coldim());
+    P.applyRight(dR, dA);
+    return dense2sparse(R, dR, QQ);
 }

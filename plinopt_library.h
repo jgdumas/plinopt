@@ -37,6 +37,8 @@
 #include <givaro/givrational.h>
 #include <linbox/matrix/sparse-matrix.h>
 #include <linbox/util/matrix-stream.h>
+#include <linbox/blackbox/permutation.h>
+
 
 using LinBox::Tag::FileFormat;
 
@@ -47,11 +49,15 @@ typedef LinBox::MatrixStream<QRat> QMstream;
 typedef LinBox::SparseMatrix<QRat,
                              LinBox::SparseMatrixFormat::SparseSeq > Matrix;
 typedef LinBox::DenseMatrix<QRat> DenseMatrix;
+typedef LinBox::Permutation<QRat> Permutation;
 
 typedef std::vector<Givaro::Rational> QArray;
 typedef LinBox::DenseVector<QRat> QVector;
 
 typedef std::tuple<size_t, size_t, size_t> Tricounter;
+std::ostream& operator<<(std::ostream& out, const Tricounter& t) {
+    return out << '<' << std::get<0>(t)<< ',' << std::get<1>(t)<< ',' << std::get<2>(t) << '>';
+}
 
 	// Copy the transposed  matrix
 template<typename _Mat1, typename _Mat2>
@@ -67,9 +73,17 @@ _Mat1& matrixCopy(_Mat1&, const _Mat2&, const QRat&);
 	// Replace row i of A, by row j of B
 Matrix& setRow(Matrix& A, size_t i, const Matrix& B, size_t j, const QRat&);
 
+	// Negate row i of A
+Matrix& negRow(Matrix& A, size_t i, const QRat& QQ);
+
 	// Replace row i of A, by v
 template<typename _Mat, typename Vector>
 _Mat& setRow(_Mat& A, size_t i, const Vector& v, const QRat& QQ);
+
+	// permute rows
+template<typename _Mat1, typename _Mat2>
+_Mat1& permuteRows(_Mat1& R, const Permutation& P, const _Mat2& A,
+                   const QRat& QQ);
 
     // From HM representation(L,R,P) to represented matrix-multiplication
 template<typename _Mat>

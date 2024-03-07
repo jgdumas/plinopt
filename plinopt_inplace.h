@@ -22,6 +22,11 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
                              const Matrix& A, const Matrix& B,
                              const Matrix& T);
 
+// ===============================================================
+// Searching the space of in-place bilinear programs
+Tricounter SearchBiLinearAlgorithm(std::ostream& out,
+                                   const Matrix& A, const Matrix& B,
+                                   const Matrix& T, size_t randomloops);
 
 // ===============================================================
 // Double expansion of an HM representation

@@ -45,17 +45,36 @@
 
 #include "plinopt_inplace.h"
 
+
+void usage(int argc, char ** argv) {
+    std::clog << "Usage: " << argv[0] << " L.sms R.sms P.sms [-e] [-O #]\n";
+    exit(-1);
+}
+
+
 // ===============================================================
 // argv[1-3]: L.sms R.sms P.sms
 // argv[4]: if present, double expand intermediate result
 int main(int argc, char ** argv) {
 
+    size_t randomloops(DORANDOMSEARCH?DEFAULT_RANDOM_LOOPS:1);
+    bool doexpand(false);
 
-    if ((argc <=3) || (std::string(argv[1]) == "-h")) {
-        std::clog << "Usage: " << argv[0] << " L.sms R.sms P.sms [expand]\n";
-        exit(-1);
+    if (argc<4) usage(argc,argv);
+
+    for (int i = 4; i<argc; ++i) {
+        std::string args(argv[i]);
+        if (args == "-h") usage(argc,argv);
+        else if (args == "-e") { doexpand = true; }
+        else if (args == "-O") {
+            randomloops = atoi(argv[++i]);
+            if ( (randomloops>1) && (!DORANDOMSEARCH) ) {
+                randomloops = 1;
+                std::cerr << "#  \033[1;36mWARNING: RANDOM_TIES not defined,"
+                          << " random loops disabled\033[0m." << std::endl;
+            }
+        }
     }
-
         // ================================
         // Reading matrices
 	std::ifstream left (argv[1]), right (argv[2]), product(argv[3]);
@@ -74,19 +93,22 @@ int main(int argc, char ** argv) {
     T.write(std::clog << "T:=Matrix(",FileFormat::Maple) << ");" << std::endl;
     std::clog << std::string(30,'#') << std::endl;
 #endif
+
+
+
     Tricounter opcount; // 0:ADD, 1:SCA, 2:MUL
 
-    if (argc>4) {
+    if (doexpand) {
             // ================================
             // Duplicate intermediate products
             // to group them 2 by 2
         Matrix AA(QQ), BB(QQ), TT(QQ);
         DoubleExpand(AA,BB,TT, A,B,T);
-        opcount = BiLinearAlgorithm(std::cout, AA, BB, TT);
+        opcount = SearchBiLinearAlgorithm(std::cout, AA, BB, TT, randomloops);
     } else {
             // ================================
             // Direct computation
-        opcount = BiLinearAlgorithm(std::cout, A, B, T);
+        opcount = SearchBiLinearAlgorithm(std::cout, A, B, T, randomloops);
     }
 
     std::clog << std::string(40,'#') << std::endl;
@@ -95,9 +117,12 @@ int main(int argc, char ** argv) {
     std::clog << "# \033[1;32m" << std::get<2>(opcount)  << "\tAXPY" << "\033[0m" << std::endl;
     std::clog << std::string(40,'#') << std::endl;
 
+
+
+
 #ifdef INPLACE_CHECKER
         // =============================================
-        // Checking, when algorithm is a matrix product
+        // Enables checking, when algorithm is a matrix product
     Tricounter mkn(LRP2MM(A,B,C));
     const size_t& n(std::get<0>(mkn)), t(std::get<1>(mkn)), m(std::get<2>(mkn));
     std::clog <<"# code-checking for "
