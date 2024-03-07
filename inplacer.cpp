@@ -100,7 +100,6 @@ int main(int argc, char ** argv) {
 #endif
 
 
-
     Tricounter opcount; // 0:ADD, 1:SCA, 2:MUL
 
     if (doexpand) {
@@ -109,47 +108,75 @@ int main(int argc, char ** argv) {
             // to group them 2 by 2
         Matrix AA(QQ), BB(QQ), TT(QQ);
         DoubleExpand(AA,BB,TT, A,B,T);
-        opcount = SearchBiLinearAlgorithm(std::cout, AA, BB, TT, randomloops);
+        opcount = BiLinearAlgorithm(std::cout, AA, BB, TT);
     } else {
             // ================================
             // Direct computation
+#ifdef INPLACE_CHECKER
+        const size_t tt(A.coldim()), n(B.coldim()), s(T.coldim());
+        for(size_t h=0; h<tt; ++h)
+            std::clog << 'a' << h << ":=L[" << (h+1) << "];";
+        std::clog << std::endl;
+        for(size_t h=0; h<n; ++h)
+            std::clog << 'b' << h << ":=H[" << (h+1) << "];";
+        std::clog << std::endl;
+        for(size_t h=0; h<s; ++h)
+            std::clog << 'c' << h << ":=F[" << (h+1) << "];";
+        std::clog << std::endl;
+        std::clog << std::string(30,'#') << std::endl;
+#endif
+
         opcount = SearchBiLinearAlgorithm(std::cout, A, B, T, randomloops);
+
+
+#ifdef INPLACE_CHECKER
+        std::clog << std::string(30,'#') << std::endl;
+        for(size_t h=0; h<s; ++h)
+            std::clog << "R[" << (h+1) << "]:=simplify(" << 'c' << h << ",symbolic);";
+        std::clog << std::endl;
+        for(size_t h=0; h<n; ++h)
+            std::clog << 'b' << h << "-H[" << (h+1) << "],";
+        std::clog << "0;" << std::endl;
+        for(size_t h=0; h<tt; ++h)
+            std::clog << 'a' << h << "-L[" << (h+1) << "],";
+        std::clog << "0;" << std::endl;
+        std::clog << std::string(30,'#') << std::endl;
+#endif
+
     }
+
+#ifdef INPLACE_CHECKER
+        // =============================================
+        // Enables checking, when algorithm is a matrix product
+    if (! doexpand) {
+        Tricounter mkn(LRP2MM(A,B,C));
+        const size_t& n(std::get<0>(mkn)), t(std::get<1>(mkn)), m(std::get<2>(mkn));
+        std::clog <<"# code-checking for "
+                  << m << 'x' << t << 'x' << n
+                  << " Matrix-Multiplication" << std::endl;
+        std::clog << '<';
+        for(size_t i=0; i<m; ++i) {
+            if (i!=0) std::clog << ',' << std::endl;
+            std::clog << '<';
+            for(size_t j=0; j<n; ++j) {
+                if (j!=0) std::clog << '|';
+                for(size_t k=0; k<t; ++k) {
+                    if (k!=0) std::clog << '+';
+                    std::clog << "L[" << (i*t+k+1) << "]*H[" << (k*n+j+1) << ']';
+                }
+                std::clog << " + F[" << (i*n+j+1) << "] - R[" << (i*n+j+1) << ']';
+            }
+            std::clog << '>';
+        }
+        std::clog << ">;" << std::endl;
+    }
+#endif
 
     std::clog << std::string(40,'#') << std::endl;
     std::clog << "# \033[1;32m" << std::get<0>(opcount) << "\tADD" << "\033[0m" << std::endl;
     std::clog << "# \033[1;32m" << std::get<1>(opcount)  << "\tSCA" << "\033[0m" << std::endl;
     std::clog << "# \033[1;32m" << std::get<2>(opcount)  << "\tAXPY" << "\033[0m" << std::endl;
     std::clog << std::string(40,'#') << std::endl;
-
-
-
-
-#ifdef INPLACE_CHECKER
-        // =============================================
-        // Enables checking, when algorithm is a matrix product
-    Tricounter mkn(LRP2MM(A,B,C));
-    const size_t& n(std::get<0>(mkn)), t(std::get<1>(mkn)), m(std::get<2>(mkn));
-    std::clog <<"# code-checking for "
-              << m << 'x' << t << 'x' << n
-              << " Matrix-Multiplication" << std::endl;
-    std::clog << '<';
-    for(size_t i=0; i<m; ++i) {
-        if (i!=0) std::clog << ',' << std::endl;
-        std::clog << '<';
-        for(size_t j=0; j<n; ++j) {
-            if (j!=0) std::clog << '|';
-            for(size_t k=0; k<t; ++k) {
-                if (k!=0) std::clog << '+';
-                std::clog << "L[" << (i*t+k+1) << "]*H[" << (k*n+j+1) << ']';
-            }
-            std::clog << " + F[" << (i*n+j+1) << "] - R[" << (i*n+j+1) << ']';
-        }
-        std::clog << '>';
-    }
-    std::clog << ">;" << std::endl;
-#endif
-
 
     return 0;
 }

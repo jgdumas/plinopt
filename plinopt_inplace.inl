@@ -340,20 +340,6 @@ Tricounter SearchBiLinearAlgorithm(std::ostream& out,
     const QRat& QQ = T.field();
 
 
-#ifdef INPLACE_CHECKER
-    const size_t tt(A.coldim()), n(B.coldim()), s(T.coldim());
-    for(size_t h=0; h<tt; ++h)
-        std::clog << 'a' << h << ":=L[" << (h+1) << "];";
-    std::clog << std::endl;
-    for(size_t h=0; h<n; ++h)
-        std::clog << 'b' << h << ":=H[" << (h+1) << "];";
-    std::clog << std::endl;
-    for(size_t h=0; h<s; ++h)
-        std::clog << 'c' << h << ":=F[" << (h+1) << "];";
-    std::clog << std::endl;
-    std::clog << std::string(30,'#') << std::endl;
-#endif
-
     Givaro::Timer elapsed;
     std::ostringstream sout;
     Tricounter nbops(BiLinearAlgorithm(sout, A, B, T, true));
@@ -410,21 +396,6 @@ Tricounter SearchBiLinearAlgorithm(std::ostream& out,
     }
 
     out << res << std::flush;
-
-
-#ifdef INPLACE_CHECKER
-    std::clog << std::string(30,'#') << std::endl;
-    for(size_t h=0; h<s; ++h)
-        std::clog << "R[" << (h+1) << "]:=simplify(" << 'c' << h << ",symbolic);";
-    std::clog << std::endl;
-    for(size_t h=0; h<n; ++h)
-        std::clog << 'b' << h << "-H[" << (h+1) << "],";
-    std::clog << "0;" << std::endl;
-    for(size_t h=0; h<tt; ++h)
-        std::clog << 'a' << h << "-L[" << (h+1) << "],";
-    std::clog << "0;" << std::endl;
-    std::clog << std::string(30,'#') << std::endl;
-#endif
 
 
     return nbops;
