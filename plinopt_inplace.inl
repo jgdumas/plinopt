@@ -10,8 +10,11 @@
 #include "plinopt_inplace.h"
 
 
-Matrix::Row::const_iterator nextindex(const size_t preci, const Matrix::Row& L) {
-        // Try to reuse previous variable
+Matrix::Row::const_iterator orientindex(const size_t preci, const Matrix::Row& L,
+                                        const bool oriented) {
+    if (! oriented) return L.begin();
+
+            // Try to reuse previous variable
     auto nexti(std::find_if(L.begin(),L.end(),
                             [preci](const auto&a) { return a.first == preci; } )
                );
@@ -23,10 +26,8 @@ Matrix::Row::const_iterator nextindex(const size_t preci, const Matrix::Row& L) 
             if (isOne(iter->second)) vnext.push_back(iter);
         }
         if (vnext.size()>0) {
-#ifdef RANDOM_TIES
             std::shuffle (vnext.begin(), vnext.end(),
                           std::default_random_engine(Givaro::BaseTimer::seed()));
-#endif
             nexti = vnext.front();
         }
     }
@@ -41,16 +42,30 @@ Matrix::Row::const_iterator nextindex(const size_t preci, const Matrix::Row& L) 
     return (nexti != L.end()) ? nexti : L.begin() ;
 }
 
-std::string rmnl(const std::string& str) {
-    std::string s(str);
-    s.erase(std::remove(s.begin(), s.end(), '\n'), s.cend());
-    return s;
+Matrix::Row::const_iterator nextindex(const size_t preci, const Matrix::Row& L,
+                                      const bool oriented) {
+#ifdef RANDOM_TIES
+    if (oriented) return orientindex(preci, L, oriented);
+    std::vector<Matrix::Row::const_iterator> vnext;
+    for(auto iter=L.begin(); iter!=L.end(); ++iter) vnext.push_back(iter);
+    std::shuffle (vnext.begin(), vnext.end(),
+                  std::default_random_engine(Givaro::BaseTimer::seed()));
+    return vnext.front();
+#else
+    return orientindex(preci, L, oriented);
+#endif
 }
+
+// std::string rmnl(const std::string& str) {
+//     std::string s(str);
+//     s.erase(std::remove(s.begin(), s.end(), '\n'), s.cend());
+//     return s;
+// }
 
 
 Tricounter BiLinearAlgorithm(std::ostream& out,
                              const Matrix& A, const Matrix& B,
-                             const Matrix& T) {
+                             const Matrix& T, const bool oriented) {
 
     const QRat& QQ = T.field();
 
@@ -66,7 +81,7 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
 // std::clog << "# BEG row: " << l << ", astr: " << rmnl(saout.str()) << ", bstr: " <<  rmnl(sbout.str()) << std::endl;
 
            /* Left hand side */
-        const auto aiter { nextindex(preci, A[l]) };
+        const auto aiter { nextindex(preci, A[l], oriented) };
         const size_t i(aiter->first);
         if ( (i == preci) && (l>0) && (aiter->second == A.getEntry(l-1,i)) ) {
             if (! QQ.isOne(aiter->second)) {
@@ -108,7 +123,7 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
         saout.clear(); saout.str(std::string());
 
             /* Right hand side */
-        const auto bjter( nextindex(precj, B[l]) );
+        const auto bjter( nextindex(precj, B[l], oriented) );
         const size_t j(bjter->first);
         if ( (j == precj) && (l>0) && (bjter->second == B.getEntry(l-1,j)) ) {
             if (! QQ.isOne(bjter->second)) {
@@ -151,7 +166,7 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
 
 
             /* Product */
-        const auto ckter( nextindex(preck, T[l]) );
+        const auto ckter( nextindex(preck, T[l], oriented) );
         const size_t k(ckter->first);
 
         if ( (!QQ.isOne(ckter->second)) && (!QQ.isMOne(ckter->second))) {
@@ -339,9 +354,9 @@ Tricounter SearchBiLinearAlgorithm(std::ostream& out,
 
     Givaro::Timer elapsed;
     std::ostringstream sout;
-    Tricounter nbops(BiLinearAlgorithm(sout, A, B, T));
+    Tricounter nbops(BiLinearAlgorithm(sout, A, B, T, true));
     std::string res(sout.str());
-    std::clog << "# Initial number of operations: " << nbops << std::endl;
+    std::clog << "# Oriented number of operations: " << nbops << std::endl;
 
 #pragma omp parallel for shared(A,B,T,res,nbops)
     for(size_t i=0; i<randomloops; ++i) {

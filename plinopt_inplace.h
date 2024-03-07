@@ -20,7 +20,7 @@
 // In-place program realizing a bilinear function
 Tricounter BiLinearAlgorithm(std::ostream& out,
                              const Matrix& A, const Matrix& B,
-                             const Matrix& T);
+                             const Matrix& T, const bool oriented=false);
 
 // ===============================================================
 // Searching the space of in-place bilinear programs
