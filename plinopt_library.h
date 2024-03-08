@@ -54,11 +54,6 @@ typedef LinBox::Permutation<QRat> Permutation;
 typedef std::vector<Givaro::Rational> QArray;
 typedef LinBox::DenseVector<QRat> QVector;
 
-typedef std::tuple<size_t, size_t, size_t> Tricounter;
-std::ostream& operator<<(std::ostream& out, const Tricounter& t) {
-    return out << '<' << std::get<0>(t)<< ',' << std::get<1>(t)<< ',' << std::get<2>(t) << '>';
-}
-
 	// Copy the transposed  matrix
 template<typename _Mat1, typename _Mat2>
 inline _Mat1& Transpose(_Mat1& T, const _Mat2& A);
@@ -84,6 +79,18 @@ _Mat& setRow(_Mat& A, size_t i, const Vector& v, const QRat& QQ);
 template<typename _Mat1, typename _Mat2>
 _Mat1& permuteRows(_Mat1& R, const Permutation& P, const _Mat2& A,
                    const QRat& QQ);
+
+	// Printing tuples
+typedef std::tuple<size_t, size_t, size_t> Tricounter;
+std::ostream& operator<<(std::ostream& out, const Tricounter& t) {
+    return out << '{' << std::get<0>(t)<< ','
+               << std::get<1>(t)<< ',' << std::get<2>(t) << '}';
+}
+
+template<typename _T1, typename _T2>
+std::ostream& operator<<(std::ostream& out, const std::pair<_T1,_T2>& t) {
+    return out << '<' << t.frst << ',' << t.second << '>';
+}
 
     // From HM representation(L,R,P) to represented matrix-multiplication
 template<typename _Mat>

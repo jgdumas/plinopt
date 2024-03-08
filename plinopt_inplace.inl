@@ -10,7 +10,10 @@
 #include "plinopt_inplace.h"
 
 
-Matrix::Row::const_iterator orientindex(const size_t preci, const Matrix::Row& L,
+// ===============================================================
+// Directed selection of accumulation i/o variables
+Matrix::Row::const_iterator orientindex(const size_t preci,
+                                        const Matrix::Row& L,
                                         const bool oriented) {
     if (! oriented) return L.begin();
 
@@ -28,8 +31,10 @@ Matrix::Row::const_iterator orientindex(const size_t preci, const Matrix::Row& L
             if (isOne(iter->second)) vnext.push_back(iter);
         }
         if (vnext.size()>0) {
+#ifdef RANDOM_TIES
             std::shuffle (vnext.begin(), vnext.end(),
                           std::default_random_engine(Givaro::BaseTimer::seed()));
+#endif
             nexti = vnext.front();
         }
     }
@@ -43,7 +48,11 @@ Matrix::Row::const_iterator orientindex(const size_t preci, const Matrix::Row& L
 
     return (nexti != L.end()) ? nexti : L.begin() ;
 }
+// ===============================================================
 
+
+// ===============================================================
+// Random selection of accumulation i/o variables
 Matrix::Row::const_iterator nextindex(const size_t preci, const Matrix::Row& L,
                                       const bool oriented) {
 #ifdef RANDOM_TIES
@@ -57,14 +66,11 @@ Matrix::Row::const_iterator nextindex(const size_t preci, const Matrix::Row& L,
     return orientindex(preci, L, oriented);
 #endif
 }
-
-// std::string rmnl(const std::string& str) {
-//     std::string s(str);
-//     s.erase(std::remove(s.begin(), s.end(), '\n'), s.cend());
-//     return s;
-// }
+// ===============================================================
 
 
+// ===============================================================
+// In-place program realizing a bilinear function
 Tricounter BiLinearAlgorithm(std::ostream& out,
                              const Matrix& A, const Matrix& B,
                              const Matrix& T, const bool oriented) {
@@ -74,64 +80,75 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
     Tricounter opcount; // 0:ADD, 1:SCA, 2:MUL
     size_t preci(A.coldim()), precj(B.coldim()), preck(T.coldim());
 
+        // Buffering clauses, to enable optimizing them out
     std::ostringstream saout, sbout, scout;
-
-    std::map<std::pair<size_t,Givaro::Rational>,std::ostringstream> maaout, mabout, macout;
+    std::map<std::pair<size_t,Givaro::Rational>,std::ostringstream>
+        maaout, mabout, macout;
 
     const size_t m(A.rowdim());
     for(size_t l=0; l<m; ++l) {
-// std::clog << "# BEG row: " << l << ", astr: " << rmnl(saout.str()) << ", bstr: " <<  rmnl(sbout.str()) << std::endl;
+//         std::clog << "# BEGIN parsing of: AXPY[" << l
+//                   << "], astr: " << rmnl(saout.str())
+//                   << ", bstr: " <<  rmnl(sbout.str()) << std::endl;
 
-           /* Left hand side */
-        const auto aiter { nextindex(preci, A[l], oriented) };
+            /******************
+             * Left hand side *
+             ******************/
+        const auto aiter { nextindex(preci, A[l], oriented) }; // choose var
         const size_t i(aiter->first);
         if ( (i == preci) && (l>0) && (aiter->second == A.getEntry(l-1,i)) ) {
             if (! QQ.isOne(aiter->second)) {
 #ifdef VERBATIM_PARSING
                 std::clog << "# Optimized out: scalar (div;mul), "
-                          << 'a' << i << " /* " << VALPAR(aiter->second) << std::endl;
+                          << 'a' << i << " /* " << VALPAR(aiter->second)
+                          << std::endl;
 #endif
                 --std::get<1>(opcount);
                 saout.clear(); saout.str(std::string());
             }
         } else {
-            SCA(saout, 'a',i,'*',aiter->second, opcount);
+            SCA(saout, 'a',i,'*',aiter->second, opcount); // scale choosen var
         }
         const bool aSCA(saout.tellp() != std::streampos(0));
 
         for(auto iter = A[l].begin(); iter != A[l].end(); ++iter) {
             if (iter != aiter) {
+                const auto asearch(maaout.find(*iter));
                 if ( (i == preci) && (l>0) && (! aSCA) &&
-                     (std::find(A[l-1].begin(), A[l-1].end(), *iter ) != A[l-1].end()) ) {
+                     ( asearch != maaout.end() ) ) {
 #ifdef VERBATIM_PARSING
                     std::clog << "# Optimized out: (add;sub), "
                               << 'a' << i << " +- "
-                              << VALPAR(iter->second) << 'a' << iter->first << std::endl;
+                              << VALPAR(iter->second) << 'a' << iter->first
+                              << std::endl;
 #endif
-                    maaout.erase(maaout.find(*iter));
+                    maaout.erase(asearch);
                     --std::get<0>(opcount);
                 } else {
                     ADD(saout, 'a',i,'+',iter->second, iter->first, opcount);
                 }
             }
         }
-//         std::clog << "### AFT maaout" << std::endl;
+
+            // Print remaining LHS clauses
         for(const auto& [key,value]: maaout) {
             out << value.str() << std::flush;
         }
         maaout.clear();
-//         std::clog << "### AFT saout" << std::endl;
         out << saout.str() << std::flush;
         saout.clear(); saout.str(std::string());
 
-            /* Right hand side */
+            /*******************
+             * Right hand side *
+             *******************/
         const auto bjter( nextindex(precj, B[l], oriented) );
         const size_t j(bjter->first);
         if ( (j == precj) && (l>0) && (bjter->second == B.getEntry(l-1,j)) ) {
             if (! QQ.isOne(bjter->second)) {
 #ifdef VERBATIM_PARSING
                 std::clog << "# Optimized out, scalar (div;mul): "
-                          << 'b' << j << " /* " << VALPAR(bjter->second) << std::endl;
+                          << 'b' << j << " /* " << VALPAR(bjter->second)
+                          << std::endl;
 #endif
                 --std::get<1>(opcount);
                 sbout.clear(); sbout.str(std::string());
@@ -143,31 +160,35 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
 
         for(auto jter = B[l].begin(); jter != B[l].end(); ++jter) {
             if (jter != bjter) {
+                const auto bsearch(mabout.find(*jter));
                 if ( (j == precj) && (l>0) && (! bSCA) &&
-                     (std::find(B[l-1].begin(), B[l-1].end(), *jter ) != B[l-1].end()) ) {
+                     ( bsearch != mabout.end() ) ) {
 #ifdef VERBATIM_PARSING
                     std::clog << "# Optimized out: (add;sub), "
                               << 'b' << j << " +- "
-                              << VALPAR(jter->second) << 'b' << jter->first << std::endl;
+                              << VALPAR(jter->second) << 'b' << jter->first
+                              << std::endl;
 #endif
-                    mabout.erase(mabout.find(*jter));
+                    mabout.erase(bsearch);
                     --std::get<0>(opcount);
                 } else {
                     ADD(sbout, 'b',j,'+',jter->second, jter->first, opcount);
                 }
             }
         }
-//         std::clog << "### AFT mabout" << std::endl;
+
+            // Print remaining RHS clauses
         for(const auto& [key,value]: mabout) {
             out << value.str() << std::flush;
         }
         mabout.clear();
-//         std::clog << "### AFT sbout" << std::endl;
         out << sbout.str() << std::flush;
         sbout.clear(); sbout.str(std::string());
 
 
-            /* Product */
+            /***********
+             * Product *
+             ***********/
         const auto ckter( nextindex(preck, T[l], oriented) );
         const size_t k(ckter->first);
 
@@ -176,7 +197,8 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
                 if (! QQ.isOne(ckter->second)) {
 #ifdef VERBATIM_PARSING
                     std::clog << "# Optimized out, scalar (div;mul): "
-                              << 'c' << k << " /* " << VALPAR(ckter->second) << std::endl;
+                              << 'c' << k << " /* " << VALPAR(ckter->second)
+                              << std::endl;
 #endif
                     --std::get<1>(opcount);
                     scout.clear(); scout.str(std::string());
@@ -189,14 +211,17 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
 
         for(auto kter = T[l].begin(); kter != T[l].end(); ++kter) {
             if (kter != ckter) {
+                auto cadd(*kter); cadd.second *= ckter->second;
+                const auto csearch(macout.find(cadd));
                 if ( (k == preck) && (l>0) && (! cSCA) &&
-                     (std::find(T[l-1].begin(), T[l-1].end(), *kter ) != T[l-1].end()) ) {
+                     ( csearch != macout.end()) ) {
 #ifdef VERBATIM_PARSING
                     std::clog << "# Optimized out: (add;sub), "
                               << 'c' << kter->first << " +- "
-                              << VALPAR(kter->second) << 'c' << k << std::endl;
+                              << VALPAR(kter->second) << 'c' << k
+                              << std::endl;
 #endif
-                    macout.erase(macout.find(*kter));
+                    macout.erase(csearch);
                     --std::get<0>(opcount);
                 } else {
                     ADD(scout, 'c', kter->first, MONEOP('-',ckter->second),
@@ -204,23 +229,31 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
                 }
             }
         }
-//         std::clog << "### AFT macout" << std::endl;
+
+            // Print remaining Product clauses
         for(const auto& [key,value]: macout) {
             out << value.str() << std::flush;
         }
         macout.clear();
-//         std::clog << "### AFT scout" << std::endl;
         out << scout.str() << std::flush;
         scout.clear(); scout.str(std::string());
 
-            /* the recursive (multiplicative) calls */
+
+
+            /****************************************
+             * the recursive (multiplicative) calls *
+             ****************************************/
         MUL(out, 'c',k,MONEOP('+',ckter->second),'a',i,'b',j, opcount);
 
 
-            /* RESTORE: Product */
+
+            /********************
+             * RESTORE: Product *
+             ********************/
         for(auto kter = T[l].begin(); kter != T[l].end(); ++kter) {
             if (kter != ckter) {
-                ADD(macout[*kter], 'c', kter->first, MONEOP('+',ckter->second),
+                auto cadd(*kter); cadd.second *= ckter->second;
+                ADD(macout[cadd], 'c', kter->first, MONEOP('+',ckter->second),
                     kter->second, k, opcount);
             }
         }
@@ -228,7 +261,9 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
             SCA(scout, 'c', ckter->first, '*', ckter->second, opcount);
         }
 
-            /* RESTORE: Right hand side */
+            /****************************
+             * RESTORE: Right hand side *
+             ****************************/
         for(auto jter = B[l].begin(); jter != B[l].end(); ++jter) {
             if (jter != bjter) {
                 ADD(mabout[*jter], 'b',j,'-',jter->second, jter->first, opcount);
@@ -236,7 +271,9 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
         }
         SCA(sbout, 'b',j,'/',bjter->second, opcount);
 
-            /* RESTORE: Left hand side */
+            /***************************
+             * RESTORE: Left hand side *
+             ***************************/
         for(auto iter = A[l].begin(); iter != A[l].end(); ++iter) {
             if (iter != aiter) {
                 ADD(maaout[*iter], 'a',i,'-',iter->second, iter->first, opcount);
@@ -244,38 +281,26 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
         }
         SCA(saout, 'a',i,'/',aiter->second, opcount);
 
-// std::clog << "# END row: " << l << std::endl;
-
         preci=i; precj=j; preck=k;
+//         std::clog << "# END of parsing of: AXPY[" << l << ']'<<  std::endl;
     }
 
-//     std::clog << "### END macout" << std::endl;
-    for(const auto& [key,value]: macout) {
-        out << value.str() << std::flush;
-    }
-//     std::clog << "### END scout" << std::endl;
+        // Print last Product clauses
+    for(const auto& [key,value]: macout) { out << value.str() << std::flush; }
     out << scout.str() << std::flush;
-
-
-//     std::clog << "### END mabout" << std::endl;
-    for(const auto& [key,value]: mabout) {
-        out << value.str() << std::flush;
-    }
-//     std::clog << "### END sbout" << std::endl;
+        // Print last RHS clauses
+    for(const auto& [key,value]: mabout) { out << value.str() << std::flush; }
     out << sbout.str() << std::flush;
-
-
-//     std::clog << "### END maaout" << std::endl;
-    for(const auto& [key,value]: maaout) {
-        out << value.str() << std::flush;
-    }
-//     std::clog << "### END saout" << std::endl;
+        // Print last LHS clauses
+    for(const auto& [key,value]: maaout) { out << value.str() << std::flush; }
     out << saout.str() << std::flush;
 
     return opcount;
 }
+// ===============================================================
 
 
+// ===============================================================
 // Duplicate intermediate products
 void DoubleExpand(Matrix& AA, Matrix& BB, Matrix& TT,
                   const Matrix& A, const Matrix& B, const Matrix& T) {
@@ -309,13 +334,14 @@ void DoubleExpand(Matrix& AA, Matrix& BB, Matrix& TT,
     }
 
 #ifdef VERBATIM_PARSING
-    AA.write(std::clog << "A:=",LinBox::Tag::FileFormat::Maple) << ';' << std::endl;
-    BB.write(std::clog << "B:=",LinBox::Tag::FileFormat::Maple) << ';' << std::endl;
-    TT.write(std::clog << "T:=",LinBox::Tag::FileFormat::Maple) << ';' << std::endl;
+    AA.write(std::clog << "A:=",FileFormat::Maple) << ';' << std::endl;
+    BB.write(std::clog << "B:=",FileFormat::Maple) << ';' << std::endl;
+    TT.write(std::clog << "T:=",FileFormat::Maple) << ';' << std::endl;
     std::clog << std::string(30,'#') << std::endl;
 #endif
 
 }
+// ===============================================================
 
 
 // ===============================================================
@@ -324,24 +350,18 @@ Tricounter SearchBiLinearAlgorithm(std::ostream& out,
                                    const Matrix& A, const Matrix& B,
                                    const Matrix& T, size_t randomloops) {
 
-    if ( (A.rowdim() != B.rowdim())
-         ||
-         (A.rowdim() != T.rowdim())
-         ) {
-
+    if ( (A.rowdim() != B.rowdim()) || (A.rowdim() != T.rowdim()) ) {
         std::cerr << "Incorrect dimensions :" << std::endl;
 		std::cerr << "A is " << A.rowdim() << " by " << A.coldim() << std::endl;
 		std::cerr << "B is " << B.rowdim() << " by " << B.coldim() << std::endl;
 		std::cerr << "C is " << T.coldim() << " by " << T.rowdim() << std::endl;
-
         return Tricounter{0,0,0};
     }
 
     const QRat& QQ = T.field();
 
-
     Givaro::Timer elapsed;
-    std::ostringstream sout;
+    std::ostringstream sout, matout;
     Tricounter nbops(BiLinearAlgorithm(sout, A, B, T, true));
     std::string res(sout.str());
     std::clog << "# Oriented number of operations: " << nbops << std::endl;
@@ -349,20 +369,23 @@ Tricounter SearchBiLinearAlgorithm(std::ostream& out,
 #pragma omp parallel for shared(A,B,T,res,nbops)
     for(size_t i=0; i<randomloops; ++i) {
 
-
+            // =============================================
+            // random permutation of the rows
         LinBox::Permutation<QRat> P(QQ,A.rowdim());
         Givaro::GivRandom generator;
-
         P.random(generator.seed());
 
         Matrix pA(QQ,A.rowdim(), A.coldim()),
             pB(QQ,B.rowdim(), B.coldim()),
-            pT(QQ,T.rowdim(), T.coldim());
+            pT(QQ,T.rowdim(), T.coldim()),
+            TpT(QQ,T.coldim(), T.rowdim());
         permuteRows(pA,P,A,QQ);
         permuteRows(pB,P,B,QQ);
         permuteRows(pT,P,T,QQ);
 
 
+            // =============================================
+            // random coherent negation of the rows
         for(size_t i=0; i<pA.rowdim(); ++i) {
             const bool negA( generator.brand() ), negB( generator.brand() );
             if (negA) negRow(pA, i, QQ);
@@ -370,11 +393,12 @@ Tricounter SearchBiLinearAlgorithm(std::ostream& out,
             if (negA != negB) negRow(pT, i, QQ);
         }
 
-        std::ostringstream lout;
+        std::ostringstream lout, oout;
+
+            // =============================================
+            // trying first a random selection of variables
         Tricounter lops(BiLinearAlgorithm(lout, pA, pB, pT,false));
-#ifdef VERBATIM_PARSING
-        std::clog << "# Inplace algorithm operations[" << i << "]: " << lops << std::endl;
-#endif
+
         if ( (std::get<0>(lops)<std::get<0>(nbops)) ||
              ( (std::get<0>(lops)==std::get<0>(nbops))
                && (std::get<1>(lops)<std::get<1>(nbops)) ) ) {
@@ -382,21 +406,22 @@ Tricounter SearchBiLinearAlgorithm(std::ostream& out,
             res = lout.str();
             std::clog << "# Found algorithm[" << i << "], operations: " << lops << std::endl;
         }
-        lops = BiLinearAlgorithm(lout, pA, pB, pT, true);
-#ifdef VERBATIM_PARSING
-        std::clog << "# Inplace oriented operations [" << i << "]: " << lops << std::endl;
-#endif
+
+            // =============================================
+            // then trying a directed selection of variables
+        lops = BiLinearAlgorithm(oout, pA, pB, pT, true);
+
         if ( (std::get<0>(lops)<std::get<0>(nbops)) ||
              ( (std::get<0>(lops)==std::get<0>(nbops))
                && (std::get<1>(lops)<std::get<1>(nbops)) ) ) {
             nbops = lops;
-            res = lout.str();
+            res = oout.str();
             std::clog << "# Found oriented [" << i << "], operations: " << lops << std::endl;
         }
     }
 
+        // Print the chosen algorithm
     out << res << std::flush;
-
-
     return nbops;
 }
+// ===============================================================
