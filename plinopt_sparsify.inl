@@ -767,12 +767,12 @@ std::ostream& consistency(std::ostream& out, const _Mat& M,
         std::cerr << "# \033[1;31m****** ERROR inconsistency ******\033[0m"
                   << std::endl;
         DenseMatrix dM(QQ, M.rowdim(), M.coldim()); matrixCopy(dM,M,QQ);
-        dM.write(out,FileFormat::linalg) << std::endl;
+        dM.write(out,FileFormat::Maple) << std::endl;
         out << " != " << std::endl;
         DenseMatrix dR(QQ, R.rowdim(), R.coldim()); matrixCopy(dR,R,QQ);
-        dR.write(out,FileFormat::linalg) << std::endl;
+        dR.write(out,FileFormat::Maple) << std::endl;
         out << " * " << std::endl;
-        C.write(out,FileFormat::linalg) << std::endl;
+        C.write(out,FileFormat::Maple) << std::endl;
         out << std::string(30,'#') << std::endl;
     }
 

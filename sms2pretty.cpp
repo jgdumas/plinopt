@@ -91,8 +91,8 @@ std::ostream& PrettyPrint(std::ostream& out, std::istream& input,
 
         if ( (matformat == FileFormat::Plain) ||
              (matformat == FileFormat::HTML)  ||
-             (matformat == FileFormat(6))||
-             (matformat == FileFormat::linalg)  ) {
+             (matformat == FileFormat(6))     ||	// dense
+             (matformat == FileFormat(12))  ) {		// linalg
             DenseMatrix B(QQ,A.rowdim(),A.coldim()); matrixCopy(B,A,QQ);
             if (matformat == FileFormat(6))
                 out << B << std::endl;
