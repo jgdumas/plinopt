@@ -35,6 +35,7 @@
 #endif
 
 #include <givaro/givrational.h>
+#include <givaro/givprint.h>
 #include <linbox/matrix/sparse-matrix.h>
 #include <linbox/util/matrix-stream.h>
 #include <linbox/blackbox/permutation.h>
@@ -85,11 +86,6 @@ typedef std::tuple<size_t, size_t, size_t> Tricounter;
 std::ostream& operator<<(std::ostream& out, const Tricounter& t) {
     return out << '{' << std::get<0>(t)<< ','
                << std::get<1>(t)<< ',' << std::get<2>(t) << '}';
-}
-
-template<typename _T1, typename _T2>
-std::ostream& operator<<(std::ostream& out, const std::pair<_T1,_T2>& t) {
-    return out << '<' << t.frst << ',' << t.second << '>';
 }
 
     // From HM representation(L,R,P) to represented matrix-multiplication
