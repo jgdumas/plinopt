@@ -14,7 +14,7 @@
  *          bitsize: if present bitsize of random matrices
  *          sq srep: if present srep represents sqrt(sq)
  *                  then results is correct up to srep^2=sq,
- *                  that is modulo remainder=(srep^2-sq)
+ *                  thus checked modulo: (srep^2-sq) or /2 or /4
  * References:
  *   [ J-G. Dumas, C. Pernet, A. Sedoglavic; Feb. 2024
  *     Strassen's algorithm is not optimally accurate
@@ -29,31 +29,40 @@
 // ===============================================================
 // argv[1-3]: L.sms R.sms P.sms
 // argv[4]: bitsize
-// argv[5-6]: modulus = argv[6]^2-argv[5], in that case 2*argv[6].bitsize is added to bitsize
+// argv[5-6]: modulus = (argv[6]^2-argv[5]), and /2 if argv[5]!=2
 int main(int argc, char ** argv) {
 
     if ((argc <=3) || (std::string(argv[1]) == "-h")) {
-        std::clog << "Usage: " << argv[0] << " L.sms R.sms P.sms [bitsize [sq srep]]\n";
-
-        std::clog << "  [bitsize]: random check with values of size 'bitsize'\n"
-                  << "  [sq srep]: check is performed modulo (srep-sq^2)\n";
+        std::clog << "Usage:" << argv[0]
+                  << "  L.sms R.sms P.sms [bitsize [sq srep]]\n"
+                  << "  [bitsize]: random check with values of size 'bitsize'\n"
+                  << "  [sq srep]: check is modulo (srep^2-sq) or /2 or /4\n";
 
         exit(-1);
     }
 
         // =============================================
-        // if present, result is checked modulo (srep^2-sq)
+        // if present, result is checked modulo
+        // sq=2, check is mod (srep^2-sq) or /2 or /4
+        // Indeed (2k+1)^2 - (2v+1) is even, so at least remove 2
+        // Probability of correctness is better if modulus is prime
+        // Examples:
+        //    For sq=2, then srep=1013, gives mod: 1013^2-2     = 1026167
+        //    For sq=3, then srep=1013, gives mod: (1013^2-3)/2 =  512083
+        //    For sq=5, then srep=1013, gives mod: (1013^2-5)/4 =  256541
+        //    For sq=7, then srep=1011, gives mod: (1011^2-7)/2 =  511057
     Givaro::Integer sq(argc>6?argv[5]:""), srep(argc>6?argv[6]:"");
     Givaro::Integer modulus(srep*srep-sq);
-
+    if ( (sq%2) != 0) modulus >>=1; // (2k+1)^2 - (2v+1) is 0 mod 2
+    if ( (sq%4) == 1) modulus >>=1; // (2k+1)^2 - (4v+1) is 0 mod 4
+#ifdef VERBATIM_PARSING
+    std::clog << std::string(30,'#') << std::endl;
+    std::clog << "# Check is modulo: " << modulus << std::endl;
+#endif
         // =============================================
         // Reading matrices
 	std::ifstream left (argv[1]), right (argv[2]), product(argv[3]);
     size_t bitsize(argc>4?atoi(argv[4]):32u);
-
-        // To not interfere too much with probabilistic modular check ...
-    if(argc>6) bitsize += srep.bitsize()<<1;
-
 
     QRat QQ;
     QMstream ls(QQ, left), rs(QQ, right), ss(QQ, product);
@@ -64,9 +73,9 @@ int main(int argc, char ** argv) {
 
 
 #ifdef VERBATIM_PARSING
-    L.write(std::clog << "L:=",LinBox::Tag::FileFormat::Maple) << ';' << std::endl;
-    R.write(std::clog << "R:=",LinBox::Tag::FileFormat::Maple) << ';' << std::endl;
-    P.write(std::clog << "P:=",LinBox::Tag::FileFormat::Maple) << ';' << std::endl;
+    L.write(std::clog << "L:=",FileFormat::Maple) << ';' << std::endl;
+    R.write(std::clog << "R:=",FileFormat::Maple) << ';' << std::endl;
+    P.write(std::clog << "P:=",FileFormat::Maple) << ';' << std::endl;
     std::clog << std::string(30,'#') << std::endl;
 #endif
 
@@ -77,8 +86,8 @@ int main(int argc, char ** argv) {
 
     QVector va(QQ,L.rowdim()), ua(QQ,L.coldim());
     QVector vb(QQ,R.rowdim()), ub(QQ,R.coldim());
-    for(auto iter=ua.begin(); iter!=ua.end(); ++iter) QQ.random(generator, *iter, bitsize);
-    for(auto iter=ub.begin(); iter!=ub.end(); ++iter) QQ.random(generator, *iter, bitsize);
+    for(auto &iter:ua) QQ.random(generator, iter, bitsize);
+    for(auto &iter:ub) QQ.random(generator, iter, bitsize);
 
         // =============================================
         // Compute matrix product via the HM algorithm
@@ -94,18 +103,18 @@ int main(int argc, char ** argv) {
         // Compute the matrix product directly
     Tricounter mkn(LRP2MM(L,R,P));
     const size_t& n(std::get<0>(mkn)), k(std::get<1>(mkn)), m(std::get<2>(mkn));
-    LinBox::DenseMatrix<QRat> Ma(QQ,m,k), Mb(QQ,k,n), Mc(QQ,m,n);
+    LinBox::DenseMatrix<QRat> Ma(QQ,m,k), Mb(QQ,k,n), Delta(QQ,m,n);
 
         // row-major vectorization
     for(size_t i=0; i<ua.size(); ++i) Ma.setEntry(i/k,i%k,ua[i]);
     for(size_t i=0; i<ub.size(); ++i) Mb.setEntry(i/n,i%n,ub[i]);
-    for(size_t i=0; i<wc.size(); ++i) Mc.setEntry(i/n,i%n,wc[i]);
+    for(size_t i=0; i<wc.size(); ++i) Delta.setEntry(i/n,i%n,wc[i]);
 
     LinBox::MatrixDomain<QRat> BMD(QQ);
-    LinBox::DenseMatrix<QRat> Rc(QQ,m,n);
-    BMD.mul(Rc,Ma,Mb); // Direct matrix multiplication
+    LinBox::DenseMatrix<QRat> Mc(QQ,m,n);
+    BMD.mul(Mc,Ma,Mb); // Direct matrix multiplication
 
-    BMD.subin(Mc, Rc);
+    BMD.subin(Delta, Mc);
 
         // =============================================
         // Computations should agree modulo (srep^2-sq)
@@ -113,13 +122,16 @@ int main(int argc, char ** argv) {
     if(argc>6) {
         for(size_t i=0; i<m; ++i) {
             for(size_t j=0; j<n; ++j) {
-                Mc.refEntry(i,j) = (Mc.refEntry(i,j).nume() % modulus) / Mc.refEntry(i,j).deno();
+                Delta.setEntry(i,j, Givaro::Rational(
+                    Delta.getEntry(i,j).nume() % modulus,
+                    Delta.getEntry(i,j).deno() ) );
             }
         }
     }
+
         // =============================================
         // Both computations should agree
-    if (BMD.isZero (Mc))
+    if (BMD.isZero (Delta))
         std::clog <<"# \033[1;32mSUCCESS: correct "
                   << m << 'x' << k << 'x' << n
                   << " Matrix-Multiplication!\033[0m" << std::endl;
@@ -129,17 +141,22 @@ int main(int argc, char ** argv) {
                   << " MM algorithm******\033[0m"
                   << std::endl;
 
-        ua.write(std::clog << "Ua:=", LinBox::Tag::FileFormat::Maple ) << ';' << std::endl;
-        va.write(std::clog << "Va:=", LinBox::Tag::FileFormat::Maple ) << ';' << std::endl;
-        ub.write(std::clog << "Ub:=", LinBox::Tag::FileFormat::Maple ) << ';' << std::endl;
-        vb.write(std::clog << "Vb:=", LinBox::Tag::FileFormat::Maple ) << ';' << std::endl;
-        vc.write(std::clog << "Vc:=", LinBox::Tag::FileFormat::Maple ) << ';' << std::endl;
-        wc.write(std::clog << "wc:=", LinBox::Tag::FileFormat::Maple ) << ';' << std::endl;
+        ua.write(std::clog << "Ua:=", FileFormat::Maple ) << ';' << std::endl;
+        va.write(std::clog << "Va:=", FileFormat::Maple ) << ';' << std::endl;
+        ub.write(std::clog << "Ub:=", FileFormat::Maple ) << ';' << std::endl;
+        vb.write(std::clog << "Vb:=", FileFormat::Maple ) << ';' << std::endl;
+        vc.write(std::clog << "Vc:=", FileFormat::Maple ) << ';' << std::endl;
+        wc.write(std::clog << "wc:=", FileFormat::Maple ) << ';' << std::endl;
 
-        Ma.write(std::clog << "Ma:=", LinBox::Tag::FileFormat::Maple) << ';' << std::endl;
-        Mb.write(std::clog << "Mb:=", LinBox::Tag::FileFormat::Maple) << ';' << std::endl;
-        Mc.write(std::clog << "Mc:=", LinBox::Tag::FileFormat::Maple) << ';' << std::endl;
-        Rc.write(std::clog << "Rc:=", LinBox::Tag::FileFormat::Maple) << ';' << std::endl;
+        Ma.write(std::clog << "Ma:=", FileFormat::linalg) << ';' << std::endl;
+        Mb.write(std::clog << "Mb:=", FileFormat::linalg) << ';' << std::endl;
+            // Correct value
+        Mc.write(std::clog << "Mc:=", FileFormat::linalg) << ';' << std::endl;
+            // Difference with computed value
+        Delta.write(std::clog << "Df:=", FileFormat::linalg) << ';' << std::endl;
+        BMD.addin(Delta, Mc);
+            // Computed value
+        Delta.write(std::clog << "Rc:=", FileFormat::linalg) << ';' << std::endl;
     }
 
     return 0;
