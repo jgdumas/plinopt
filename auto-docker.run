@@ -18,8 +18,10 @@ apt install git make g++ pkg-config
 apt install libgmp-dev liblinbox-dev libntl-dev
 cd; git clone https://github.com/jgdumas/plinopt.git
 cd plinopt; make
-./inplacer data/Lw.sms data/Rw.sms data/Pw.sms
-./inplacer data/Lk.sms data/Rk.sms data/Pk.sms e
+./inplacer data/Lw.sms
+./inplacer -t data/Pw.sms
+./bilplacer data/Lw.sms data/Rw.sms data/Pw.sms
+./bilplacer data/Lk.sms data/Rk.sms data/Pk.sms -e
 ./sms2pretty data/Ls.sms data/Rs.sms data/Ps.sms
 ./matrix-transpose data/Pw.sms
 ./MMchecker data/Lw.sms data/Rw.sms data/Pw.sms

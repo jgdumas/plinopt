@@ -9,6 +9,80 @@
 
 #include "plinopt_inplace.h"
 
+// ===============================================================
+// Tools for atomic operation (ADD or SCA)
+struct Atom {
+    char _var;
+    size_t _src;
+    char _ope;
+    Givaro::Rational _val;
+    size_t _des;
+
+    Atom(char v, size_t s, char o, const Givaro::Rational& r, size_t d=0)
+            : _var(v),_src(s),_ope(o),_val(r),_des(d) {}
+
+    friend std::ostream& operator<<(std::ostream& out, const Atom& p) {
+        const bool bsca(isSca(p._ope));
+
+        if (bsca && isOne(p._val)) return out;
+
+
+        if (p._ope == ' ') return out << "# row computed in "
+                                      << p._var << p._src;
+
+
+        out << p._var << p._src << ":="
+            << p._var << p._src << ' ';
+
+        if (bsca) {
+            out << p._ope << ' ' << VALPAR(p._val);
+        } else {
+            const auto uval(sign(p._val)<0?-p._val:p._val);
+            const auto uope(sign(p._val)<0?SWAPOP(p._ope):p._ope);
+            out << uope << ' ';
+            if (! isOne(uval)) {
+                out << VALPAR(uval) << '*';
+            }
+            out << p._var << p._des;
+        }
+        return out << ';';
+    }
+
+    bool isinv(const Atom& p) const {
+        bool binv(true);
+        binv &= (this->_var == p._var);
+        binv &= (this->_src == p._src);
+        if (isAdd(this->_ope)) {
+            if (this->_ope==p._ope) {
+                binv &= isZero(this->_val+p._val);
+            } else {
+                binv &= isZero(this->_val-p._val);
+            }
+        } else {
+            binv &= isOne(this->_val * p._val);
+        }
+        return binv &= (this->_des == p._des);
+    }
+};
+
+auto isScaOne {[](const Atom& p){ return (isSca(p._ope) && isOne(p._val));} };
+
+Tricounter complexity(const Program_t& p) {
+    Tricounter nops;
+    for(const auto& iter: p) {
+        if (isAdd(iter._ope)) ++std::get<0>(nops);
+        if (isSca(iter._ope)) ++std::get<1>(nops);
+        if (iter._ope == ' ') ++std::get<2>(nops);
+    }
+    return nops;
+}
+std::ostream& operator<< (std::ostream& out, const Program_t& p) {
+    for(const auto& iter: p) {
+        out << iter << std::endl;
+    }
+    return out;
+}
+
 
 // ===============================================================
 // Directed selection of accumulation i/o variables
@@ -58,7 +132,9 @@ Matrix::Row::const_iterator nextindex(const size_t preci, const Matrix::Row& L,
 #ifdef RANDOM_TIES
     if (oriented) return orientindex(preci, L, oriented);
     std::vector<Matrix::Row::const_iterator> vnext;
-    for(auto iter=L.begin(); iter!=L.end(); ++iter) vnext.push_back(iter);
+    for(auto iter=L.begin(); iter!=L.end(); ++iter) {
+        vnext.push_back(iter);
+    }
     std::shuffle (vnext.begin(), vnext.end(),
                   std::default_random_engine(Givaro::BaseTimer::seed()));
     return vnext.front();
@@ -67,6 +143,176 @@ Matrix::Row::const_iterator nextindex(const size_t preci, const Matrix::Row& L,
 #endif
 }
 // ===============================================================
+
+
+
+// ===============================================================
+// Removes the first atom followed by its inverse
+bool simplify(Program_t& Program) {
+    size_t cnt(0);
+    for(auto iter = Program.begin(); iter != Program.end(); ++iter) {
+        ++ cnt;
+        auto next(iter);
+        for(++next; next != Program.end(); ++next) {
+            if (next->isinv(*iter)) {
+#ifdef VERBATIM_PARSING
+                std::clog << "# Removing[" << cnt << "] " << *iter << " with " << *next << std::endl;
+#endif
+                Program.erase(next);
+                Program.erase(iter);
+
+                return true;
+
+            }
+            if (next->_src == iter->_src) {
+                if ( (next->_ope == ' ') || isSca(next->_ope) ) {
+                    break;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+// ===============================================================
+
+
+
+
+
+// ===============================================================
+// In-place program realizing a linear function
+Program_t& LinearAlgorithm(Program_t& Program, const Matrix& A,
+                           const char variable,
+                           const bool transposed, const bool oriented) {
+
+    const QRat& QQ = A.field();
+    Tricounter opcount; // 0:ADD, 1:SCA, 2:MUL
+    const size_t m(A.rowdim());
+    size_t preci(A.coldim());
+
+    for(size_t l=0; l<m; ++l) {
+        const auto aiter { nextindex(preci, A[l], oriented) }; // choose var
+        const size_t i(aiter->first);
+
+            // scale choosen var
+        Program.emplace_back(variable,i,(transposed?'/':'*'),aiter->second);
+
+			// Add the rest of the row
+       for(auto iter = A[l].begin(); iter != A[l].end(); ++iter) {
+            if (iter != aiter) {
+                if (transposed) {
+                    Program.emplace_back(variable, iter->first,
+                                         MONEOP('-',aiter->second),
+                                         iter->second, i);
+                } else {
+                    Program.emplace_back(variable, i,
+                                         '+',
+                                         iter->second, iter->first);
+                }
+
+            }
+        }
+
+        Program.emplace_back(variable,i,' ',QQ.zero); // placeholder for stop
+
+			// Sub the rest of the row
+        for(auto iter = A[l].begin(); iter != A[l].end(); ++iter) {
+            if (iter != aiter) {
+                if (transposed) {
+                    Program.emplace_back(variable, iter->first,
+                                         MONEOP('+',aiter->second),
+                                         iter->second, i);
+                } else {
+                    Program.emplace_back(variable, i,
+                                         '-',
+                                         iter->second, iter->first);
+                }
+            }
+        }
+
+            // Un-scale choosen var
+        Program.emplace_back(variable,i,(transposed?'*':'/'),aiter->second);
+
+        preci = i;
+    }
+
+// std::clog << "# P setup : " << Program.size() << std::endl;
+// std::clog <<  Program << std::endl;
+
+        // Removing noops
+    Program.erase(std::remove_if(Program.begin(),
+                                 Program.end(),
+                                 isScaOne),
+                  Program.end());
+
+// std::clog << "# P pruned: " << Program.size() << std::endl;
+// std::clog <<  Program << std::endl;
+
+        // Removes atoms followed by their inverses
+    if (! transposed) {
+        bool simp; do {
+            simp = simplify(Program);
+// std::clog << "# P simplf: " << Program.size() << std::endl;
+// std::clog <<  Program << std::endl;
+        } while(simp);
+    }
+
+    return Program;
+}
+// ===============================================================
+
+
+
+// ===============================================================
+// Searching the space of in-place linear programs
+Tricounter SearchLinearAlgorithm(Program_t& Program, const Matrix& A,
+                                 const char variable, size_t randomloops,
+                                 const bool transposed) {
+    const QRat& QQ = A.field();
+
+    Givaro::Timer elapsed;
+    std::ostringstream sout, matout;
+
+    LinearAlgorithm(Program, A, variable, transposed, true);
+    Tricounter nbops { complexity(Program) };
+
+
+    std::string res(sout.str());
+    std::clog << "# Oriented number of operations for " << variable
+              << ": " << nbops << std::endl;
+
+#pragma omp parallel for shared(A,Program,nbops)
+    for(size_t i=0; i<randomloops; ++i) {
+
+            // =============================================
+            // random permutation of the rows
+        LinBox::Permutation<QRat> P(QQ,A.rowdim());
+        Givaro::GivRandom generator;
+        P.random(generator.seed());
+
+        Matrix pA(QQ,A.rowdim(), A.coldim());
+        permuteRows(pA,P,A,QQ);
+
+        Program_t lProgram; LinearAlgorithm(lProgram, A, variable, transposed);
+        Tricounter lops { complexity(lProgram) };
+
+        if ( (std::get<0>(lops)<std::get<0>(nbops)) ||
+             ( (std::get<0>(lops)==std::get<0>(nbops))
+               && (std::get<1>(lops)<std::get<1>(nbops)) ) ) {
+            nbops = lops;
+            Program = lProgram;
+            std::clog << "# Found algorithm[" << i << "] for " << variable
+                      << ", operations: " << lops << std::endl;
+        }
+    }
+
+    return nbops;
+}
+// ===============================================================
+
+
+
 
 
 // ===============================================================
@@ -424,4 +670,73 @@ Tricounter SearchBiLinearAlgorithm(std::ostream& out,
     out << res << std::flush;
     return nbops;
 }
+// ===============================================================
+
+
+
+
+// ===============================================================
+// Enables checking a matrix multiplication with Maple
+#ifdef INPLACE_CHECKER
+
+    // Setup auxilliary variables
+void InitializeVariables(const char L, const size_t m,
+                         const char H, const size_t n,
+                         const char F, const size_t s) {
+    for(size_t h=0; h<m; ++h)
+        std::clog << L << h << ":=L[" << (h+1) << "];";
+    std::clog << std::endl;
+    for(size_t h=0; h<n; ++h)
+        std::clog << H << h << ":=H[" << (h+1) << "];";
+    std::clog << std::endl;
+    for(size_t h=0; h<s; ++h)
+        std::clog << F << h << ":=F[" << (h+1) << "];";
+    std::clog << std::endl;
+    std::clog << std::string(30,'#') << std::endl;
+}
+
+    // Collect result of program
+void CollectVariables(const char L, const size_t m,
+                      const char H, const size_t n,
+                      const char F, const size_t s) {
+    std::clog << std::string(30,'#') << std::endl;
+    for(size_t h=0; h<s; ++h)
+        std::clog << "R[" << (h+1) << "]:=simplify(" << F << h << ",symbolic);";
+    std::clog << std::endl;
+    for(size_t h=0; h<n; ++h)
+        std::clog << H << h << "-H[" << (h+1) << "],";
+    std::clog << "0;" << std::endl;
+    for(size_t h=0; h<m; ++h)
+        std::clog << L << h << "-L[" << (h+1) << "],";
+    std::clog << "0;" << std::endl;
+    std::clog << std::string(30,'#') << std::endl;
+}
+
+
+    // Compare program with a matrix multiplication
+void CheckMatrixMultiplication(const Matrix& A, const Matrix& B,
+                               const Matrix& C) {
+    Tricounter mkn(LRP2MM(A,B,C));
+    const size_t& n(std::get<0>(mkn)), t(std::get<1>(mkn)), m(std::get<2>(mkn));
+    std::clog <<"# code-checking for "
+              << m << 'x' << t << 'x' << n
+              << " Matrix-Multiplication" << std::endl;
+    std::clog << '<';
+    for(size_t i=0; i<m; ++i) {
+        if (i!=0) std::clog << ',' << std::endl;
+        std::clog << '<';
+        for(size_t j=0; j<n; ++j) {
+            if (j!=0) std::clog << '|';
+            for(size_t k=0; k<t; ++k) {
+                if (k!=0) std::clog << '+';
+                std::clog << "L[" << (i*t+k+1) << "]*H[" << (k*n+j+1) << ']';
+            }
+            std::clog << " + F[" << (i*n+j+1) << "] - R[" << (i*n+j+1) << ']';
+        }
+        std::clog << '>';
+    }
+    std::clog << ">;" << std::endl;
+}
+
+#endif
 // ===============================================================
