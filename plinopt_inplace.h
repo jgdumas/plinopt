@@ -33,13 +33,14 @@ Program_t& LinearAlgorithm(Program_t& Program, const Matrix& A,
 // Searching the space of in-place linear programs
 Tricounter SearchLinearAlgorithm(Program_t& Program, const Matrix& A,
                                  const char a, size_t randomloops,
-                                 const bool transposed=false);
+                                 const bool transposed=false,
+                                 const bool oriented=false);
 
 // ===============================================================
-// In-place program realizing a bilinear function
-Tricounter BiLinearAlgorithm(std::ostream& out,
-                             const Matrix& A, const Matrix& B,
-                             const Matrix& T, const bool oriented=false);
+// In-place optimized program realizing a bilinear function
+Tricounter BiLinearProgram(std::ostream& out, const Matrix& A, const Matrix& B,
+                           const Matrix& T, const size_t randomloops,
+                           const bool oriented=false);
 
 // ===============================================================
 // Searching the space of in-place bilinear programs

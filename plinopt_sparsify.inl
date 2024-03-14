@@ -485,9 +485,9 @@ inline bool sparseILU(Matrix& TC, Matrix& A, const size_t sparsity) {
     static LinBox::GaussDomain<QRat> GD(QQ);
     static LinBox::MatrixDomain<QRat> BMD(QQ);
 
-    const size_t m(A.rowdim()), n(A.coldim());
+    const size_t m(A.rowdim());
 #ifdef DEBUG
-    DenseMatrix TR(QQ,m,n);
+    DenseMatrix TR(QQ,m,A.coldim());
     applyInverse(TR, TC, A, QQ, BMD);	// TR s.t., A == TC . TR
 #endif
 
