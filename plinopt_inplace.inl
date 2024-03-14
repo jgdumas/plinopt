@@ -226,7 +226,8 @@ Program_t& LinearAlgorithm(Program_t& Program, const Matrix& A,
     size_t preci(A.coldim());
 
     for(size_t l=0; l<m; ++l) {
-        const auto aiter { nextindex(preci, A[l], oriented) }; // choose var
+        const auto& CurrentRow(A[l]);
+        const auto aiter { nextindex(preci, CurrentRow, oriented) }; // choose var
         const size_t i(aiter->first);
 
             // scale choosen var
@@ -240,7 +241,7 @@ Program_t& LinearAlgorithm(Program_t& Program, const Matrix& A,
 
 
 			// Add the rest of the row
-       for(auto iter = A[l].begin(); iter != A[l].end(); ++iter) {
+       for(auto iter = CurrentRow.begin(); iter != CurrentRow.end(); ++iter) {
             if (iter != aiter) {
                 if (transposed) {
                     Program.emplace_back(variable, iter->first,
@@ -258,7 +259,7 @@ Program_t& LinearAlgorithm(Program_t& Program, const Matrix& A,
         Program.emplace_back(variable,i,' ', aiter->second); // placeholder for stop
 
 			// Sub the rest of the row
-        for(auto iter = A[l].begin(); iter != A[l].end(); ++iter) {
+        for(auto iter = CurrentRow.begin(); iter != CurrentRow.end(); ++iter) {
             if (iter != aiter) {
                 if (transposed) {
                     Program.emplace_back(variable, iter->first,
@@ -282,7 +283,7 @@ Program_t& LinearAlgorithm(Program_t& Program, const Matrix& A,
         }
 
 
-        preci = i;
+        if (CurrentRow.size()>1) preci = i;
     }
 
 // std::clog << "# P setup : " << Program.size() << std::endl;
@@ -400,11 +401,14 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
 //         std::clog << "# BEGIN parsing of: AXPY[" << l
 //                   << "], astr: " << rmnl(saout.str())
 //                   << ", bstr: " <<  rmnl(sbout.str()) << std::endl;
+        const auto& CurrentARow(A[l]);
+        const auto& CurrentBRow(B[l]);
+        const auto& CurrentTRow(T[l]);
 
             /******************
              * Left hand side *
              ******************/
-        const auto aiter { nextindex(preci, A[l], oriented) }; // choose var
+        const auto aiter { nextindex(preci, CurrentARow, oriented) }; // choose var
         const size_t i(aiter->first);
         if ( (i == preci) && (l>0) && (aiter->second == A.getEntry(l-1,i)) ) {
             if (! QQ.isOne(aiter->second)) {
@@ -421,7 +425,7 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
         }
         const bool aSCA(saout.tellp() != std::streampos(0));
 
-        for(auto iter = A[l].begin(); iter != A[l].end(); ++iter) {
+        for(auto iter = CurrentARow.begin(); iter != CurrentARow.end(); ++iter) {
             if (iter != aiter) {
                 const auto asearch(maaout.find(*iter));
                 if ( (i == preci) && (l>0) && (! aSCA) &&
@@ -451,7 +455,7 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
             /*******************
              * Right hand side *
              *******************/
-        const auto bjter( nextindex(precj, B[l], oriented) );
+        const auto bjter( nextindex(precj, CurrentBRow, oriented) );
         const size_t j(bjter->first);
         if ( (j == precj) && (l>0) && (bjter->second == B.getEntry(l-1,j)) ) {
             if (! QQ.isOne(bjter->second)) {
@@ -468,7 +472,7 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
         }
         const bool bSCA(sbout.tellp() != std::streampos(0));
 
-        for(auto jter = B[l].begin(); jter != B[l].end(); ++jter) {
+        for(auto jter = CurrentBRow.begin(); jter != CurrentBRow.end(); ++jter) {
             if (jter != bjter) {
                 const auto bsearch(mabout.find(*jter));
                 if ( (j == precj) && (l>0) && (! bSCA) &&
@@ -499,7 +503,7 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
             /***********
              * Product *
              ***********/
-        const auto ckter( nextindex(preck, T[l], oriented) );
+        const auto ckter( nextindex(preck, CurrentTRow, oriented) );
         const size_t k(ckter->first);
 
         if ( (!QQ.isOne(ckter->second)) && (!QQ.isMOne(ckter->second))) {
@@ -519,7 +523,7 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
         }
         const bool cSCA(scout.tellp() != std::streampos(0));
 
-        for(auto kter = T[l].begin(); kter != T[l].end(); ++kter) {
+        for(auto kter = CurrentTRow.begin(); kter != CurrentTRow.end(); ++kter) {
             if (kter != ckter) {
                 auto cadd(*kter); cadd.second *= ckter->second;
                 const auto csearch(macout.find(cadd));
@@ -560,7 +564,7 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
             /********************
              * RESTORE: Product *
              ********************/
-        for(auto kter = T[l].begin(); kter != T[l].end(); ++kter) {
+        for(auto kter = CurrentTRow.begin(); kter != CurrentTRow.end(); ++kter) {
             if (kter != ckter) {
                 auto cadd(*kter); cadd.second *= ckter->second;
                 ADD(macout[cadd], 'c', kter->first, MONEOP('+',ckter->second),
@@ -574,7 +578,7 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
             /****************************
              * RESTORE: Right hand side *
              ****************************/
-        for(auto jter = B[l].begin(); jter != B[l].end(); ++jter) {
+        for(auto jter = CurrentBRow.begin(); jter != CurrentBRow.end(); ++jter) {
             if (jter != bjter) {
                 ADD(mabout[*jter], 'b',j,'-',jter->second, jter->first, opcount);
             }
@@ -584,14 +588,16 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
             /***************************
              * RESTORE: Left hand side *
              ***************************/
-        for(auto iter = A[l].begin(); iter != A[l].end(); ++iter) {
+        for(auto iter = CurrentARow.begin(); iter != CurrentARow.end(); ++iter) {
             if (iter != aiter) {
                 ADD(maaout[*iter], 'a',i,'-',iter->second, iter->first, opcount);
             }
         }
         SCA(saout, 'a',i,'/',aiter->second, opcount);
 
-        preci=i; precj=j; preck=k;
+        if (CurrentARow.size()>1) preci=i;
+        if (CurrentBRow.size()>1) precj=j;
+        if (CurrentTRow.size()>1) preck=k;
 //         std::clog << "# END of parsing of: AXPY[" << l << ']'<<  std::endl;
     }
 
