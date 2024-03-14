@@ -118,7 +118,6 @@ int main(int argc, char ** argv) {
 
         opcount = SearchBiLinearAlgorithm(std::cout, A, B, T, randomloops);
 
-
 #ifdef INPLACE_CHECKER
         CollectVariables('a',A.coldim(), 'b', B.coldim(), 'c', T.coldim());
         CheckMatrixMultiplication(A,B,C);

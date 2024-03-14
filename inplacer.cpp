@@ -37,6 +37,10 @@ std::ostream& FindProgram(std::ostream& out, std::istream& input,
     M.write(std::clog << "M:=Matrix(",FileFormat::Maple) << ");" << std::endl;
     std::clog << std::string(30,'#') << std::endl;
 #endif
+#ifdef INPLACE_CHECKER
+    InitializeVariable('m',M.coldim(), 'L');
+    std::clog << std::string(30,'#') << std::endl;
+#endif
 
     Tricounter opcount; Program_t Program;
 
@@ -50,6 +54,10 @@ std::ostream& FindProgram(std::ostream& out, std::istream& input,
         // Print the chosen algorithm
     out << Program << std::flush;
 
+#ifdef INPLACE_CHECKER
+    CollectVariable('m',M.coldim(), 'L');
+    std::clog << std::string(30,'#') << std::endl;
+#endif
         // =================================
         // Resulting program operation count
     std::clog << std::string(40,'#') << std::endl;
