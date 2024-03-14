@@ -62,7 +62,7 @@ void usage(int argc, char ** argv) {
 //        looks for reduced number of additions, then multiplications
 int main(int argc, char ** argv) {
 
-    size_t randomloops(DORANDOMSEARCH?DEFAULT_RANDOM_LOOPS:1);
+    size_t randomloops(DORANDOMSEARCH?ceil(std::sqrt(DEFAULT_RANDOM_LOOPS)):1);
     bool doexpand(false);
 
     if (argc<4) usage(argc,argv);

@@ -181,10 +181,17 @@ bool simplify(Program_t& Program, const bool transposed) {
 
 
 
+				// Stop optimizing, if iter is reused from now, in certain cases
             if (transposed) {
-                break;
+                if ( ( (iter->_des == next->_des)
+                       &&
+                       ( (next->_ope == ' ') || isSca(next->_ope) ) )
+                     ||
+                     (iter->_des == next->_src)
+                     ) {
+                    break;
+                }
             } else {
-                    // Stop optimizing, if iter is reused from now
                 if ( ( (iter->_src == next->_src)
                        &&
                        ( (next->_ope == ' ') || isSca(next->_ope) ) )
