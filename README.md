@@ -10,7 +10,8 @@
 
 **Requirements**:
 - C++, pkg-config
-- [LinBox](https://linalg.org/), dev: headers & library
+- [LinBox](https://linalg.org/), dev: headers & library (LinBox version ≥ 1.7.0; givaro version ≥ 4.2.0)
+
 
 
 
