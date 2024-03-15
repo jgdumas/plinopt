@@ -148,15 +148,15 @@ int main(int argc, char ** argv) {
         vc.write(std::clog << "Vc:=", FileFormat::Maple ) << ';' << std::endl;
         wc.write(std::clog << "wc:=", FileFormat::Maple ) << ';' << std::endl;
 
-        Ma.write(std::clog << "Ma:=", FileFormat::linalg) << ';' << std::endl;
-        Mb.write(std::clog << "Mb:=", FileFormat::linalg) << ';' << std::endl;
+        Ma.write(std::clog << "Ma:=", FileFormat::Maple) << ';' << std::endl;
+        Mb.write(std::clog << "Mb:=", FileFormat::Maple) << ';' << std::endl;
             // Correct value
-        Mc.write(std::clog << "Mc:=", FileFormat::linalg) << ';' << std::endl;
+        Mc.write(std::clog << "Mc:=", FileFormat::Maple) << ';' << std::endl;
             // Difference with computed value
-        Delta.write(std::clog << "Df:=", FileFormat::linalg) << ';' << std::endl;
+        Delta.write(std::clog << "Df:=", FileFormat::Maple) << ';' << std::endl;
         BMD.addin(Delta, Mc);
             // Computed value
-        Delta.write(std::clog << "Rc:=", FileFormat::linalg) << ';' << std::endl;
+        Delta.write(std::clog << "Rc:=", FileFormat::Maple) << ';' << std::endl;
     }
 
     return 0;
