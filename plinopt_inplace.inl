@@ -762,7 +762,7 @@ Tricounter SearchBiLinearAlgorithm(std::ostream& out,
 
     Givaro::Timer elapsed;
     std::ostringstream sout, matout;
-    Tricounter nbops(BiLinearAlgorithm(sout, A, B, T, true));
+    Tricounter nbops{ BiLinearProgram(sout, A, B, T, randomloops, true) };
     std::string res(sout.str());
     std::clog << "# Oriented number of operations: " << nbops << std::endl;
 
