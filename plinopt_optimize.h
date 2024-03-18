@@ -27,62 +27,85 @@
 
 
 #include "plinopt_library.h"
+#include <givaro/modular.h>
 #include <linbox/algorithms/gauss.h>
 
 #ifndef _PLINOPT_LIBRARY_OPTIMIZE_H_
 #define _PLINOPT_LIBRARY_OPTIMIZE_H_
 
-typedef std::tuple<size_t, size_t, Givaro::Rational> triple;
-typedef std::vector<triple> VTriple;
-typedef std::map<triple,size_t> STriple;
-
-bool operator==(const triple& u, const triple&v);
-
-std::ostream& operator<<(std::ostream& out, const triple& t);
-std::ostream& operator<<(std::ostream& out, const VTriple& v);
+// typedef std::tuple<size_t, size_t, Givaro::Rational> triple;
 
 template<typename T1, typename T2>
 std::ostream& operator<<(std::ostream& out, const std::map<T1,T2>& v);
 
 // Build pairs of indices with normalized coefficient (ratio of the two values)
-template<typename Iter>
-VTriple listpairs(const Iter& start, const Iter& end);
+template<typename Iter, typename Field>
+std::vector<std::tuple<size_t, size_t, typename Field::Element>> listpairs(
+    const Iter& start, const Iter& end, const Field& F);
 
 // If cse is present in row, add square of row density to score
-size_t score(const std::vector<VTriple>& AllPairs,
+template<typename triple>
+size_t score(const std::vector<std::vector<triple>>& AllPairs,
              const std::vector<size_t>& Density,
              const triple& cse);
 
 // Removing one pair
-bool OneSub(std::ostream& sout, Matrix& M, VTriple& multiples, size_t& nbmul,
-            const char tev, const char rav);
+template<typename triple, typename _Mat>
+bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
+            size_t& nbmul, const char tev, const char rav);
 
 
 // Factors out same coefficient in a column
-template<typename Iter>
-void FactorOutColumns(std::ostream& sout, Matrix& T, VTriple& multiples, size_t& nbmul,
+template<typename Iter, typename triple, typename _Mat>
+void FactorOutColumns(std::ostream& sout, _Mat& T,
+                      std::vector<triple>& multiples, size_t& nbmul,
                       const char tev, const char rav,
                       const size_t j, const Iter& start, const Iter& end) ;
 
 // Factors out same coefficient in a row
-template<typename Iter>
-void FactorOutRows(std::ostream& sout, Matrix& M, size_t& nbadd, const char tev,
+template<typename Iter, typename _Mat>
+void FactorOutRows(std::ostream& sout, _Mat& M, size_t& nbadd, const char tev,
                    const size_t i, const Iter& start, const Iter& end);
 
 // Sets new temporaries with the input values
-void input2Temps(std::ostream& sout, const size_t N, const char inv, const char tev);
-void input2Temps(std::ostream& sout, const size_t N, const char inv, const char tev,
-                 const Matrix& trsp);
+void input2Temps(std::ostream& sout, const size_t N,
+                 const char inv, const char tev);
+template<typename _Mat>
+void input2Temps(std::ostream& sout, const size_t N,
+                 const char inv, const char tev, const _Mat& trsp);
 
 
 // Global optimization function (pairs and factors)
-std::pair<size_t,size_t> Optimizer(std::ostream& sout, Matrix& M,
+template<typename _Mat>
+std::pair<size_t,size_t> Optimizer(std::ostream& sout, _Mat& M,
                                    const char inv, const char ouv,
                                    const char tev, const char rav);
 
 
 	// Precondition _Matrix A is upper triangularized
-std::pair<size_t,size_t> nullspacedecomp(std::ostream& sout, Matrix& x, Matrix& A) ;
+template<typename _Mat>
+std::pair<size_t,size_t> nullspacedecomp(std::ostream& sout,
+                                         _Mat& x, _Mat& A) ;
+
+
+template<typename _Elt>
+std::ostream& printmulorjustdiv(std::ostream& out, const _Elt& e) {
+    return out << '*' << e;
+}
+
+template<>
+std::ostream& printmulorjustdiv(std::ostream& out, const Givaro::Rational& r) {
+    if (Givaro::isOne(r.nume()))
+        return out << '/' << r.deno();
+    else
+        return out << '*' << r;
+}
+
+
+
+
+
+
 
 
 #include "plinopt_optimize.inl"

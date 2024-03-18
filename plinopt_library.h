@@ -60,7 +60,8 @@ template<typename _Mat1, typename _Mat2>
 inline _Mat1& Transpose(_Mat1& T, const _Mat2& A);
 
 	// Copy the negation of the transposed  matrix
-Matrix& NegTranspose(Matrix& T, const Matrix& A);
+template<typename _Mat1, typename _Mat2>
+inline _Mat1& NegTranspose(_Mat1& T, const _Mat2& A);
 
 	// Copy (and convert) a matrix
 template<typename _Mat1, typename _Mat2>
