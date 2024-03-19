@@ -76,6 +76,7 @@
 - `./MMchecker data/Lw.sms data/Rw.sms data/Pw.sms`: probabilistically checking Strassen-Winograd's matrix-multiplication algorithm
 - `./MMchecker data/Lo.sms data/Ro.sms data/Po.sms 32 3 1013`: probabilistically checking matrix-multiplication algorithm using 32 bits random elements and 1013 as a placeholder for sqrt(3)
 - `./optimizer data/cyclic.sms`: a program computing that matrix-vector product
+- `./optimizer data/Rr.sms -q 3`: a program computing that matrix-vector product modulo 3
 - `./transpozer data/test.prg`: a program computing the transposed program
 - `./optimizer -D data/Pi.sms`: a program computing that matrix-vector product
 - `./matrix-transpose data/Pi.sms | ./optimizer -K | ./transpozer`: a program computing that matrix-vector product

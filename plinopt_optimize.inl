@@ -9,22 +9,41 @@
 
 #include "plinopt_optimize.h"
 
-inline bool operator==(const triple& u, const triple&v) {
-    return ( (std::get<0>(u) == std::get<0>(v)) &&
-             (std::get<1>(u) == std::get<1>(v)) &&
-             (std::get<2>(u) == std::get<2>(v)) );
+
+
+
+
+
+template<typename Ring>
+std::ostream& printmulorjustdiv(std::ostream& out,
+                                const char c, const size_t i,
+                                const typename Ring::Element& e,
+                                size_t& nbmul, const Ring& F) {
+    out << c << i;
+    if ( (!F.isOne(e)) && (!F.isMOne(e)) ) {
+        ++nbmul;
+        out << '*' << e;
+    }
+    return out;
 }
 
-std::ostream& operator<<(std::ostream& out, const triple& t) {
-    return out << '<' << std::get<0>(t) << ':' << std::get<1>(t) << '|' << std::get<2>(t) << '>';
+template<>
+std::ostream& printmulorjustdiv(std::ostream& out,
+                                const char c, const size_t i,
+                                const Givaro::Rational& r,
+                                size_t& nbmul, const QRat& QQ) {
+    out << c << i;
+    if (!QQ.isOne(r)) {
+        ++nbmul;
+        if (Givaro::isOne(r.nume()))
+            out << '/' << r.deno();
+        else
+            out << '*' << r;
+    }
+    return out;
 }
 
-std::ostream& operator<<(std::ostream& out, const VTriple& v) {
-    out << '[';
-    for(const auto& iter: v)
-        out << iter << ' ';
-    return out << ']';
-}
+
 
 template<typename T1, typename T2>
 std::ostream& operator<<(std::ostream& out, const std::map<T1,T2>& v) {
@@ -35,23 +54,25 @@ std::ostream& operator<<(std::ostream& out, const std::map<T1,T2>& v) {
 }
 
 // Build pairs of indices with normalized coefficient (ratio of the two values)
-template<typename Iter>
-inline VTriple listpairs(const Iter& start, const Iter& end) {
-    std::vector<triple> v;
-    if (start == end) return v;
-    for(Iter iter = start; iter != end; ++iter) {
+template<typename Container, typename Ring>
+std::vector<Etriple<Ring>> listpairs (const Container& c, const Ring& F) {
+    std::vector<Etriple<Ring>> v;
+    typename Ring::Element tmp;
+    for(auto iter=c.begin(); iter != c.end(); ++iter) {
         auto next(iter);
-        for(++next; next!= end; ++next) {
-            v.emplace_back(iter->first, next->first, next->second/iter->second);
+        for(++next; next!= c.end(); ++next) {
+            v.emplace_back(iter->first, next->first,
+                           F.div(tmp,next->second,iter->second));
         }
     }
     return v;
 }
 
 // If cse is present in row, add square of row density to score
-inline size_t score(const std::vector<VTriple>& AllPairs,
-             const std::vector<size_t>& Density,
-             const triple& cse) {
+template<typename triple>
+inline size_t score(const std::vector<std::vector<triple>>& AllPairs,
+                    const std::vector<size_t>& Density,
+                    const triple& cse) {
     size_t score(0);
     for(size_t k=0; k<Density.size(); ++k) {
         if (std::find(AllPairs[k].begin(), AllPairs[k].end(), cse) != AllPairs[k].end()) {
@@ -62,22 +83,25 @@ inline size_t score(const std::vector<VTriple>& AllPairs,
 }
 
 // Removing one pair
-bool OneSub(std::ostream& sout, Matrix& M, VTriple& multiples, size_t& nbmul,
-            const char tev, const char rav) {
+template<typename triple,typename _Mat>
+bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
+            size_t& nbmul, const char tev, const char rav) {
 // M.write(std::clog << "# BEG OS\n",FileFormat::Pretty) << ';' << std::endl;
     size_t m(M.coldim());
+    const auto& FF(M.field());
 
-    std::vector<VTriple> AllPairs;
+
+    std::vector<std::vector<triple>> AllPairs;
     std::vector<size_t> Density;
 
         // Compute initial densisty, and all pairs, in a row
     for(auto iter=M.rowBegin(); iter != M.rowEnd(); ++iter) {
         Density.emplace_back(iter->size());
-        AllPairs.push_back(listpairs(iter->begin(), iter->end()));
+        AllPairs.push_back(listpairs(*iter, M.field()));
     }
 
         // Count occurences of each pair in whole matrix
-    STriple PairMap;
+    std::map<triple,size_t> PairMap;
     for(const auto& rows: AllPairs) {
         for (const auto& iter: rows) {
             PairMap[iter]++;
@@ -87,7 +111,7 @@ bool OneSub(std::ostream& sout, Matrix& M, VTriple& multiples, size_t& nbmul,
         // Found some pairs
     if (PairMap.size()) {
         size_t maxfrq(0);
-        VTriple MaxCSE;
+        std::vector<triple> MaxCSE;
         triple cse;
             // Find all pairs with maximal frequency
         for (const auto& [element, frequency] : PairMap) {
@@ -116,8 +140,8 @@ bool OneSub(std::ostream& sout, Matrix& M, VTriple& multiples, size_t& nbmul,
                     const size_t newscore(score(AllPairs,Density,element));
                     if (newscore == maxscore) {
                             // Tie breaking by multiplier
-                        if (Givaro::isOne(std::get<2>(element)) ||
-                            Givaro::isMOne(std::get<2>(element)) ) {
+                        if (FF.isOne(std::get<2>(element)) ||
+                            FF.isMOne(std::get<2>(element)) ) {
                             cse = element;
                         }
                     }
@@ -147,7 +171,7 @@ bool OneSub(std::ostream& sout, Matrix& M, VTriple& multiples, size_t& nbmul,
             for(size_t i=0; i<AllPairs.size(); ++i) {
                 const auto& rows(AllPairs[i]);
                 if (std::find(rows.begin(), rows.end(), cse) != rows.end()) {
-                    Givaro::Rational coeff;
+                    typename _Mat::Element coeff;
                     for(auto iter=M[i].begin(); iter!= M[i].end(); ++iter) {
                         if (iter->first==std::get<0>(cse)) {
                             coeff = iter->second;
@@ -170,7 +194,7 @@ bool OneSub(std::ostream& sout, Matrix& M, VTriple& multiples, size_t& nbmul,
                 //    else put it in a temporary for future reuse
             auto asgs(abs(std::get<2>(cse)));
             size_t rindex(m);
-            if (!Givaro::isOne(asgs)) {
+            if (!FF.isOne(asgs)) {
                 for(const auto& iter: multiples) {
                     if ((std::get<1>(iter) == std::get<1>(cse)) &&
                         (std::get<2>(iter) == asgs)) {
@@ -179,14 +203,10 @@ bool OneSub(std::ostream& sout, Matrix& M, VTriple& multiples, size_t& nbmul,
                     }
                 }
                 if (rindex == m) {
-                    ++nbmul;
-                    sout << rav << m << ":="
-                         << tev << std::get<1>(cse);
-                    if (Givaro::isOne(asgs.nume()))
-                        sout << '/' << asgs.deno();
-                    else
-                        sout << '*' << asgs;
-                    sout << ';' << std::endl;
+                    sout << rav << m << ":=";
+                    if (FF.isMOne(asgs)) sout << '-';
+                    printmulorjustdiv(sout, tev, std::get<1>(cse),
+                                      asgs, nbmul, FF) << ';' << std::endl;
                     multiples.emplace_back(m,std::get<1>(cse),asgs);
                 }
             }
@@ -196,7 +216,7 @@ bool OneSub(std::ostream& sout, Matrix& M, VTriple& multiples, size_t& nbmul,
             sout << tev << m << ":="
                  << tev << std::get<0>(cse)
                  << (sign(std::get<2>(cse)) >= 0?'+':'-');
-            if (Givaro::isOne(asgs))
+            if (FF.isOne(asgs))
                 sout << tev << std::get<1>(cse);
             else
                 sout << rav << rindex;
@@ -212,15 +232,18 @@ bool OneSub(std::ostream& sout, Matrix& M, VTriple& multiples, size_t& nbmul,
 }
 
 // Factors out same coefficient in a column
-template<typename Iter>
-void FactorOutColumns(std::ostream& sout, Matrix& T, VTriple& multiples, size_t& nbmul,
+template<typename Iter, typename triple, typename _Mat>
+void FactorOutColumns(std::ostream& sout, _Mat& T,
+                      std::vector<triple>& multiples, size_t& nbmul,
                       const char tev, const char rav,
                       const size_t j, const Iter& start, const Iter& end) {
     if (start == end) return;
-    std::map<Givaro::Rational, size_t> MapVals;
+    std::map<typename _Mat::Element, size_t> MapVals;
     for(Iter iter = start; iter != end; ++iter) {
         MapVals[abs(iter->second)]++;
     }
+
+    const auto& FF(T.field());
 
 // T.write(std::clog << "BEG FOC\n",FileFormat::Pretty) << ';'
 //                   << "\nMap: " << MapVals << std::endl;
@@ -229,7 +252,7 @@ void FactorOutColumns(std::ostream& sout, Matrix& T, VTriple& multiples, size_t&
         size_t m(T.rowdim());
 
             // Found repeated coefficient
-        if ((frequency>1) && (!Givaro::isOne(element)) ) {
+        if ((frequency>1) && (!FF.isOne(element)) ) {
             size_t rindex(m);
                 // If coefficient was already applied
                 //    then reuse the multiplication
@@ -242,14 +265,10 @@ void FactorOutColumns(std::ostream& sout, Matrix& T, VTriple& multiples, size_t&
                 }
             }
             if (rindex == m) {
-                ++nbmul;
-                sout << rav << m << ":="
-                          << tev << j;
-                if (Givaro::isOne(element.nume()))
-                    sout << '/' << element.deno();
-                else
-                    sout << '*' << element;
-                sout << ';' << std::endl;
+                sout << rav << m << ":=";
+                if (FF.isMOne(element)) sout << '-';
+                printmulorjustdiv(sout, tev, j,
+                                  element, nbmul, FF) << ';' << std::endl;
                 multiples.emplace_back(m,j,element);
             }
 
@@ -276,14 +295,16 @@ void FactorOutColumns(std::ostream& sout, Matrix& T, VTriple& multiples, size_t&
 }
 
 // Factors out same coefficient in a row
-template<typename Iter>
-void FactorOutRows(std::ostream& sout, Matrix& M, size_t& nbadd, const char tev,
+template<typename Iter, typename _Mat>
+void FactorOutRows(std::ostream& sout, _Mat& M, size_t& nbadd, const char tev,
                    const size_t i, const Iter& start, const Iter& end) {
     if (start == end) return;
-    std::map<Givaro::Rational, size_t> MapVals;
+    std::map<typename _Mat::Element, size_t> MapVals;
     for(Iter iter = start; iter != end; ++iter) {
         MapVals[abs(iter->second)]++;
     }
+
+    const auto& FF(M.field());
 
 // M.write(std::clog << "BEG FOR\n",FileFormat::Pretty) << ';'
 //                   << "\nMap: " << MapVals << std::endl;
@@ -291,7 +312,7 @@ void FactorOutRows(std::ostream& sout, Matrix& M, size_t& nbadd, const char tev,
     size_t m(M.coldim());
     for (const auto& [element, frequency] : MapVals) {
             // Found repeated coefficient
-        if ((frequency>1) && (!Givaro::isOne(element)) ) {
+        if ((frequency>1) && (!FF.isOne(element)) ) {
             sout << tev << m << ":=";
             ++m;
                 // Add a column with coefficient multiplying a new sum
@@ -327,7 +348,8 @@ void FactorOutRows(std::ostream& sout, Matrix& M, size_t& nbadd, const char tev,
 }
 
 // Sets new temporaries with the input values
-void input2Temps(std::ostream& sout, const size_t N, const char inv, const char tev) {
+void input2Temps(std::ostream& sout, const size_t N,
+                 const char inv, const char tev) {
     // Inputs to temporaries
     for(size_t i=0; i<N; ++i) {
         sout << tev << i << ":="
@@ -335,8 +357,10 @@ void input2Temps(std::ostream& sout, const size_t N, const char inv, const char 
     }
 }
 // Sets new temporaries with the input values
-void input2Temps(std::ostream& sout, const size_t N, const char inv, const char tev,
-                 const Matrix& trsp) {
+template<typename _Mat>
+void input2Temps(std::ostream& sout, const size_t N,
+                 const char inv, const char tev,
+                 const _Mat& trsp) {
     // Inputs to temporaries
     for(size_t i=0; i<N; ++i) {
         if (trsp[i].size()) {
@@ -348,17 +372,22 @@ void input2Temps(std::ostream& sout, const size_t N, const char inv, const char 
 
 
 // Global optimization function (pairs and factors)
-std::pair<size_t,size_t> Optimizer(std::ostream& sout, Matrix& M,
+template<typename _Mat>
+std::pair<size_t,size_t> Optimizer(std::ostream& sout, _Mat& M,
                                    const char inv, const char ouv,
                                    const char tev, const char rav) {
+    using triple=std::tuple<size_t, size_t, typename _Mat::Element>;
+    const auto& FF(M.field());
+
+
     size_t addcount(0), nbmul(0);
 
         // Factoring sums
-    VTriple multiples;
+    std::vector<triple> multiples;
     for( ; OneSub(sout, M, multiples, nbmul, tev, rav) ; ++addcount) { }
 
         // Factoring multiplier by colums
-    Matrix T(M.field());
+    _Mat T(M.field());
     Transpose(T, M);
     for(size_t j=0; j<M.coldim(); ++j) {
         FactorOutColumns(sout, T, multiples, nbmul, tev, rav,
@@ -374,10 +403,10 @@ std::pair<size_t,size_t> Optimizer(std::ostream& sout, Matrix& M,
         // Computing remaining (simple) linear combinations
     for(size_t i=0; i<M.rowdim(); ++i) {
         const auto& row(M[i]);
+        sout << ouv << i << ":=";
         if (row.size()>0) {
 
-            sout << ouv << i << ":=";
-            if ( sign(row.begin()->second) < 0) sout << '-';
+            if ( (sign(row.begin()->second) < 0) || FF.isMOne(row.begin()->second) ) sout << '-';
             auto arbs(abs(row.begin()->second));
 
                 // If already multiplied, reuse it
@@ -392,21 +421,15 @@ std::pair<size_t,size_t> Optimizer(std::ostream& sout, Matrix& M,
             if (rindex != M.coldim()) {
                 sout << rav << rindex;
             } else {
-                sout << tev << row.begin()->first;
-                if (!Givaro::isOne(arbs)) {
-                    ++nbmul;
-                    if (Givaro::isOne(arbs.nume()))
-                        sout << '/' << arbs.deno();
-                    else
-                        sout << '*' << arbs;
-                }
+                printmulorjustdiv(sout, tev, row.begin()->first,
+                                  arbs, nbmul, FF);
             }
 
                 // For all the monomials of the linear combination
             auto iter(row.begin());
             for(++iter; iter!= row.end(); ++iter) {
                 ++addcount;
-                sout << (sign(iter->second) >= 0 ? '+' : '-');
+                sout << ( ( (sign(iter->second) <0) || FF.isMOne(iter->second) ) ? '-' : '+');
                 auto ais(abs(iter->second));
 
                     // If already multiplied, reuse it
@@ -421,18 +444,15 @@ std::pair<size_t,size_t> Optimizer(std::ostream& sout, Matrix& M,
                 if (rindex != M.coldim()) {
                     sout << rav << rindex;
                 } else {
-                    sout << tev << iter->first;
-                    if (!Givaro::isOne(ais)) {
-                        ++nbmul;
-                        if (Givaro::isOne(ais.nume()))
-                            sout << '/' << ais.deno();
-                        else
-                            sout << '*' << ais;
-                    }
+                        // otherwise next function will sout << '-'
+                    printmulorjustdiv(sout, tev, iter->first,
+                                      ais, nbmul, FF);
                 }
             }
-            sout << ';' << std::endl;
+        } else {
+            sout << '0';
         }
+        sout << ';' << std::endl;
     }
 
 
@@ -444,12 +464,14 @@ std::pair<size_t,size_t> Optimizer(std::ostream& sout, Matrix& M,
 
 
 	// Postcondition _Matrix A is nullified
-std::pair<size_t,size_t> nullspacedecomp(std::ostream& sout, Matrix& x, Matrix& A) {
-    QRat::Element Det;
+template<typename _Mat>
+std::pair<size_t,size_t> nullspacedecomp(std::ostream& sout,
+                                         _Mat& x, _Mat& A) {
+    typename _Mat::Element Det;
     size_t Rank;
     size_t Ni(A.rowdim()),Nj(A.coldim());
 
-    Matrix FreePart(A.field()); Transpose(FreePart,A);
+    _Mat FreePart(A.field()); Transpose(FreePart,A);
 
         // ============================================
         // Find the rows to start the kernel elimination
@@ -488,8 +510,8 @@ std::pair<size_t,size_t> nullspacedecomp(std::ostream& sout, Matrix& x, Matrix& 
 
         // ============================================
         // Now find subset of independent rows
-    LinBox::Permutation<QRat> P(A.field(),(int)Nj);
-    LinBox::GaussDomain<QRat> GD(A.field());
+    LinBox::Permutation<typename _Mat::Field> P(A.field(),(int)Nj);
+    LinBox::GaussDomain<typename _Mat::Field> GD(A.field());
 
         // LUP decomposition
     GD.InPlaceLinearPivoting(Rank, Det, A, P, Ni, Nj );
@@ -517,7 +539,7 @@ std::pair<size_t,size_t> nullspacedecomp(std::ostream& sout, Matrix& x, Matrix& 
 #endif
     if ( (Rank != 0) && (nullity != 0) ) {
             // compute U2T s.t. U = [ U1 | -U2T^T ]
-        Matrix U2T(A.field(),nullity,Rank);
+        _Mat U2T(A.field(),nullity,Rank);
 
         for(auto uit=A.IndexedBegin(); uit != A.IndexedEnd(); ++uit) {
             if (uit.colIndex() >= Rank)
@@ -527,7 +549,7 @@ std::pair<size_t,size_t> nullspacedecomp(std::ostream& sout, Matrix& x, Matrix& 
             A.field().negin(*u2it);
 
             // Compute the basis vector by vector
-        typedef LinBox::Sparse_Vector< Givaro::Rational > SparseVect;
+        typedef LinBox::Sparse_Vector<typename _Mat::Element> SparseVect;
         for(size_t i=0; i<nullity; ++i) {
             SparseVect W1Ti;
                 // Solve for upper part of basis
@@ -575,7 +597,7 @@ std::pair<size_t,size_t> nullspacedecomp(std::ostream& sout, Matrix& x, Matrix& 
 
             // ============================================
             // Optimize the dependent rows (transposed nullspace)
-        Matrix Tx(x.field());
+        _Mat Tx(x.field());
         NegTranspose(Tx, x);
 
 #ifdef VERBATIM_PARSING

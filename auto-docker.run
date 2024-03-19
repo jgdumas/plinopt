@@ -27,6 +27,7 @@ cd plinopt; make
 ./MMchecker data/Lw.sms data/Rw.sms data/Pw.sms
 ./MMchecker data/Lo.sms data/Ro.sms data/Po.sms 32 3 1013
 ./optimizer data/cyclic.sms
+./optimizer data/Rr.sms -q 3
 ./transpozer data/test.prg
 ./optimizer data/Pi.sms
 ./matrix-transpose data/Pi.sms | ./optimizer -K |./transpozer

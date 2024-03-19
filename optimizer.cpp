@@ -41,9 +41,11 @@
 
 // ============================================================
 // Optimizing a linear program
-int Selector(std::istream& input, const size_t randomloops,
-             const bool printMaple, const bool printPretty,
-             const bool tryDirect, const bool tryKernel) {
+template<typename Field>
+int DKOptimiser(std::istream& input, const size_t randomloops,
+                const bool printMaple, const bool printPretty,
+                const bool tryDirect, const bool tryKernel,
+                const Field& F) {
 
         // ============================================================
         // Read Matrix of Linear Transformation
@@ -81,12 +83,17 @@ int Selector(std::istream& input, const size_t randomloops,
     std::pair<size_t,size_t> nbops{addinit,mulinit};
 
         // ============================================================
+        // Rebind matrix type over sub field matrix type
+    typedef typename Matrix::template rebind<Field>::other FMatrix;
+
+        // ============================================================
         // First try: optimize the whole matrix
     if (tryDirect) {
 #pragma omp parallel for shared(M,T,ssout,nbops)
         for(size_t i=0; i<randomloops; ++i) {
-            Matrix lM(QQ,M.rowdim(),M.coldim()); matrixCopy(lM,M,QQ);
-            Matrix lT(QQ,T.rowdim(),T.coldim()); matrixCopy(lT,T,QQ);
+            FMatrix lM(M, F);
+            FMatrix lT(T, F);
+
             std::ostringstream lssout;
                 // Cancellation-free optimization
             input2Temps(lssout, lM.coldim(), 'i', 't', lT);
@@ -110,9 +117,10 @@ int Selector(std::istream& input, const size_t randomloops,
     if (tryKernel) {
 #pragma omp parallel for shared(T,ssout,nbops)
         for(size_t i=0; i<randomloops; ++i) {
-            Matrix lT(QQ,T.rowdim(),T.coldim()); matrixCopy(lT,T,QQ);
+            FMatrix lT(T, F);
+//             Matrix lT(QQ,T.rowdim(),T.coldim()); matrixCopy(lT,T,QQ);
             std::ostringstream lssout;
-            Matrix NullSpace(QQ,lT.coldim(),T.coldim());
+            FMatrix NullSpace(F,lT.coldim(),T.coldim());
             auto lnbops( nullspacedecomp(lssout, NullSpace, lT) );
 #ifdef VERBATIM_PARSING
             std::clog << "# Found, kernel: " << lnbops.first << "\tadditions, "
@@ -139,6 +147,25 @@ int Selector(std::istream& input, const size_t randomloops,
 
     std::cout << ssout.str() << std::flush;
 
+
+#ifdef INPLACE_CHECKER
+    std::clog << std::string(40,'#') << std::endl;
+    std::clog << '<';
+    for(size_t i=0; i< M.rowdim(); ++i) {
+        if (i != 0) std::clog << '|' << std::endl;
+        std::clog << '<';
+        for(size_t j=0; j<M.coldim(); ++j) {
+            if (j != 0) std::clog << '+';
+            std::clog << 'i' << j << "*(" << M.getEntry(i,j) << ')';
+        }
+        std::clog << " - o" << i << '>';
+    }
+    std::clog << '>';
+    if (F.characteristic() > 0) std::clog << " mod " << F.characteristic();
+    std::clog << ';' << std::endl;
+#endif
+
+
     if ((nbops.first !=0 || nbops.second != 0)) {
         std::clog << std::string(40,'#') << std::endl;
         std::clog << "# \033[1;32m" << nbops.first << "\tadditions\tinstead of " << addinit
@@ -150,10 +177,33 @@ int Selector(std::istream& input, const size_t randomloops,
     return 0;
 }
 
+
+
+
+// ============================================================
+// Choice between modular computation or over the rationals
+int Selector(std::istream& input, const size_t randomloops,
+             const bool printMaple, const bool printPretty,
+             const bool tryDirect, const bool tryKernel,
+             const Givaro::Integer& q) {
+    if (! Givaro::isZero(q)) {
+        Givaro::Modular<Givaro::Integer> FF(q);
+        return DKOptimiser(input, randomloops, printMaple, printPretty,
+                           tryDirect, tryKernel, FF);
+    } else {
+        QRat QQ;
+        return DKOptimiser(input, randomloops, printMaple, printPretty,
+                           tryDirect, tryKernel, QQ);
+    }
+}
+// ============================================================
+
+
 // ============================================================
 // Main: select between file / std::cin
 // -D/-K options select direct/kernel methods only (default is both)
 // -P/-M option choose the printing format
+// -q # search for linear map modulo # (default is over the rationals)
 // -O # search for reduced number of additions, then multiplications
 //      i.e. min of random # tries (requires definition of RANDOM_TIES)
 int main(int argc, char** argv) {
@@ -165,6 +215,7 @@ int main(int argc, char** argv) {
         directOnly(false),
         kernelOnly(false);
     size_t randomloops(DORANDOMSEARCH?DEFAULT_RANDOM_LOOPS:1);
+    Givaro::Integer prime(0u);
 
     std::string filename;
 
@@ -177,15 +228,17 @@ int main(int argc, char** argv) {
             std::clog
                 << "  -D/-K options: select direct/kernel methods only (default is both)\n"
                 << "  -P/-M options: choose the printing format\n"
+                << "  -q #: search modulo (default is Rationals)\n"
                 << "  -O #: search for reduced number of additions, then multiplications\n";
 
             exit(-1);
-        } else if (args == "-M") { printMaple = true; }
+        }
+        else if (args == "-M") { printMaple = true; }
         else if (args == "-P") { printPretty = true; }
         else if (args == "-D") { directOnly = true; }
         else if (args == "-K") { kernelOnly = true; }
-        else if (args == "-O") {
-            randomloops = atoi(argv[++i]);
+        else if (args == "-q") { prime = Givaro::Integer(argv[++i]); }
+        else if (args == "-O") { randomloops = atoi(argv[++i]);
             if ( (randomloops>1) && (!DORANDOMSEARCH) ) {
                 randomloops = 1;
                 std::cerr << "#  \033[1;36mWARNING: RANDOM_TIES not defined,"
@@ -198,14 +251,15 @@ int main(int argc, char** argv) {
     const bool tryDirect(directOnly || !kernelOnly);
     const bool tryKernel(kernelOnly || !directOnly);
 
-    QRat QQ;
-
     if (filename == "") {
-        return Selector(std::cin, randomloops, printMaple, printPretty, tryDirect, tryKernel);
+        return Selector(std::cin, randomloops, printMaple, printPretty,
+                        tryDirect, tryKernel, prime);
     } else {
         std::ifstream inputmatrix(filename);
         if ( inputmatrix ) {
-            int rt=Selector(inputmatrix, randomloops, printMaple, printPretty, tryDirect, tryKernel);
+            int rt = Selector(inputmatrix, randomloops,
+                              printMaple, printPretty,
+                              tryDirect, tryKernel, prime);
             inputmatrix.close();
             return rt;
         }
