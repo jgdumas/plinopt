@@ -94,8 +94,6 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
             FMatrix lM(M, F);
             FMatrix lT(T, F);
 
-//             Matrix lM(QQ,M.rowdim(),M.coldim()); matrixCopy(lM,M,QQ);
-//             Matrix lT(QQ,T.rowdim(),T.coldim()); matrixCopy(lT,T,QQ);
             std::ostringstream lssout;
                 // Cancellation-free optimization
             input2Temps(lssout, lM.coldim(), 'i', 't', lT);
@@ -149,6 +147,25 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
 
     std::cout << ssout.str() << std::flush;
 
+
+#ifdef INPLACE_CHECKER
+    std::clog << std::string(40,'#') << std::endl;
+    std::clog << '<';
+    for(size_t i=0; i< M.rowdim(); ++i) {
+        if (i != 0) std::clog << '|' << std::endl;
+        std::clog << '<';
+        for(size_t j=0; j<M.coldim(); ++j) {
+            if (j != 0) std::clog << '+';
+            std::clog << 'i' << j << "*(" << M.getEntry(i,j) << ')';
+        }
+        std::clog << " - o" << i << '>';
+    }
+    std::clog << '>';
+    if (F.characteristic() > 0) std::clog << " mod " << F.characteristic();
+    std::clog << ';' << std::endl;
+#endif
+
+
     if ((nbops.first !=0 || nbops.second != 0)) {
         std::clog << std::string(40,'#') << std::endl;
         std::clog << "# \033[1;32m" << nbops.first << "\tadditions\tinstead of " << addinit
@@ -186,6 +203,7 @@ int Selector(std::istream& input, const size_t randomloops,
 // Main: select between file / std::cin
 // -D/-K options select direct/kernel methods only (default is both)
 // -P/-M option choose the printing format
+// -q # search for linear map modulo # (default is over the rationals)
 // -O # search for reduced number of additions, then multiplications
 //      i.e. min of random # tries (requires definition of RANDOM_TIES)
 int main(int argc, char** argv) {
@@ -210,6 +228,7 @@ int main(int argc, char** argv) {
             std::clog
                 << "  -D/-K options: select direct/kernel methods only (default is both)\n"
                 << "  -P/-M options: choose the printing format\n"
+                << "  -q #: search modulo (default is Rationals)\n"
                 << "  -O #: search for reduced number of additions, then multiplications\n";
 
             exit(-1);
@@ -232,18 +251,14 @@ int main(int argc, char** argv) {
     const bool tryDirect(directOnly || !kernelOnly);
     const bool tryKernel(kernelOnly || !directOnly);
 
-//     std::ifstream & minput(std::cin)
-
-// //     QRat QQ;
-//     Givaro::Modular<Givaro::Integer> FF(prime);
-
     if (filename == "") {
         return Selector(std::cin, randomloops, printMaple, printPretty,
                         tryDirect, tryKernel, prime);
     } else {
         std::ifstream inputmatrix(filename);
         if ( inputmatrix ) {
-            int rt = Selector(inputmatrix, randomloops, printMaple, printPretty,
+            int rt = Selector(inputmatrix, randomloops,
+                              printMaple, printPretty,
                               tryDirect, tryKernel, prime);
             inputmatrix.close();
             return rt;

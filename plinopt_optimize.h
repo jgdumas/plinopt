@@ -88,24 +88,37 @@ std::pair<size_t,size_t> nullspacedecomp(std::ostream& sout,
                                          _Mat& x, _Mat& A) ;
 
 
-template<typename _Elt>
-std::ostream& printmulorjustdiv(std::ostream& out, const _Elt& e) {
-    return out << '*' << e;
+
+
+
+template<typename Field>
+std::ostream& printmulorjustdiv(std::ostream& out,
+                                const char c, const size_t i,
+                                const typename Field::Element& e,
+                                size_t& nbmul, const Field& F) {
+    out << c << i;
+    if ( (!F.isOne(e)) && (!F.isMOne(e)) ) {
+        ++nbmul;
+        out << '*' << e;
+    }
+    return out;
 }
 
 template<>
-std::ostream& printmulorjustdiv(std::ostream& out, const Givaro::Rational& r) {
-    if (Givaro::isOne(r.nume()))
-        return out << '/' << r.deno();
-    else
-        return out << '*' << r;
+std::ostream& printmulorjustdiv(std::ostream& out,
+                                const char c, const size_t i,
+                                const Givaro::Rational& r,
+                                size_t& nbmul, const QRat& QQ) {
+    out << c << i;
+    if (!QQ.isOne(r)) {
+        ++nbmul;
+        if (Givaro::isOne(r.nume()))
+            out << '/' << r.deno();
+        else
+            out << '*' << r;
+    }
+    return out;
 }
-
-
-
-
-
-
 
 
 #include "plinopt_optimize.inl"

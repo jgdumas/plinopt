@@ -18,16 +18,17 @@ std::ostream& operator<<(std::ostream& out, const std::map<T1,T2>& v) {
 }
 
 // Build pairs of indices with normalized coefficient (ratio of the two values)
-template<typename Iter, typename Field>
+template<typename Container, typename Field>
 std::vector<std::tuple<size_t, size_t, typename Field::Element> > listpairs (
-    const Iter& start, const Iter& end, const Field& F) {
+    const Container& c, const Field& F) {
     std::vector<std::tuple<size_t, size_t, typename Field::Element> > v;
-    if (start == end) return v;
-    for(Iter iter = start; iter != end; ++iter) {
+        // if (c.size() == 0) return v;
+    typename Field::Element tmp;
+    for(auto iter=c.begin(); iter != c.end(); ++iter) {
         auto next(iter);
-        for(++next; next!= end; ++next) {
+        for(++next; next!= c.end(); ++next) {
             v.emplace_back(iter->first, next->first,
-                           F.divin(next->second,iter->second));
+                           F.div(tmp,next->second,iter->second));
         }
     }
     return v;
@@ -62,7 +63,7 @@ bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
         // Compute initial densisty, and all pairs, in a row
     for(auto iter=M.rowBegin(); iter != M.rowEnd(); ++iter) {
         Density.emplace_back(iter->size());
-        AllPairs.push_back(listpairs(iter->begin(), iter->end(), M.field()));
+        AllPairs.push_back(listpairs(*iter, M.field()));
     }
 
         // Count occurences of each pair in whole matrix
@@ -168,10 +169,10 @@ bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
                     }
                 }
                 if (rindex == m) {
-                    ++nbmul;
-                    sout << rav << m << ":="
-                         << tev << std::get<1>(cse);
-                    printmulorjustdiv(sout, asgs) << ';' << std::endl;
+                    sout << rav << m << ":=";
+                    if (FF.isMOne(asgs)) sout << '-';
+                    printmulorjustdiv(sout, tev, std::get<1>(cse),
+                                      asgs, nbmul, FF) << ';' << std::endl;
                     multiples.emplace_back(m,std::get<1>(cse),asgs);
                 }
             }
@@ -230,10 +231,10 @@ void FactorOutColumns(std::ostream& sout, _Mat& T,
                 }
             }
             if (rindex == m) {
-                ++nbmul;
-                sout << rav << m << ":="
-                          << tev << j;
-                printmulorjustdiv(sout, element) << ';' << std::endl;
+                sout << rav << m << ":=";
+                if (FF.isMOne(element)) sout << '-';
+                printmulorjustdiv(sout, tev, j,
+                                  element, nbmul, FF) << ';' << std::endl;
                 multiples.emplace_back(m,j,element);
             }
 
@@ -371,7 +372,7 @@ std::pair<size_t,size_t> Optimizer(std::ostream& sout, _Mat& M,
         if (row.size()>0) {
 
             sout << ouv << i << ":=";
-            if ( sign(row.begin()->second) < 0) sout << '-';
+            if ( (sign(row.begin()->second) < 0) || FF.isMOne(row.begin()->second) ) sout << '-';
             auto arbs(abs(row.begin()->second));
 
                 // If already multiplied, reuse it
@@ -386,18 +387,15 @@ std::pair<size_t,size_t> Optimizer(std::ostream& sout, _Mat& M,
             if (rindex != M.coldim()) {
                 sout << rav << rindex;
             } else {
-                sout << tev << row.begin()->first;
-                if (!FF.isOne(arbs)) {
-                    ++nbmul;
-                    printmulorjustdiv(sout, arbs);
-                }
+                printmulorjustdiv(sout, tev, row.begin()->first,
+                                  arbs, nbmul, FF);
             }
 
                 // For all the monomials of the linear combination
             auto iter(row.begin());
             for(++iter; iter!= row.end(); ++iter) {
                 ++addcount;
-                sout << (sign(iter->second) >= 0 ? '+' : '-');
+                sout << ( ( (sign(iter->second) <0) || FF.isMOne(iter->second) ) ? '-' : '+');
                 auto ais(abs(iter->second));
 
                     // If already multiplied, reuse it
@@ -412,11 +410,9 @@ std::pair<size_t,size_t> Optimizer(std::ostream& sout, _Mat& M,
                 if (rindex != M.coldim()) {
                     sout << rav << rindex;
                 } else {
-                    sout << tev << iter->first;
-                    if (!FF.isOne(ais)) {
-                        ++nbmul;
-                        printmulorjustdiv(sout, ais);
-                    }
+                        // otherwise next function will sout << '-'
+                    printmulorjustdiv(sout, tev, iter->first,
+                                      ais, nbmul, FF);
                 }
             }
             sout << ';' << std::endl;
