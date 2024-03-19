@@ -369,9 +369,9 @@ std::pair<size_t,size_t> Optimizer(std::ostream& sout, _Mat& M,
         // Computing remaining (simple) linear combinations
     for(size_t i=0; i<M.rowdim(); ++i) {
         const auto& row(M[i]);
+        sout << ouv << i << ":=";
         if (row.size()>0) {
 
-            sout << ouv << i << ":=";
             if ( (sign(row.begin()->second) < 0) || FF.isMOne(row.begin()->second) ) sout << '-';
             auto arbs(abs(row.begin()->second));
 
@@ -415,8 +415,10 @@ std::pair<size_t,size_t> Optimizer(std::ostream& sout, _Mat& M,
                                       ais, nbmul, FF);
                 }
             }
-            sout << ';' << std::endl;
+        } else {
+            sout << '0';
         }
+        sout << ';' << std::endl;
     }
 
 
