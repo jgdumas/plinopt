@@ -33,15 +33,15 @@
 #ifndef _PLINOPT_LIBRARY_OPTIMIZE_H_
 #define _PLINOPT_LIBRARY_OPTIMIZE_H_
 
-// typedef std::tuple<size_t, size_t, Givaro::Rational> triple;
+template<typename Ring>
+using Etriple = std::tuple<size_t, size_t, typename Ring::Element>;
 
 template<typename T1, typename T2>
 std::ostream& operator<<(std::ostream& out, const std::map<T1,T2>& v);
 
 // Build pairs of indices with normalized coefficient (ratio of the two values)
-template<typename Iter, typename Field>
-std::vector<std::tuple<size_t, size_t, typename Field::Element>> listpairs(
-    const Iter& start, const Iter& end, const Field& F);
+template<typename Container, typename Ring>
+std::vector<Etriple<Ring>> listpairs(const Container& c, const Ring& F);
 
 // If cse is present in row, add square of row density to score
 template<typename triple>
@@ -82,44 +82,20 @@ std::pair<size_t,size_t> Optimizer(std::ostream& sout, _Mat& M,
                                    const char tev, const char rav);
 
 
-	// Precondition _Matrix A is upper triangularized
+// Precondition _Matrix A is upper triangular
 template<typename _Mat>
 std::pair<size_t,size_t> nullspacedecomp(std::ostream& sout,
                                          _Mat& x, _Mat& A) ;
 
 
 
-
-
-template<typename Field>
+// prints c[i] * e, or c[i] / b for rational e=1/b
+// updates nbmul if e not in {-1,1}
+template<typename Ring>
 std::ostream& printmulorjustdiv(std::ostream& out,
                                 const char c, const size_t i,
-                                const typename Field::Element& e,
-                                size_t& nbmul, const Field& F) {
-    out << c << i;
-    if ( (!F.isOne(e)) && (!F.isMOne(e)) ) {
-        ++nbmul;
-        out << '*' << e;
-    }
-    return out;
-}
-
-template<>
-std::ostream& printmulorjustdiv(std::ostream& out,
-                                const char c, const size_t i,
-                                const Givaro::Rational& r,
-                                size_t& nbmul, const QRat& QQ) {
-    out << c << i;
-    if (!QQ.isOne(r)) {
-        ++nbmul;
-        if (Givaro::isOne(r.nume()))
-            out << '/' << r.deno();
-        else
-            out << '*' << r;
-    }
-    return out;
-}
-
+                                const typename Ring::Element& e,
+                                size_t& nbmul, const Ring& F);
 
 #include "plinopt_optimize.inl"
 #endif

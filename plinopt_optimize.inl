@@ -9,6 +9,42 @@
 
 #include "plinopt_optimize.h"
 
+
+
+
+
+
+template<typename Ring>
+std::ostream& printmulorjustdiv(std::ostream& out,
+                                const char c, const size_t i,
+                                const typename Ring::Element& e,
+                                size_t& nbmul, const Ring& F) {
+    out << c << i;
+    if ( (!F.isOne(e)) && (!F.isMOne(e)) ) {
+        ++nbmul;
+        out << '*' << e;
+    }
+    return out;
+}
+
+template<>
+std::ostream& printmulorjustdiv(std::ostream& out,
+                                const char c, const size_t i,
+                                const Givaro::Rational& r,
+                                size_t& nbmul, const QRat& QQ) {
+    out << c << i;
+    if (!QQ.isOne(r)) {
+        ++nbmul;
+        if (Givaro::isOne(r.nume()))
+            out << '/' << r.deno();
+        else
+            out << '*' << r;
+    }
+    return out;
+}
+
+
+
 template<typename T1, typename T2>
 std::ostream& operator<<(std::ostream& out, const std::map<T1,T2>& v) {
     out << '{';
@@ -18,12 +54,10 @@ std::ostream& operator<<(std::ostream& out, const std::map<T1,T2>& v) {
 }
 
 // Build pairs of indices with normalized coefficient (ratio of the two values)
-template<typename Container, typename Field>
-std::vector<std::tuple<size_t, size_t, typename Field::Element> > listpairs (
-    const Container& c, const Field& F) {
-    std::vector<std::tuple<size_t, size_t, typename Field::Element> > v;
-        // if (c.size() == 0) return v;
-    typename Field::Element tmp;
+template<typename Container, typename Ring>
+std::vector<Etriple<Ring>> listpairs (const Container& c, const Ring& F) {
+    std::vector<Etriple<Ring>> v;
+    typename Ring::Element tmp;
     for(auto iter=c.begin(); iter != c.end(); ++iter) {
         auto next(iter);
         for(++next; next!= c.end(); ++next) {
