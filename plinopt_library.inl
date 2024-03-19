@@ -18,10 +18,11 @@ inline _Mat1& Transpose(_Mat1& T, const _Mat2& A) {
     return T;
 }
 
-inline Matrix& NegTranspose(Matrix& T, const Matrix& A) {
+template<typename _Mat1, typename _Mat2>
+inline _Mat1& NegTranspose(_Mat1& T, const _Mat2& A) {
     T.resize(0,0);
     T.resize(A.coldim(), A.rowdim());
-    typename Matrix::Element tmp; T.field().init(tmp);
+    typename _Mat1::Element tmp; T.field().init(tmp);
     for(auto it = A.IndexedBegin(); it != A.IndexedEnd(); ++it)
         T.setEntry(it.colIndex(),it.rowIndex(), T.field().neg(tmp,it.value()));
     return T;
