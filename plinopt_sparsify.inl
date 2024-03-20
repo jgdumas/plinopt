@@ -170,7 +170,7 @@ std::ostream& densityProfile(std::ostream& out, size_t& ss, const Matrix& M) {
 //    w has to be independent of Cand
 //    if sparsity is the same then test w's sparsity
 //    If w is better, then replaces the line #num of LCoB
-inline bool testLinComb(std::pair<int,int>& weight, Matrix& LCoB, Matrix& Cand,
+inline bool testLinComb(Pair<int>& weight, Matrix& LCoB, Matrix& Cand,
                         const size_t num,const QArray& w, const Matrix& TM) {
     static QRat QQ;
     static QArray v(TM.coldim()); v.resize(TM.coldim());
@@ -288,7 +288,7 @@ Matrix& Sparsifier(Matrix& TCoB, Matrix& TM, const size_t maxnumcoeff) {
 
         for(size_t num=0; num<firstcolumns; ++num) {
             matrixCopy(A, LCoB, QQ);
-            std::pair<int,int> weight{-1,-1}; // Best Hamming weight so far
+            Pair<int> weight{-1,-1}; // Best Hamming weight so far
             bool found((block == 0) && (num == 0));
             if (found) {
                 weight.first=rnHw;
@@ -646,7 +646,7 @@ int blockSparsifier(Givaro::Timer& elapsed, Matrix& CoB, Matrix& Res,
 //   (Res=[identity,lower part])*(CoB=[upperpart])
 //   with prescribed inner dimension
 // precondition: upper part is full-rank
-std::pair<size_t,size_t> backSolver(Matrix& CoB, Matrix& Res,
+Pair<size_t> backSolver(Matrix& CoB, Matrix& Res,
                                     const Matrix& iM, const QRat& QQ) {
 
     const size_t r(iM.rowdim()), n(iM.coldim()), k(CoB.rowdim());
@@ -741,7 +741,7 @@ std::pair<size_t,size_t> backSolver(Matrix& CoB, Matrix& Res,
 #else
     dense2sparse(Res, R, QQ);
 #endif
-    return std::pair<size_t,size_t>{density(Res),density(CoB)};
+    return Pair<size_t>{density(Res),density(CoB)};
 }
 
 // ============================================================

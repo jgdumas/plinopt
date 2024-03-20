@@ -87,7 +87,8 @@ inline DenseMatrix& sparse2dense(DenseMatrix& A, const _Mat& M) {
 }
 
 	// copy sparse matrix B into sparse matrix A
-inline Matrix& sparse2sparse(Matrix& A, const Matrix& B) {
+template<typename _Mat>
+inline _Mat& sparse2sparse(_Mat& A, const _Mat& B) {
     A.resize(B.rowdim(), B.coldim());
     std::copy(B.rowBegin(), B.rowEnd(), A.rowBegin());
     return A;

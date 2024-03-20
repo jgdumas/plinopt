@@ -55,6 +55,8 @@ typedef LinBox::Permutation<QRat> Permutation;
 typedef std::vector<Givaro::Rational> QArray;
 typedef LinBox::DenseVector<QRat> QVector;
 
+template<typename _T> using Pair = std::pair<_T,_T>;
+
 	// Copy the transposed  matrix
 template<typename _Mat1, typename _Mat2>
 inline _Mat1& Transpose(_Mat1& T, const _Mat2& A);
@@ -64,8 +66,8 @@ template<typename _Mat1, typename _Mat2>
 inline _Mat1& NegTranspose(_Mat1& T, const _Mat2& A);
 
 	// Copy (and convert) a matrix
-template<typename _Mat1, typename _Mat2>
-_Mat1& matrixCopy(_Mat1&, const _Mat2&, const QRat&);
+template<typename _Mat1, typename _Mat2, typename _Field>
+_Mat1& matrixCopy(_Mat1&, const _Mat2&, const _Field&);
 
 	// Replace row i of A, by row j of B
 Matrix& setRow(Matrix& A, size_t i, const Matrix& B, size_t j, const QRat&);
@@ -94,6 +96,18 @@ template<typename _Mat>
 Tricounter LRP2MM(const _Mat& L, const _Mat& R, const _Mat& P) {
     const size_t n(std::sqrt(R.coldim()*P.rowdim()/L.coldim()));
     return Tricounter { n, R.coldim()/n, P.rowdim()/n };
+}
+
+
+    // Tools testing units
+template<typename Ring>
+bool isAbsOne(const Ring& F, const typename Ring::Element& e) {
+    return (F.isOne(e) || F.isMOne(e));
+}
+
+template<typename Ring>
+bool notAbsOne(const Ring& F, const typename Ring::Element& e) {
+    return ( (!F.isOne(e)) && (!F.isMOne(e)) );
 }
 
 #include "plinopt_library.inl"

@@ -95,7 +95,7 @@ int Tellegen(std::istream& input) {
     std::set<std::string> outSet;
     std::set<std::string> inSet;
 
-    std::pair<size_t, size_t> Nops(0,0);
+    std::pair<size_t,size_t> Nops(0,0);
 
     std::clog << std::string(30,'#') << std::endl;
 
