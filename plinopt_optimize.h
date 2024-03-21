@@ -106,6 +106,10 @@ template<typename _Mat>
 Pair<size_t> nullspacedecomp(std::ostream& sout,
                              _Mat& x, _Mat& A) ;
 
+template<typename _Mat>
+Pair<size_t> nullspacedecomp(std::ostream& sout,
+                             _Mat& x, _Mat& A, std::vector<size_t>& l) ;
+
 
 
 // prints c[i] * e, or c[i] / b for rational e=1/b

@@ -508,6 +508,14 @@ Pair<size_t> Optimizer(std::ostream& sout, _Mat& M,
 	// Postcondition _Matrix A is nullified
 template<typename _Mat>
 Pair<size_t> nullspacedecomp(std::ostream& sout, _Mat& x, _Mat& A) {
+	std::vector<size_t> l;
+    return nullspacedecomp(sout, x, A, l);
+}
+
+	// Postcondition _Matrix A is nullified
+template<typename _Mat>
+Pair<size_t> nullspacedecomp(std::ostream& sout, _Mat& x, _Mat& A,
+                             std::vector<size_t>& l) {
     const auto& FF(A.field());
     typename _Mat::Element Det;
     size_t Rank;
@@ -522,12 +530,14 @@ Pair<size_t> nullspacedecomp(std::ostream& sout, _Mat& x, _Mat& A) {
 
 
 #ifdef RANDOM_TIES
+        // If permutation is not fixed,
         // Randomly swap initial rows of FreePart
-    std::vector<size_t> l(Nj);
-    std::iota(l.begin(), l.end(), 0); // Q will be this permutation
-    std::shuffle ( l.begin(), l.end(),
-                   std::default_random_engine(Givaro::BaseTimer::seed()));
-
+    if (l.size() != Nj) {
+        l.resize(Nj);
+        std::iota(l.begin(), l.end(), 0); // Select a random permutation
+        std::shuffle ( l.begin(), l.end(),
+                       std::default_random_engine(Givaro::BaseTimer::seed()));
+    } // Otherwise only use the prescribed permutation
     for(size_t i=1; i<Nj; ++i) {
         if (i != l[i]) {
             std::swap(FreePart[i],FreePart[l[i]]);
