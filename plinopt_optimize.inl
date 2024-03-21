@@ -634,12 +634,15 @@ Pair<size_t> nullspacedecomp(std::ostream& sout, _Mat& x, _Mat& A) {
             // ============================================
             // Optimize the set of independent rows
         input2Temps(sout, FreePart.coldim(), 'i', 't');
+            // o <-- Free . i
         auto Fops( Optimizer(sout, FreePart, 'i', 'o', 't', 'r') );
 
 
             // ============================================
             // Optimize the dependent rows (transposed nullspace)
-        _Mat Tx(x.field(), x.coldim(), x.rowdim()); NegTranspose(Tx, x);
+            // [ Free^T | Dep^T ] . [ x^T | I ]^T = 0
+            // So Dep . i = (- x^T) Free . i = (- x^T) o
+         _Mat Tx(x.field(), x.coldim(), x.rowdim()); NegTranspose(Tx, x);
 
 #ifdef VERBATIM_PARSING
         std::clog << std::string(30,'#') << std::endl;
@@ -647,13 +650,16 @@ Pair<size_t> nullspacedecomp(std::ostream& sout, _Mat& x, _Mat& A) {
 #endif
 
         input2Temps(sout, Tx.coldim(), 'o', 'v', x);
+            // x <-- Tx . o = (- x^T) o
         auto Kops( Optimizer(sout, Tx, 'o', 'x', 'v', 'g') );
 
             // ============================================
             // Recover final output of NullSpace
             // Applying both permutations, P then Q
+            // back into 'o' variables
         for(size_t i=0; i<nullity; ++i) {
-            sout << 'o' << Q[ P.getStorage()[ Rank+i ] ] << ":=" << 'x' << i << ';' << std::endl;
+            sout << 'o' << Q[ P.getStorage()[ Rank+i ] ] << ":="
+                 << 'x' << i << ';' << std::endl;
         }
 
             // ============================================
