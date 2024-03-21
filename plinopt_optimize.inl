@@ -159,10 +159,7 @@ Pair<size_t> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
 }
 
 
-
-
-
-// Removing one pair
+// Removing one pair (CSE)
 template<typename triple,typename _Mat>
 bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
             size_t& nbmul, const char tev, const char rav) {
@@ -220,8 +217,7 @@ bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
                     const size_t newscore(score(AllPairs,Density,element));
                     if (newscore == maxscore) {
                             // Tie breaking by multiplier
-                        if (FF.isOne(std::get<2>(element)) ||
-                            FF.isMOne(std::get<2>(element)) ) {
+                        if (isAbsOne(FF,std::get<2>(element))) {
                             cse = element;
                         }
                     }
@@ -426,7 +422,9 @@ std::ostream& ProgramGen(std::ostream& sout, _Mat& M,
         sout << ouv << i << ":=";
         if (row.size()>0) {
 
-            if ( (sign(row.begin()->second) < 0) || FF.isMOne(row.begin()->second) ) sout << '-';
+            if ( (sign(row.begin()->second) < 0)
+                 || FF.isMOne(row.begin()->second) ) sout << '-';
+
             auto arbs(abs(row.begin()->second));
 
                 // If already multiplied, reuse it
@@ -449,7 +447,9 @@ std::ostream& ProgramGen(std::ostream& sout, _Mat& M,
             auto iter(row.begin());
             for(++iter; iter!= row.end(); ++iter) {
                 ++addcount;
-                sout << ( ( (sign(iter->second) <0) || FF.isMOne(iter->second) ) ? '-' : '+');
+                sout << ( ( (sign(iter->second) <0)
+                            || FF.isMOne(iter->second) ) ? '-' : '+');
+
                 auto ais(abs(iter->second));
 
                     // If already multiplied, reuse it

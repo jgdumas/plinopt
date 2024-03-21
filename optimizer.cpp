@@ -204,9 +204,8 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
         } else {
                 // Optimal was already found
             std::clog << "# \033[1;36m"
-                      << "Above direct computation is optimal"
-                      << " (proven via exhaustive search). \t" << chrono
-                      << "\033[0m" << std::endl;
+                      << "No greedy CSE scheduling is better.\033[0m \t" 
+                      << chrono << std::endl;
         }
     }
 

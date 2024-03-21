@@ -192,8 +192,9 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
         const auto ckter( nextindex(preck, T[l], oriented) );
         const size_t k(ckter->first);
 
-        if ( (!QQ.isOne(ckter->second)) && (!QQ.isMOne(ckter->second))) {
-            if ( (k == preck) && (l>0) && (ckter->second == T.getEntry(l-1,k)) ) {
+        if (notAbsOne(QQ,ckter->second)) {
+            if ( (k == preck) && (l>0)
+                 && (ckter->second == T.getEntry(l-1,k)) ) {
                 if (! QQ.isOne(ckter->second)) {
 #ifdef VERBATIM_PARSING
                     std::clog << "# Optimized out, scalar (div;mul): "
@@ -257,7 +258,7 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
                     kter->second, k, opcount);
             }
         }
-        if ( (!QQ.isOne(ckter->second)) && (!QQ.isMOne(ckter->second))) {
+        if (notAbsOne(QQ,ckter->second)) {
             SCA(scout, 'c', ckter->first, '*', ckter->second, opcount);
         }
 
