@@ -11,7 +11,24 @@
 
 
 
-
+// Returns the kth-permutation of 0..(n-1) via the factoradic
+// Fn is the factorial vector up to n-1
+std::vector<size_t> kthpermutation(const size_t k, const size_t n,
+                                   const std::vector<long>& Fn ) {
+    std::vector<size_t> l;
+    std::deque<size_t> Q(n);
+    std::iota(Q.begin(), Q.end(), 0); // 0,1,2,3,4
+    ldiv_t result;
+    long r(k);
+    for(size_t i=n-1; i>0; --i) {
+        result = div(r, Fn[i-1]);
+        l.push_back(Q[result.quot]);
+        Q.erase(Q.begin()+result.quot);
+        r = result.rem;
+    }
+    l.push_back(Q.front());
+    return l;
+}
 
 
 template<typename Ring>

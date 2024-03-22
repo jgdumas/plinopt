@@ -178,16 +178,15 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
     if (allkernels && (M.rowdim() < 20)) {
         chrono.start();
 
-        std::vector<size_t> l(M.rowdim());
-        std::iota(l.begin(), l.end(), 0); // 0,1,2,3,4 ...
-        size_t lf(1); for(size_t i=2; i<=M.rowdim(); ++i) lf *= i; // factorial
+        const size_t m(M.rowdim());
+        std::vector<long> Fm { factorial(m) };
         std::ostringstream kout;
 
         auto knbops(nbops);
 
-#pragma omp parallel for shared(l,T,kout,knbops)
-        for(size_t i=0; i<lf; ++i) {
-            std::next_permutation(l.begin(), l.end());
+#pragma omp parallel for shared(Fm,T,kout,knbops)
+        for(size_t i=0; i<Fm.back(); ++i) {
+            std::vector<size_t> l{kthpermutation(i,m,Fm)};
             FMatrix lT(T, F);
             std::ostringstream lkout;
             FMatrix NullSpace(F,lT.coldim(),T.coldim());

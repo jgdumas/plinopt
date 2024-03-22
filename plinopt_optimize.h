@@ -120,5 +120,17 @@ std::ostream& printmulorjustdiv(std::ostream& out,
                                 const typename Ring::Element& e,
                                 size_t& nbmul, const Ring& F);
 
+
+// Vector of factorial up to n
+std::vector<long> factorial(const size_t n) {
+    std::vector<long> a(n); a[0]=1;
+    for(size_t j=1; j<n; ++j) { a[j] = a[j-1]*(j+1); } return a;
+}
+
+// Returns the kth-permutation of 0..(n-1) via the factoradic
+// Fn is the factorial vector up to n-1
+std::vector<size_t> kthpermutation(const size_t k, const size_t n,
+                                   const std::vector<long>& Fn );
+
 #include "plinopt_optimize.inl"
 #endif
