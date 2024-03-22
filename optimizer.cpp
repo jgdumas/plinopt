@@ -190,7 +190,7 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
             FMatrix lT(T, F);
             std::ostringstream lkout;
             FMatrix NullSpace(F,lT.coldim(),T.coldim());
-            auto lkops( nullspacedecomp(lkout, NullSpace, lT, l) );
+            auto lkops( nullspacedecomp(lkout, NullSpace, lT, l, exhaustive) );
 #ifdef VERBATIM_PARSING
             std::clog << "# Found, kernel: " << lkops.first << "\tadditions, "
                        << lkops.second << "\tmultiplications." << std::endl;

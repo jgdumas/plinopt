@@ -103,12 +103,13 @@ Pair<size_t> RecOptimizer(std::ostream& sout, _Mat& M,
 
 // Precondition _Matrix A is upper triangular
 template<typename _Mat>
-Pair<size_t> nullspacedecomp(std::ostream& sout,
-                             _Mat& x, _Mat& A) ;
+Pair<size_t> nullspacedecomp(std::ostream& sout, _Mat& x, _Mat& A,
+                             const bool exhaustive=false);
 
 template<typename _Mat>
-Pair<size_t> nullspacedecomp(std::ostream& sout,
-                             _Mat& x, _Mat& A, std::vector<size_t>& l) ;
+Pair<size_t> nullspacedecomp(std::ostream& sout, _Mat& x, _Mat& A,
+                             std::vector<size_t>& l,
+                             const bool exhaustive=false);
 
 
 

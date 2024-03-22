@@ -524,15 +524,16 @@ Pair<size_t> Optimizer(std::ostream& sout, _Mat& M,
 
 	// Postcondition _Matrix A is nullified
 template<typename _Mat>
-Pair<size_t> nullspacedecomp(std::ostream& sout, _Mat& x, _Mat& A) {
+Pair<size_t> nullspacedecomp(std::ostream& sout, _Mat& x, _Mat& A,
+                             const bool exhaustive) {
 	std::vector<size_t> l;
-    return nullspacedecomp(sout, x, A, l);
+    return nullspacedecomp(sout, x, A, l, exhaustive);
 }
 
 	// Postcondition _Matrix A is nullified
 template<typename _Mat>
 Pair<size_t> nullspacedecomp(std::ostream& sout, _Mat& x, _Mat& A,
-                             std::vector<size_t>& l) {
+                             std::vector<size_t>& l, const bool exhaustive) {
     const auto& FF(A.field());
     typename _Mat::Element Det;
     size_t Rank;
@@ -662,7 +663,12 @@ Pair<size_t> nullspacedecomp(std::ostream& sout, _Mat& x, _Mat& A,
             // Optimize the set of independent rows
         input2Temps(sout, FreePart.coldim(), 'i', 't');
             // o <-- Free . i
-        auto Fops( Optimizer(sout, FreePart, 'i', 'o', 't', 'r') );
+        Pair<size_t> Fops;
+        if (exhaustive) {
+            Fops = RecOptimizer(sout, FreePart, 'i', 'o', 't', 'r');
+        } else {
+            Fops = Optimizer(sout, FreePart, 'i', 'o', 't', 'r');
+        }
 
 
             // ============================================
@@ -678,7 +684,12 @@ Pair<size_t> nullspacedecomp(std::ostream& sout, _Mat& x, _Mat& A,
 
         input2Temps(sout, Tx.coldim(), 'o', 'v', x);
             // x <-- Tx . o = (- x^T) o
-        auto Kops( Optimizer(sout, Tx, 'o', 'x', 'v', 'g') );
+        Pair<size_t> Kops;
+        if (exhaustive) {
+            Kops = RecOptimizer(sout, Tx, 'o', 'x', 'v', 'g');
+        } else {
+            Kops = Optimizer(sout, Tx, 'o', 'x', 'v', 'g');
+        }
 
             // ============================================
             // Recover final output of NullSpace
