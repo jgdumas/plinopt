@@ -16,7 +16,7 @@
 std::vector<size_t> kthpermutation(const size_t k, const size_t n,
                                    const std::vector<long>& Fn ) {
     std::vector<size_t> l;
-    std::deque<size_t> Q(n);
+    std::vector<size_t> Q(n);
     std::iota(Q.begin(), Q.end(), 0); // 0,1,2,3,4
     ldiv_t result;
     long r(k);
@@ -700,12 +700,9 @@ Pair<size_t> nullspacedecomp(std::ostream& sout, _Mat& x, _Mat& A,
 }
 
 
-
-#include <deque>
-
 // Recusive search for the best cse
 template<typename triple,typename _Mat>
-bool RecSub(std::deque<std::string>& out, _Mat& Mat,
+bool RecSub(std::vector<std::string>& out, _Mat& Mat,
             std::vector<triple>& multiples,
             size_t& nbadd, size_t& nbmul, const size_t lvl,
             const char tev, const char rav) {
@@ -754,7 +751,7 @@ bool RecSub(std::deque<std::string>& out, _Mat& Mat,
     size_t bestadds(nbadd), bestmuls(nbmul);
     _Mat bestM(FF,Mat.rowdim(),Mat.coldim()); sparse2sparse(bestM, Mat);
     std::vector<triple> bestmultiples(multiples);
-    std::deque<std::string> bestdout;
+    std::vector<std::string> bestdout;
 //     std::clog << std::string(lvl,'#') << " lvl(" << lvl << "), " << nbadd << '|' << nbmul << ", allpairs: ";
 //     size_t subexps(0); for(const auto& rows: AllPairs) subexps+=rows.size();
 //    std::clog << subexps << std::endl;
@@ -776,7 +773,7 @@ bool RecSub(std::deque<std::string>& out, _Mat& Mat,
                 size_t ladditions(nbadd-savings.first);
                 size_t lmuls(nbmul-savings.second);
 
-                std::deque<std::string> sdout;
+                std::vector<std::string> sdout(1,ssout.str());
                 RecSub(sdout, lM, lmultiples, ladditions, lmuls, lvl+1, tev, rav);
 
                 if ( (ladditions < bestadds) ||
@@ -786,7 +783,7 @@ bool RecSub(std::deque<std::string>& out, _Mat& Mat,
                     sparse2sparse(bestM, lM);
                     bestmultiples = lmultiples;
                     bestdout = sdout;
-                    bestdout.push_front(ssout.str());
+//                     bestdout.push_front(ssout.str());
                 }
             }
         }
@@ -823,7 +820,7 @@ Pair<size_t> RecOptimizer(std::ostream& sout, _Mat& M,
         if (notAbsOne(FF,it.value())) ++nbmul;
 
         // Factoring sums
-    std::deque<std::string> dout;
+    std::vector<std::string> dout;
     std::vector<triple> multiples;
     size_t lmul(0);
     RecSub(dout, M, multiples, nbadd, nbmul, 0, tev, rav);
@@ -832,7 +829,7 @@ Pair<size_t> RecOptimizer(std::ostream& sout, _Mat& M,
     for(auto it = M.IndexedBegin(); it != M.IndexedEnd(); ++it)
         if (notAbsOne(FF,it.value())) --alreadymuls;
 
-    for(auto iter = dout.rbegin(); iter != dout.rend(); ++iter) {
+    for(auto iter = dout.begin(); iter != dout.end(); ++iter) {
         sout << *iter;
     }
 

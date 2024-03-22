@@ -174,8 +174,8 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
 
 
         // ============================================================
-        // Exhaustive nullspace permutation search (if # is < 2^64)
-    if (allkernels && (M.rowdim() < 20)) {
+        // Exhaustive nullspace permutation search (if # is <= 12!)
+    if (allkernels && (M.rowdim() < 13)) {
         chrono.start();
 
         const size_t m(M.rowdim());
@@ -233,7 +233,7 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
     if (exhaustive) {
         chrono.start();
 
-        std::deque<std::ostringstream> out;
+        std::vector<std::ostringstream> out;
         FMatrix lM(M, F);
         FMatrix lT(T, F);
         std::ostringstream iout;
