@@ -418,6 +418,12 @@ std::ostream& ProgramGen(std::ostream& sout, _Mat& M,
                          const char inv, const char ouv,
                          const char tev, const char rav) {
 
+#ifdef VERBATIM_PARSING
+    std::clog << "# Program Generation:" << inv << ' ' << ouv << ' '
+               << tev << ' ' << rav << ' ' << std::endl;
+    std::clog << std::string(30,'#') << std::endl;
+#endif
+
     const auto& FF(M.field());
 
         // Factoring multiplier by colums
@@ -439,9 +445,6 @@ std::ostream& ProgramGen(std::ostream& sout, _Mat& M,
         sout << ouv << i << ":=";
         if (row.size()>0) {
 
-            if ( (sign(row.begin()->second) < 0)
-                 || FF.isMOne(row.begin()->second) ) sout << '-';
-
             auto arbs(abs(row.begin()->second));
 
                 // If already multiplied, reuse it
@@ -454,8 +457,11 @@ std::ostream& ProgramGen(std::ostream& sout, _Mat& M,
                 }
             }
             if (rindex != M.coldim()) {
+                if (! FF.areEqual(arbs,row.begin()->second)) sout << '-';
                 sout << rav << rindex;
             } else {
+                if ( (sign(row.begin()->second) < 0)
+                     || FF.isMOne(row.begin()->second) ) sout << '-';
                 printmulorjustdiv(sout, tev, row.begin()->first,
                                   arbs, nbmul, FF);
             }
@@ -464,9 +470,6 @@ std::ostream& ProgramGen(std::ostream& sout, _Mat& M,
             auto iter(row.begin());
             for(++iter; iter!= row.end(); ++iter) {
                 ++addcount;
-                sout << ( ( (sign(iter->second) <0)
-                            || FF.isMOne(iter->second) ) ? '-' : '+');
-
                 auto ais(abs(iter->second));
 
                     // If already multiplied, reuse it
@@ -479,9 +482,12 @@ std::ostream& ProgramGen(std::ostream& sout, _Mat& M,
                     }
                 }
                 if (rindex != M.coldim()) {
-                    sout << rav << rindex;
+                    sout << (FF.areEqual(ais,iter->second) ? '+' : '-')
+                         << rav << rindex;
                 } else {
                         // otherwise next function will sout << '-'
+                    sout << ( ( (sign(iter->second) <0)
+                                || FF.isMOne(iter->second) ) ? '-' : '+');
                     printmulorjustdiv(sout, tev, iter->first,
                                       ais, nbmul, FF);
                 }
@@ -492,9 +498,12 @@ std::ostream& ProgramGen(std::ostream& sout, _Mat& M,
         sout << ';' << std::endl;
     }
 
+#ifdef VERBATIM_PARSING
+    std::clog << "# Program Generation done." << std::endl;
+    std::clog << std::string(30,'#') << std::endl;
+//     M.write(std::clog << "M:=",FileFormat::Maple) << ';' << std::endl;
+#endif
 
-// std::clog << std::string(30,'#') << std::endl;
-// M.write(std::clog << "M:=",FileFormat::Maple) << ';' << std::endl;
     return sout;
 }
 
@@ -845,7 +854,6 @@ Pair<size_t> RecOptimizer(std::ostream& sout, _Mat& M,
     }
 
     size_t addcount(0);
-
 
     ProgramGen(sout, M, multiples, addcount, alreadymuls, inv, ouv, tev, rav);
 
