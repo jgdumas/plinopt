@@ -45,7 +45,7 @@ template<typename Field>
 int DKOptimiser(std::istream& input, const size_t randomloops,
                 const bool printMaple, const bool printPretty,
                 const bool tryDirect, const bool tryKernel,
-                const bool exhaustive, const bool allkernels, const Field& F) {
+                const bool mostCSE, const bool allkernels, const Field& F) {
 
         // ============================================================
         // Read Matrix of Linear Transformation
@@ -190,7 +190,7 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
             FMatrix lT(T, F);
             std::ostringstream lkout;
             FMatrix NullSpace(F,lT.coldim(),T.coldim());
-            auto lkops( nullspacedecomp(lkout, NullSpace, lT, l, exhaustive) );
+            auto lkops( nullspacedecomp(lkout, NullSpace, lT, l, mostCSE) );
 #ifdef VERBATIM_PARSING
             std::clog << "# Found, kernel: " << lkops.first << "\tadditions, "
                        << lkops.second << "\tmultiplications." << std::endl;
@@ -229,8 +229,8 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
     }
 
         // ============================================================
-        // Exhaustive Greedy CSE search
-    if (exhaustive) {
+        // MostCSE Greedy CSE search
+    if (mostCSE) {
         chrono.start();
 
         std::vector<std::ostringstream> out;
@@ -276,16 +276,16 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
 int Selector(std::istream& input, const size_t randomloops,
              const bool printMaple, const bool printPretty,
              const bool tryDirect, const bool tryKernel,
-             const bool exhaustive, const bool allkernels,
+             const bool mostCSE, const bool allkernels,
              const Givaro::Integer& q) {
     if (! Givaro::isZero(q)) {
         Givaro::Modular<Givaro::Integer> FF(q);
         return DKOptimiser(input, randomloops, printMaple, printPretty,
-                           tryDirect, tryKernel, exhaustive, allkernels, FF);
+                           tryDirect, tryKernel, mostCSE, allkernels, FF);
     } else {
         QRat QQ;
         return DKOptimiser(input, randomloops, printMaple, printPretty,
-                           tryDirect, tryKernel, exhaustive, allkernels, QQ);
+                           tryDirect, tryKernel, mostCSE, allkernels, QQ);
     }
 }
 // ============================================================
@@ -304,7 +304,7 @@ int main(int argc, char** argv) {
 
         // ============================================================
         // Linear Transformation
-    bool printMaple(false), printPretty(false), exhaustive(false),
+    bool printMaple(false), printPretty(false), mostCSE(false),
         directOnly(false), kernelOnly(false), allkernels(false);
     size_t randomloops(DORANDOMSEARCH?DEFAULT_RANDOM_LOOPS:1);
     Givaro::Integer prime(0u);
@@ -330,7 +330,7 @@ int main(int argc, char** argv) {
         else if (args == "-P") { printPretty = true; }
         else if (args == "-D") { directOnly = true; }
         else if (args == "-K") { kernelOnly = true; }
-        else if (args == "-E") { exhaustive = true; }
+        else if (args == "-E") { mostCSE = true; }
         else if (args == "-N") { allkernels = true; }
         else if (args == "-q") { prime = Givaro::Integer(argv[++i]); }
         else if (args == "-O") { randomloops = atoi(argv[++i]);
@@ -348,12 +348,12 @@ int main(int argc, char** argv) {
 
     if (filename == "") {
         return Selector(std::cin, randomloops, printMaple, printPretty,
-                        tryDirect, tryKernel, exhaustive, allkernels, prime);
+                        tryDirect, tryKernel, mostCSE, allkernels, prime);
     } else {
         std::ifstream inputmatrix(filename);
         if ( inputmatrix ) {
             int s=Selector(inputmatrix, randomloops, printMaple, printPretty,
-                           tryDirect, tryKernel, exhaustive, allkernels, prime);
+                           tryDirect, tryKernel, mostCSE, allkernels, prime);
             inputmatrix.close();
             return s;
         }

@@ -534,15 +534,15 @@ Pair<size_t> Optimizer(std::ostream& sout, _Mat& M,
 	// Postcondition _Matrix A is nullified
 template<typename _Mat>
 Pair<size_t> nullspacedecomp(std::ostream& sout, _Mat& x, _Mat& A,
-                             const bool exhaustive) {
+                             const bool mostCSE) {
 	std::vector<size_t> l;
-    return nullspacedecomp(sout, x, A, l, exhaustive);
+    return nullspacedecomp(sout, x, A, l, mostCSE);
 }
 
 	// Postcondition _Matrix A is nullified
 template<typename _Mat>
 Pair<size_t> nullspacedecomp(std::ostream& sout, _Mat& x, _Mat& A,
-                             std::vector<size_t>& l, const bool exhaustive) {
+                             std::vector<size_t>& l, const bool mostCSE) {
     const auto& FF(A.field());
     typename _Mat::Element Det;
     size_t Rank;
@@ -673,7 +673,7 @@ Pair<size_t> nullspacedecomp(std::ostream& sout, _Mat& x, _Mat& A,
         input2Temps(sout, FreePart.coldim(), 'i', 't');
             // o <-- Free . i
         Pair<size_t> Fops;
-        if (exhaustive) {
+        if (mostCSE) {
             Fops = RecOptimizer(sout, FreePart, 'i', 'o', 't', 'r');
         } else {
             Fops = Optimizer(sout, FreePart, 'i', 'o', 't', 'r');
@@ -694,7 +694,7 @@ Pair<size_t> nullspacedecomp(std::ostream& sout, _Mat& x, _Mat& A,
         input2Temps(sout, Tx.coldim(), 'o', 'v', x);
             // x <-- Tx . o = (- x^T) o
         Pair<size_t> Kops;
-        if (exhaustive) {
+        if (mostCSE) {
             Kops = RecOptimizer(sout, Tx, 'o', 'x', 'v', 'g');
         } else {
             Kops = Optimizer(sout, Tx, 'o', 'x', 'v', 'g');
@@ -824,7 +824,7 @@ bool RecSub(std::vector<std::string>& out, _Mat& Mat,
 
 
 
-// Global exhaustive optimization function (pairs and factors)
+// Global exhaustive greedy CSE optimization function (pairs and factors)
 template<typename _Mat>
 Pair<size_t> RecOptimizer(std::ostream& sout, _Mat& M,
                           const char inv, const char ouv,
