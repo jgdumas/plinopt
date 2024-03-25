@@ -87,15 +87,15 @@ int blockSparsifier(Givaro::Timer& elapsed, Matrix& CoB, Matrix& Res,
 // Decomposing the matrix into:
 //   (Res=[identity,lower part])*(CoB=[upperpart])
 //   with prescribed inner dimension
-std::pair<size_t,size_t> backSolver(Matrix& CoB, Matrix& Res,
-                                    const Matrix& iM, const QRat& QQ);
+Pair<size_t> backSolver(Matrix& CoB, Matrix& Res,
+                        const Matrix& iM, const QRat& QQ);
 
 
 // ============================================================
 // Utilities
 
     // Testing afor a potential better sparsity
-bool testLinComb(std::pair<int,int>& weight, Matrix& LCoB, Matrix& Cand,
+bool testLinComb(Pair<int>& weight, Matrix& LCoB, Matrix& Cand,
                  const size_t num, const QArray& w, const Matrix& TM);
 
 

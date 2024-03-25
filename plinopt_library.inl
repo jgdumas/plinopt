@@ -87,7 +87,8 @@ inline DenseMatrix& sparse2dense(DenseMatrix& A, const _Mat& M) {
 }
 
 	// copy sparse matrix B into sparse matrix A
-inline Matrix& sparse2sparse(Matrix& A, const Matrix& B) {
+template<typename _Mat>
+inline _Mat& sparse2sparse(_Mat& A, const _Mat& B) {
     A.resize(B.rowdim(), B.coldim());
     std::copy(B.rowBegin(), B.rowEnd(), A.rowBegin());
     return A;
@@ -145,4 +146,25 @@ inline Matrix& permuteRows(Matrix& R, const Permutation& P,
     DenseMatrix dR(QQ,A.rowdim(),A.coldim());
     P.applyRight(dR, dA);
     return dense2sparse(R, dR, QQ);
+}
+
+
+
+// Returns the kth-permutation of 0..(n-1) via the factoradic
+// Fn is the factorial vector up to n-1 -- from 'factorial(m)'
+std::vector<size_t> kthpermutation(const size_t k, const size_t n,
+                                   const std::vector<long>& Fn ) {
+    std::vector<size_t> l;
+    std::vector<size_t> Q(n);
+    std::iota(Q.begin(), Q.end(), 0); // 0,1,2,3,4
+    ldiv_t result;
+    long r(k);
+    for(size_t i=n-1; i>0; --i) {
+        result = div(r, Fn[i-1]);
+        l.push_back(Q[result.quot]);
+        Q.erase(Q.begin()+result.quot);
+        r = result.rem;
+    }
+    l.push_back(Q.front());
+    return l;
 }
