@@ -340,11 +340,13 @@ Tricounter SearchLinearAlgorithm(Program_t& Program, const Matrix& A,
         Givaro::GivRandom generator;
         P.random(generator.seed());
 
+            // =============================================
+            // Apply permutation to A
         Matrix pA(QQ,A.rowdim(), A.coldim());
         permuteRows(pA,P,A,QQ);
 
         Program_t lProgram;
-        LinearAlgorithm(lProgram, A, variable, transposed);
+        LinearAlgorithm(lProgram, pA, variable, transposed);
         Tricounter lops { complexity(lProgram) };
 
         if ( (std::get<0>(lops)<std::get<0>(nbops)) ||
@@ -357,7 +359,7 @@ Tricounter SearchLinearAlgorithm(Program_t& Program, const Matrix& A,
                       << ", operations: " << lops << std::endl;
 #endif
         }
-        LinearAlgorithm(lProgram, A, variable, transposed, true);
+        LinearAlgorithm(lProgram, pA, variable, transposed, true);
         lops = complexity(lProgram);
 
         if ( (std::get<0>(lops)<std::get<0>(nbops)) ||
