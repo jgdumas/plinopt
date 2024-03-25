@@ -60,8 +60,10 @@ struct Atom {
             }
         } else if (isSca(this->_ope) && isSca(p._ope)) {
             binv &= isOne(this->_val / p._val);
-        } else
-            return false; // at least one of the two operations is not arithmetic
+        } else {
+            // at least one of the two operations is not arithmetic
+            return false;
+        }
         return binv &= (this->_des == p._des);
     }
 };
@@ -179,8 +181,6 @@ bool simplify(Program_t& Program, const bool transposed) {
 
             }
 
-
-
 				// Stop optimizing, if iter is reused from now, in certain cases
             if (transposed) {
                 if ( ( (iter->_des == next->_des)
@@ -216,7 +216,7 @@ bool simplify(Program_t& Program, const bool transposed) {
 
 // ===============================================================
 // In-place program realizing a linear function
-Program_t& LinearAlgorithm(Program_t& Program, const Matrix& A,
+Tricounter LinearAlgorithm(Program_t& Program, const Matrix& A,
                            const char variable,
                            const bool transposed, const bool oriented) {
 
@@ -227,7 +227,8 @@ Program_t& LinearAlgorithm(Program_t& Program, const Matrix& A,
 
     for(size_t l=0; l<m; ++l) {
         const auto& CurrentRow(A[l]);
-        const auto aiter { nextindex(preci, CurrentRow, oriented) }; // choose var
+            // choose var
+        const auto aiter { nextindex(preci, CurrentRow, oriented) };
         const size_t i(aiter->first);
 
             // scale choosen var
@@ -256,7 +257,9 @@ Program_t& LinearAlgorithm(Program_t& Program, const Matrix& A,
             }
         }
 
-        Program.emplace_back(variable,i,' ', aiter->second); // placeholder for stop
+           // placeholder for barrier:
+           //   (AXPY will have to performed at this point)
+       Program.emplace_back(variable,i,' ', aiter->second);
 
 			// Sub the rest of the row
         for(auto iter = CurrentRow.begin(); iter != CurrentRow.end(); ++iter) {
@@ -286,26 +289,16 @@ Program_t& LinearAlgorithm(Program_t& Program, const Matrix& A,
         if (CurrentRow.size()>1) preci = i;
     }
 
-// std::clog << "# P setup : " << Program.size() << std::endl;
-// std::clog <<  Program << std::endl;
-
         // Removing noops
-    Program.erase(std::remove_if(Program.begin(),
-                                 Program.end(),
-                                 isScaOne),
+    Program.erase(std::remove_if(Program.begin(), Program.end(), isScaOne),
                   Program.end());
 
-// std::clog << "# P pruned: " << Program.size() << std::endl;
-// std::clog <<  Program << std::endl;
-
-        // Removes atoms followed by their inverses
+        // Removes atoms followed by their inverses, one at a time
     bool simp; do {
         simp = simplify(Program, transposed);
-// std::clog << "# P simplf: " << Program.size() << std::endl;
-// std::clog <<  Program << std::endl;
     } while(simp);
 
-    return Program;
+    return complexity(Program);
 }
 // ===============================================================
 
@@ -315,14 +308,13 @@ Program_t& LinearAlgorithm(Program_t& Program, const Matrix& A,
 // Searching the space of in-place linear programs
 Tricounter SearchLinearAlgorithm(Program_t& Program, const Matrix& A,
                                  const char variable, size_t randomloops,
-                                 const bool transposed, const bool oriented) {
+                                 const bool transposed) {
     const QRat& QQ = A.field();
 
     Givaro::Timer elapsed;
     std::ostringstream sout, matout;
 
-    LinearAlgorithm(Program, A, variable, transposed, true);
-    Tricounter nbops { complexity(Program) };
+    Tricounter nbops{ LinearAlgorithm(Program, A, variable, transposed, true) };
 
 
     std::string res(sout.str());
@@ -346,8 +338,7 @@ Tricounter SearchLinearAlgorithm(Program_t& Program, const Matrix& A,
         permuteRows(pA,P,A,QQ);
 
         Program_t lProgram;
-        LinearAlgorithm(lProgram, pA, variable, transposed);
-        Tricounter lops { complexity(lProgram) };
+        Tricounter lops { LinearAlgorithm(lProgram, pA, variable, transposed) };
 
         if ( (std::get<0>(lops)<std::get<0>(nbops)) ||
              ( (std::get<0>(lops)==std::get<0>(nbops))
@@ -359,8 +350,8 @@ Tricounter SearchLinearAlgorithm(Program_t& Program, const Matrix& A,
                       << ", operations: " << lops << std::endl;
 #endif
         }
-        LinearAlgorithm(lProgram, pA, variable, transposed, true);
-        lops = complexity(lProgram);
+
+        lops = LinearAlgorithm(lProgram, pA, variable, transposed, true);
 
         if ( (std::get<0>(lops)<std::get<0>(nbops)) ||
              ( (std::get<0>(lops)==std::get<0>(nbops))
@@ -400,17 +391,13 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
 
     const size_t m(A.rowdim());
     for(size_t l=0; l<m; ++l) {
-//         std::clog << "# BEGIN parsing of: AXPY[" << l
-//                   << "], astr: " << rmnl(saout.str())
-//                   << ", bstr: " <<  rmnl(sbout.str()) << std::endl;
-        const auto& CurrentARow(A[l]);
-        const auto& CurrentBRow(B[l]);
-        const auto& CurrentTRow(T[l]);
+        const auto& CurrentARow(A[l]), CurrentBRow(B[l]), CurrentTRow(T[l]);
 
             /******************
              * Left hand side *
              ******************/
-        const auto aiter { nextindex(preci, CurrentARow, oriented) }; // choose var
+            // choose var
+        const auto aiter { nextindex(preci, CurrentARow, oriented) };
         const size_t i(aiter->first);
         if ( (i == preci) && (l>0) && (aiter->second == A.getEntry(l-1,i)) ) {
             if (! QQ.isOne(aiter->second)) {
@@ -427,7 +414,7 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
         }
         const bool aSCA(saout.tellp() != std::streampos(0));
 
-        for(auto iter = CurrentARow.begin(); iter != CurrentARow.end(); ++iter) {
+        for(auto iter=CurrentARow.begin(); iter != CurrentARow.end(); ++iter) {
             if (iter != aiter) {
                 const auto asearch(maaout.find(*iter));
                 if ( (i == preci) && (l>0) && (! aSCA) &&
@@ -601,7 +588,6 @@ Tricounter BiLinearAlgorithm(std::ostream& out,
         if (CurrentARow.size()>1) preci=i;
         if (CurrentBRow.size()>1) precj=j;
         if (CurrentTRow.size()>1) preck=k;
-//         std::clog << "# END of parsing of: AXPY[" << l << ']'<<  std::endl;
     }
 
         // Print last Product clauses
@@ -676,21 +662,19 @@ Tricounter& operator+=(Tricounter& l, const Tricounter& r) {
 // ===============================================================
 // In-place program realizing a bilinear function
 Tricounter BiLinearProgram(std::ostream& out, const Matrix& A, const Matrix& B,
-                           const Matrix& T, const size_t randomloops,
-                           const bool oriented) {
+                           const Matrix& T, const bool oriented) {
     const QRat& QQ(T.field());
 
     Program_t aprog, bprog, cprog;
-    Tricounter aops { SearchLinearAlgorithm(aprog, A, 'a', randomloops,
-                                            false, oriented) };
+
+
+    Tricounter aops { LinearAlgorithm(aprog, A, 'a', false, oriented) };
     out << "# Found " << aops << " for a" << std::endl;
 
-    Tricounter bops { SearchLinearAlgorithm(bprog, B, 'b', randomloops,
-                                            false, oriented) };
+    Tricounter bops { LinearAlgorithm(bprog, B, 'b', false, oriented) };
     out << "# Found " << bops << " for b" << std::endl;
 
-    Tricounter cops { SearchLinearAlgorithm(cprog, T, 'c', randomloops,
-                                            true, oriented) }; // transposed
+    Tricounter cops { LinearAlgorithm(cprog, T, 'c', true, oriented) };
     out << "# Found " << cops << " for c" << std::endl;
 
     Tricounter pty;
@@ -716,9 +700,7 @@ Tricounter BiLinearProgram(std::ostream& out, const Matrix& A, const Matrix& B,
             MUL(out, ckter->_var, ckter->_src, MONEOP('+',ckter->_val),
                 aiter->_var, aiter->_src, bjter->_var, bjter->_src, pty);
 
-            ++aiter;
-            ++bjter;
-            ++ckter;
+            ++aiter; ++bjter; ++ckter;
         }
     }
 
@@ -735,10 +717,7 @@ Tricounter BiLinearProgram(std::ostream& out, const Matrix& A, const Matrix& B,
     }
 
         // Number of operations in the program
-    Tricounter nops;
-    nops += aops;
-    nops += bops;
-    nops += cops;
+    Tricounter nops; nops += aops; nops += bops; nops += cops;
 
     std::get<2>(nops) /= 3; // MUL is counted in each of the three programs
 
@@ -765,7 +744,7 @@ Tricounter SearchBiLinearAlgorithm(std::ostream& out,
 
     Givaro::Timer elapsed;
     std::ostringstream sout, matout;
-    Tricounter nbops{ BiLinearProgram(sout, A, B, T, randomloops, true) };
+    Tricounter nbops{ BiLinearProgram(sout, A, B, T, true) };
     std::string res(sout.str());
     std::clog << "# Oriented number of operations: " << nbops << std::endl;
 
@@ -778,13 +757,10 @@ Tricounter SearchBiLinearAlgorithm(std::ostream& out,
         Givaro::GivRandom generator;
         P.random(generator.seed());
 
-        Matrix pA(QQ,A.rowdim(), A.coldim()),
-            pB(QQ,B.rowdim(), B.coldim()),
-            pT(QQ,T.rowdim(), T.coldim()),
-            TpT(QQ,T.coldim(), T.rowdim());
-        permuteRows(pA,P,A,QQ);
-        permuteRows(pB,P,B,QQ);
-        permuteRows(pT,P,T,QQ);
+            // Apply permutation to A, B, T
+        Matrix pA(QQ,A.rowdim(), A.coldim()), pB(QQ,B.rowdim(), B.coldim()),
+            pT(QQ,T.rowdim(), T.coldim());
+        permuteRows(pA,P,A,QQ); permuteRows(pB,P,B,QQ); permuteRows(pT,P,T,QQ);
 
 
             // =============================================
@@ -797,7 +773,7 @@ Tricounter SearchBiLinearAlgorithm(std::ostream& out,
         }
 
         std::ostringstream lout, sout;
-        Tricounter lops{ BiLinearProgram(lout, pA, pB, pT, randomloops, true) };
+        Tricounter lops{ BiLinearProgram(lout, pA, pB, pT, true) };
         if ( (std::get<0>(lops)<std::get<0>(nbops)) ||
              ( (std::get<0>(lops)==std::get<0>(nbops))
                && (std::get<1>(lops)<std::get<1>(nbops)) ) ) {
@@ -805,7 +781,7 @@ Tricounter SearchBiLinearAlgorithm(std::ostream& out,
             res = lout.str();
             std::clog << "# Found oriented [" << i << "], operations: " << lops << std::endl;
         }
-        lops = BiLinearProgram(sout, pA, pB, pT, randomloops);
+        lops = BiLinearProgram(sout, pA, pB, pT);
         if ( (std::get<0>(lops)<std::get<0>(nbops)) ||
              ( (std::get<0>(lops)==std::get<0>(nbops))
                && (std::get<1>(lops)<std::get<1>(nbops)) ) ) {
@@ -819,7 +795,7 @@ Tricounter SearchBiLinearAlgorithm(std::ostream& out,
     out << res << std::flush;
     return nbops;
 
-//    return  BiLinearProgram(out, A, B, T, randomloops);
+//    return  BiLinearProgram(out, A, B, T);
 
 
 

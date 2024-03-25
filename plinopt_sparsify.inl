@@ -513,9 +513,8 @@ inline bool sparseILU(Matrix& TC, Matrix& A, const size_t sparsity) {
 // First:  FactorDiagonal
 // Second: SparseFactor with default parameters
 // Third:  SparseFactor with maxnumcoeff, 1, maxnumcoeff
-Givaro::Timer& sparseAlternate(
-    Givaro::Timer& chrono, Matrix& CoB, Matrix& Res, const Matrix& M,
-    const FileFormat& matformat, const size_t maxnumcoeff) {
+Givaro::Timer& sparseAlternate(Givaro::Timer& chrono, Matrix& CoB, Matrix& Res,
+                               const Matrix& M, const size_t maxnumcoeff) {
     chrono.start();
 
     static QRat QQ;
@@ -572,7 +571,7 @@ int blockSparsifier(Givaro::Timer& elapsed, Matrix& CoB, Matrix& Res,
         // ============================================================
         // Sparsify matrix as a whole
     if (blocksize <= 1) {
-        sparseAlternate(elapsed, CoB, Res, M, matformat, maxnumcoeff);
+        sparseAlternate(elapsed, CoB, Res, M, maxnumcoeff);
     } else {
         Givaro::Timer chrono; chrono.start();
 
@@ -606,8 +605,7 @@ int blockSparsifier(Givaro::Timer& elapsed, Matrix& CoB, Matrix& Res,
             vC.emplace_back(QQ,mat.coldim(), mat.coldim());
             vR.emplace_back(QQ,mat.rowdim(), mat.coldim());
 
-            sparseAlternate(chrono, vC.back(), vR.back(), mat,
-                            matformat, maxnumcoeff);
+            sparseAlternate(chrono, vC.back(), vR.back(), mat, maxnumcoeff);
 
             elapsed += chrono;
 #ifdef DEBUG

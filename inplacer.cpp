@@ -46,7 +46,7 @@ std::ostream& FindProgram(std::ostream& out, std::istream& input,
 
     if (transposed) {
         Matrix T(QQ, M.coldim(), M.rowdim()); Transpose(T, M);
-        opcount = SearchLinearAlgorithm(Program, T, 't', randomloops, true);
+        opcount = SearchLinearAlgorithm(Program, T, 't', randomloops);
     } else {
         opcount = SearchLinearAlgorithm(Program, M, 'm', randomloops);
     }

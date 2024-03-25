@@ -69,9 +69,8 @@ size_t SparseFactor(Matrix& TICoB, Matrix& TM,
 // First:  FactorDiagonal
 // Second: SparseFactor with default parameters
 // Third:  SparseFactor with maxnumcoeff, 1, maxnumcoeff
-Givaro::Timer& sparseAlternate(
-    Givaro::Timer& chrono, Matrix& CoB, Matrix& Res, const Matrix& M,
-    const FileFormat& matformat, const size_t maxnumcoeff);
+Givaro::Timer& sparseAlternate(Givaro::Timer& chrono, Matrix& CoB, Matrix& Res,
+                               const Matrix& M, const size_t maxnumcoeff);
 // ============================================================
 
 

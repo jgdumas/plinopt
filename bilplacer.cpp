@@ -46,7 +46,7 @@
 #include "plinopt_inplace.h"
 
 
-void usage(int argc, char ** argv) {
+void usage(char ** argv) {
     std::clog << "Usage: " << argv[0] << " L.sms R.sms P.sms [-e] [-O #]\n";
 
     std::clog << "  -e: double expands the intermediate result\n"
@@ -62,14 +62,14 @@ void usage(int argc, char ** argv) {
 //        looks for reduced number of additions, then multiplications
 int main(int argc, char ** argv) {
 
-    size_t randomloops(DORANDOMSEARCH?ceil(std::sqrt(DEFAULT_RANDOM_LOOPS)):1);
+    size_t randomloops(DORANDOMSEARCH?DEFAULT_RANDOM_LOOPS:1);
     bool doexpand(false);
 
-    if (argc<4) usage(argc,argv);
+    if (argc<4) usage(argv);
 
     for (int i = 4; i<argc; ++i) {
         std::string args(argv[i]);
-        if (args == "-h") usage(argc,argv);
+        if (args == "-h") usage(argv);
         else if (args == "-e") { doexpand = true; }
         else if (args == "-O") {
             randomloops = atoi(argv[++i]);

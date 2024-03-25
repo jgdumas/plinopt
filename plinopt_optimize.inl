@@ -159,10 +159,7 @@ Pair<size_t> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
 template<typename triple,typename _Mat>
 bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
             size_t& nbmul, const char tev, const char rav) {
-// M.write(std::clog << "# BEG OS\n",FileFormat::Pretty) << ';' << std::endl;
-    size_t m(M.coldim());
     const auto& FF(M.field());
-
 
     std::vector<std::vector<triple>> AllPairs;
     std::vector<size_t> Density;
@@ -239,8 +236,7 @@ bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
 #endif
 
                 // Now factoring out that CSE from the matrix
-            const Pair<size_t> savings = RemOneCSE(sout, M, nbmul, multiples,
-                                                   cse, AllPairs, tev, rav);
+            RemOneCSE(sout, M, nbmul, multiples, cse, AllPairs, tev, rav);
 
 // M.write(std::clog << "# END OS\n",FileFormat::Pretty) << ';' << std::endl;
             return true;
@@ -706,7 +702,6 @@ bool RecSub(std::vector<std::string>& out, _Mat& Mat,
             size_t& nbadd, size_t& nbmul, const size_t lvl,
             const char tev, const char rav) {
 
-    size_t m(Mat.coldim());
     const auto& FF(Mat.field());
 
     std::vector<std::vector<triple>> AllPairs;
@@ -739,9 +734,6 @@ bool RecSub(std::vector<std::string>& out, _Mat& Mat,
         }
     }
 
-
-
-
     triple cse{0,0,0};
     for(const auto& rows: AllPairs) {
         if (rows.size() > 0) cse = rows.front();
@@ -751,10 +743,6 @@ bool RecSub(std::vector<std::string>& out, _Mat& Mat,
     _Mat bestM(FF,Mat.rowdim(),Mat.coldim()); sparse2sparse(bestM, Mat);
     std::vector<triple> bestmultiples(multiples);
     std::vector<std::string> bestdout;
-//     std::clog << std::string(lvl,'#') << " lvl(" << lvl << "), " << nbadd << '|' << nbmul << ", allpairs: ";
-//     size_t subexps(0); for(const auto& rows: AllPairs) subexps+=rows.size();
-//    std::clog << subexps << std::endl;
-
 
     for(const auto& rows: AllPairs) {
         for (const auto& cse: rows) {
@@ -782,7 +770,6 @@ bool RecSub(std::vector<std::string>& out, _Mat& Mat,
                     sparse2sparse(bestM, lM);
                     bestmultiples = lmultiples;
                     bestdout = sdout;
-//                     bestdout.push_front(ssout.str());
                 }
             }
         }
@@ -821,7 +808,6 @@ Pair<size_t> RecOptimizer(std::ostream& sout, _Mat& M,
         // Factoring sums
     std::vector<std::string> dout;
     std::vector<triple> multiples;
-    size_t lmul(0);
     RecSub(dout, M, multiples, nbadd, nbmul, 0, tev, rav);
 
     size_t alreadymuls(nbmul);
