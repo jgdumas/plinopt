@@ -320,6 +320,7 @@ int main(int argc, char** argv) {
             std::clog
                 << "  -D/-K: select direct/kernel methods only (default is both)\n"
                 << "  -E: exhaustive greedy CSE search (default is not)\n"
+                << "  -N: exhaustive nullspace permutations (default is not)\n"
                 << "  -P/-M: choose the printing format\n"
                 << "  -q #: search modulo (default is Rationals)\n"
                 << "  -O #: search for reduced number of additions, then multiplications\n";
