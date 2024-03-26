@@ -315,7 +315,7 @@ int main(int argc, char** argv) {
         std::string args(argv[i]);
         if (args == "-h") {
             std::clog << "Usage: " << argv[0]
-                      << " [-h|-M|-P|-K|-D|-q #|-O #] [stdin|matrixfile.sms]\n";
+                      << " [-h|-M|-P|-K|-D|-E|-N|-q #|-O #] [stdin|matrixfile.sms]\n";
 
             std::clog
                 << "  -D/-K: select direct/kernel methods only (default is both)\n"

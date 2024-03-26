@@ -81,7 +81,7 @@ int main(int argc, char** argv) {
     for (int i = 1; i<argc; ++i) {
         std::string args(argv[i]);
         if (args == "-h") {
-            std::clog << "Usage: " << argv[0] << " [-h|-M|-P|-S|-c #] [stdin|matrixfile.sms]\n";
+            std::clog << "Usage: " << argv[0] << " [-h|-M|-P|-S|-c #|-U [1|0]] [stdin|matrixfile.sms]\n";
 
             std::clog << "  -c #: max number of coefficients per iteration\n"
                       << "  -b #: states the blocking dimension\n"

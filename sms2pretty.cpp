@@ -68,40 +68,46 @@ std::ostream& PrettyPrint(std::ostream& out, std::istream& input,
 
         // ====================================================
         // Read Matrix
-    Givaro::Timer chrono; chrono.start();
-    Matrix A ( ms );
-    chrono.stop();
+    Givaro::Timer chrono;
 
-        // ====================================================
-        // number of non-zero & Frobenius norm
-    size_t nnz(0); Givaro::Rational FNormSq(0);
-    for(auto row=A.rowBegin(); row != A.rowEnd(); ++row) {
-        nnz += row->size(); // # of non-zero elements
-        for(const auto& iter:*row)
-            FNormSq += (iter.second)*(iter.second); // Square of Frobenius norm
-    }
+    do {
+        chrono.start();
+        Matrix A ( ms );
+        chrono.stop();
 
-    std::clog << "# [READ]: \033[1;32m" << A.rowdim() << 'x' << A.coldim() << ' ' << nnz << ' ' << FNormSq << "\033[0m " << chrono << std::endl;
-
-        // ====================================================
-        // Special latex for rationals or one of LinBox formats
-    if (matformat == FileFormat::LaTeX) {
-        latex_print(out, A) << std::endl;
-    } else {
-
-        if ( (matformat == FileFormat::Plain) ||
-             (matformat == FileFormat::HTML)  ||
-             (matformat == FileFormat(6))     ||	// dense
-             (matformat == FileFormat(12))  ) {		// linalg
-            DenseMatrix B(QQ,A.rowdim(),A.coldim()); matrixCopy(B,A,QQ);
-            if (matformat == FileFormat(6))
-                out << B << std::endl;
-            else
-                B.write(out, matformat);
-        } else {
-            A.write(out, matformat);
+            // ====================================================
+            // number of non-zero & Frobenius norm
+        size_t nnz(0); Givaro::Rational FNormSq(0);
+        for(auto row=A.rowBegin(); row != A.rowEnd(); ++row) {
+            nnz += row->size(); // # of non-zero elements
+            for(const auto& iter:*row)
+                FNormSq += (iter.second)*(iter.second); // Square of Frobenius norm
         }
-    }
+
+        std::clog << "# [READ]: \033[1;32m" << A.rowdim() << 'x' << A.coldim() << ' ' << nnz << ' ' << FNormSq << "\033[0m " << chrono << std::endl;
+
+            // ====================================================
+            // Special latex for rationals or one of LinBox formats
+        if (matformat == FileFormat::LaTeX) {
+            latex_print(out, A) << std::endl;
+        } else {
+
+            if ( (matformat == FileFormat::Plain) ||
+                 (matformat == FileFormat::HTML)  ||
+                 (matformat == FileFormat(6))     ||	// dense
+                 (matformat == FileFormat(12))  ) {		// linalg
+                DenseMatrix B(QQ,A.rowdim(),A.coldim()); matrixCopy(B,A,QQ);
+                if (matformat == FileFormat(6))
+                    out << B << std::endl;
+                else
+                    B.write(out, matformat);
+            } else {
+                A.write(out, matformat);
+            }
+        }
+            // Stop when no new matrix or empty file
+        try { ms.newmatrix(); } catch(LinBox::MatrixStreamError& e) { break; };
+    } while(! input.eof());
 
     return out;
 }
