@@ -116,7 +116,7 @@ Pair<size_t> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
         //    else put it in a temporary for future reuse
     auto asgs(abs(std::get<2>(cse)));
     size_t rindex(lm), moremul(0);
-    if (!FF.isOne(asgs)) {
+    if (notAbsOne(FF,asgs)) {
         for(const auto& iter: lmultiples) {
             if ((std::get<1>(iter) == std::get<1>(cse)) &&
                 (std::get<2>(iter) == asgs)) {
@@ -137,16 +137,20 @@ Pair<size_t> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
     savedmuls -= moremul;
 
         // Outputs the factor into a temporary variable
-    ssout << tev << lm << ":="
-          << tev << std::get<0>(cse)
-          << (sign(std::get<2>(cse)) >= 0?'+':'-');
-    --savedadds;
-
-    if (FF.isOne(asgs))
+    ssout << tev << lm << ":=" << tev << std::get<0>(cse);
+    if ( (FF.isMOne(asgs)) || (sign(std::get<2>(cse))<0) ) {
+        ssout << '-';
+    } else {
+        ssout << '+';
+    }
+    if (isAbsOne(FF,asgs)) {
         ssout << tev << std::get<1>(cse);
-    else
+    } else {
         ssout << rav << rindex;
+    }
     ssout << ';' << std::endl;
+
+    --savedadds;
 
     ++lm;
     lM.resize(lM.rowdim(), lm);
@@ -159,10 +163,8 @@ Pair<size_t> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
 template<typename triple,typename _Mat>
 bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
             size_t& nbmul, const char tev, const char rav) {
-// M.write(std::clog << "# BEG OS\n",FileFormat::Pretty) << ';' << std::endl;
     size_t m(M.coldim());
     const auto& FF(M.field());
-
 
     std::vector<std::vector<triple>> AllPairs;
     std::vector<size_t> Density;
@@ -239,10 +241,7 @@ bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
 #endif
 
                 // Now factoring out that CSE from the matrix
-            const Pair<size_t> savings = RemOneCSE(sout, M, nbmul, multiples,
-                                                   cse, AllPairs, tev, rav);
-
-// M.write(std::clog << "# END OS\n",FileFormat::Pretty) << ';' << std::endl;
+            RemOneCSE(sout, M, nbmul, multiples, cse, AllPairs, tev, rav);
             return true;
         }
     }
@@ -256,21 +255,19 @@ void FactorOutColumns(std::ostream& sout, _Mat& T,
                       const char tev, const char rav,
                       const size_t j, const Iter& start, const Iter& end) {
     if (start == end) return;
+    const auto& FF(T.field());
+
     std::map<typename _Mat::Element, size_t> MapVals;
     for(Iter iter = start; iter != end; ++iter) {
         MapVals[abs(iter->second)]++;
     }
 
-    const auto& FF(T.field());
-
-// T.write(std::clog << "BEG FOC\n",FileFormat::Pretty) << ';'
-//                   << "\nMap: " << MapVals << std::endl;
 
     for (const auto& [element, frequency] : MapVals) {
         size_t m(T.rowdim());
 
             // Found repeated coefficient
-        if ((frequency>1) && (!FF.isOne(element)) ) {
+        if ( (frequency>1) && (notAbsOne(FF,element)) ) {
             size_t rindex(m);
                 // If coefficient was already applied
                 //    then reuse the multiplication
@@ -307,7 +304,6 @@ void FactorOutColumns(std::ostream& sout, _Mat& T,
                     }
                 }
             }
-// T.write(std::clog << "END FOC\n",FileFormat::Pretty) << ';' << std::endl;
         }
     }
 }
@@ -317,20 +313,17 @@ template<typename Iter, typename _Mat>
 void FactorOutRows(std::ostream& sout, _Mat& M, size_t& nbadd, const char tev,
                    const size_t i, const Iter& start, const Iter& end) {
     if (start == end) return;
+    const auto& FF(M.field());
+
     std::map<typename _Mat::Element, size_t> MapVals;
     for(Iter iter = start; iter != end; ++iter) {
         MapVals[abs(iter->second)]++;
     }
 
-    const auto& FF(M.field());
-
-// M.write(std::clog << "BEG FOR\n",FileFormat::Pretty) << ';'
-//                   << "\nMap: " << MapVals << std::endl;
-
     size_t m(M.coldim());
     for (const auto& [element, frequency] : MapVals) {
             // Found repeated coefficient
-        if ((frequency>1) && (!FF.isOne(element)) ) {
+        if ((frequency>1) && (notAbsOne(FF,element)) ) {
             sout << tev << m << ":=";
             ++m;
                 // Add a column with coefficient multiplying a new sum
@@ -362,7 +355,6 @@ void FactorOutRows(std::ostream& sout, _Mat& M, size_t& nbadd, const char tev,
             sout << ';' << std::endl;
         }
     }
-// M.write(std::clog << "END FOR\n",FileFormat::Pretty) << ';' << std::endl;
 }
 
 // Sets new temporaries with the input values
@@ -421,8 +413,8 @@ std::ostream& ProgramGen(std::ostream& sout, _Mat& M,
         // Computing remaining (simple) linear combinations
     for(size_t i=0; i<M.rowdim(); ++i) {
         const auto& row(M[i]);
-        sout << ouv << i << ":=";
         if (row.size()>0) {
+            sout << ouv << i << ":=";
 
             auto arbs(abs(row.begin()->second));
 
@@ -471,10 +463,13 @@ std::ostream& ProgramGen(std::ostream& sout, _Mat& M,
                                       ais, nbmul, FF);
                 }
             }
-        } else {
-            sout << '0';
+            sout << ';' << std::endl;
         }
-        sout << ';' << std::endl;
+#ifdef VERBATIM_PARSING
+        else {
+            sout << ouv << i << ":=0;" << std::endl;
+        }
+#endif
     }
 
 #ifdef VERBATIM_PARSING
@@ -739,9 +734,6 @@ bool RecSub(std::vector<std::string>& out, _Mat& Mat,
         }
     }
 
-
-
-
     triple cse{0,0,0};
     for(const auto& rows: AllPairs) {
         if (rows.size() > 0) cse = rows.front();
@@ -751,10 +743,6 @@ bool RecSub(std::vector<std::string>& out, _Mat& Mat,
     _Mat bestM(FF,Mat.rowdim(),Mat.coldim()); sparse2sparse(bestM, Mat);
     std::vector<triple> bestmultiples(multiples);
     std::vector<std::string> bestdout;
-//     std::clog << std::string(lvl,'#') << " lvl(" << lvl << "), " << nbadd << '|' << nbmul << ", allpairs: ";
-//     size_t subexps(0); for(const auto& rows: AllPairs) subexps+=rows.size();
-//    std::clog << subexps << std::endl;
-
 
     for(const auto& rows: AllPairs) {
         for (const auto& cse: rows) {
@@ -782,7 +770,6 @@ bool RecSub(std::vector<std::string>& out, _Mat& Mat,
                     sparse2sparse(bestM, lM);
                     bestmultiples = lmultiples;
                     bestdout = sdout;
-//                     bestdout.push_front(ssout.str());
                 }
             }
         }
