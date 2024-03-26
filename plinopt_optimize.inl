@@ -744,7 +744,9 @@ bool RecSub(std::vector<std::string>& out, _Mat& Mat,
     std::vector<triple> bestmultiples(multiples);
     std::vector<std::string> bestdout;
 
-    for(const auto& rows: AllPairs) {
+#pragma omp parallel for shared(AllPairs,Mat,bestadds,bestmuls,bestM,bestmultiples,bestdout,tev,rav,multiples)
+    for(size_t i=0; i<AllPairs.size(); ++i) {
+        const auto& rows(AllPairs[i]);
         for (const auto& cse: rows) {
             if (PairMap[cse] > 1) {
                 _Mat lM(FF,Mat.rowdim(),Mat.coldim()); sparse2sparse(lM, Mat);
