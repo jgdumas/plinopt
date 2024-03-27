@@ -121,6 +121,30 @@ bool notAbsOne(const Ring& F, const typename Ring::Element& e) {
     return ( (!F.isOne(e)) && (!F.isMOne(e)) );
 }
 
+
+Givaro::Rational Fabs(const QRat& QQ, const Givaro::Rational& r) {
+    return abs(r);
+}
+
+template<typename Element>
+Element Fabs(const Givaro::Modular<Element>& F, const Element& e) {
+    Element a; F.init(a);
+    F.neg(a,e);
+    return (a<e ? a : F.assign(a,e));
+}
+
+int Fsign(const QRat& QQ, const Givaro::Rational& r) {
+    return sign(r);
+}
+
+template<typename Element>
+int Fsign(const Givaro::Modular<Element>& F, const Element& e) {
+    if (F.isZero(e)) return 0;
+    Element a; F.init(a);
+    F.neg(a,e);
+    return (a<e ? -1 : 1);
+}
+
 // ============================================
 
 

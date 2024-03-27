@@ -112,7 +112,6 @@ Pair<size_t> nullspacedecomp(std::ostream& sout, _Mat& x, _Mat& A,
                              const bool mostCSE=false);
 
 
-
 // prints c[i] * e, or c[i] / b for rational e=1/b
 // updates nbmul if e not in {-1,1}
 template<typename Ring>
@@ -120,6 +119,7 @@ std::ostream& printmulorjustdiv(std::ostream& out,
                                 const char c, const size_t i,
                                 const typename Ring::Element& e,
                                 size_t& nbmul, const Ring& F);
+
 
 #include "plinopt_optimize.inl"
 #endif
