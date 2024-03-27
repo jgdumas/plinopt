@@ -36,6 +36,14 @@
 template<typename Ring>
 using Etriple = std::tuple<size_t, size_t, typename Ring::Element>;
 
+	// Printing tuples
+template<typename Ring>
+std::ostream& printEtriple(std::ostream& out,
+                           const Ring& R, const Etriple<Ring>& t) {
+    return R.write(out << '{' << std::get<0>(t)<< ','
+                   << std::get<1>(t)<< ',', std::get<2>(t)) << '}';
+}
+
 template<typename T1, typename T2>
 std::ostream& operator<<(std::ostream& out, const std::map<T1,T2>& v);
 
@@ -80,6 +88,15 @@ void FactorOutColumns(std::ostream& sout, _Mat& T,
 template<typename Iter, typename _Mat>
 void FactorOutRows(std::ostream& sout, _Mat& M, size_t& nbadd, const char tev,
                    const size_t i, const Iter& start, const Iter& end);
+
+// Factors out triangles:
+// < ab | b > replaced by < 0 | b | b > then < 0 | 0 | 0 | 1>
+// < a  | . >             < 0 | . | 1 >      < 0 | . | 1 | 0>
+// With only 2 multiplications, by a, then by b, instead of 3
+template<typename triple, typename _Mat>
+bool Triangle(std::ostream& sout, _Mat& M, _Mat& T,
+              std::vector<triple>& multiples, size_t& nbadd, size_t& nbmul,
+              const char tev, const char rav, const size_t j);
 
 // Sets new temporaries with the input values
 void input2Temps(std::ostream& sout, const size_t N,

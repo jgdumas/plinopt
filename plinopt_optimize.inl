@@ -22,7 +22,7 @@ std::ostream& operator<<(std::ostream& out, const std::map<T1,T2>& v) {
 template<typename Container, typename Ring>
 std::vector<Etriple<Ring>> listpairs (const Container& c, const Ring& F) {
     std::vector<Etriple<Ring>> v;
-    typename Ring::Element tmp;
+    typename Ring::Element tmp; F.init(tmp);
     for(auto iter=c.begin(); iter != c.end(); ++iter) {
         auto next(iter);
         for(++next; next!= c.end(); ++next) {
@@ -88,23 +88,45 @@ Pair<size_t> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
                        const std::vector<std::vector<triple>>& AllPairs,
                        const char tev, const char rav) {
     const auto& FF(lM.field());
-    size_t savedadds(0), savedmuls(0), lm(lM.coldim()); // The new pair
+    size_t savedadds(0), savedmuls(0), lm(lM.coldim());
+
+        // Looking for the most number of ones in either columns of cse
+    _Mat lT(FF, lM.coldim(), lM.rowdim()); Transpose(lT, lM);
+    size_t count0, count1;
+    for(const auto& iter: lT[std::get<0>(cse)]) {
+        if (isAbsOne(FF,iter.second)) ++count0;
+    }
+    for(const auto& iter: lT[std::get<1>(cse)]) {
+        if (isAbsOne(FF,iter.second)) ++count1;
+    }
+
+    triple lcse;
+    if (count0<count1) { // More ones in std::get<1>(cse);
+        std::get<0>(lcse) = std::get<1>(cse);
+        std::get<1>(lcse) = std::get<0>(cse);
+        FF.inv( std::get<2>(lcse), std::get<2>(cse) );
+    } else {             // More ones in std::get<0>(cse);
+        std::get<0>(lcse) = std::get<0>(cse);
+        std::get<1>(lcse) = std::get<1>(cse);
+        FF.assign( std::get<2>(lcse), std::get<2>(cse) );
+    }
+
 
         // Factor out cse, in all rows
         // adds a column for the new factor
     for(size_t i=0; i<AllPairs.size(); ++i) {
         const auto& rows(AllPairs[i]);
         if (std::find(rows.begin(), rows.end(), cse) != rows.end()) {
-            typename _Mat::Element coeff;
+            typename _Mat::Element coeff; FF.init(coeff);
             for(auto iter=lM[i].begin(); iter!= lM[i].end(); ++iter) {
-                if (iter->first==std::get<0>(cse)) {
+                if (iter->first==std::get<0>(lcse)) {
                     coeff = iter->second;
                     lM[i].erase(iter); ++savedadds;
                     break;
                 }
             }
             for(auto iter=lM[i].begin(); iter!= lM[i].end(); ++iter) {
-                if (iter->first==std::get<1>(cse)) {
+                if (iter->first==std::get<1>(lcse)) {
                     if (notAbsOne(FF,iter->second)) ++savedmuls;
                     lM[i].erase(iter);
                     lM[i].emplace_back(lm,coeff);
@@ -117,11 +139,11 @@ Pair<size_t> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
         // If coefficient was already applied
         //    then reuse the multiplication
         //    else put it in a temporary for future reuse
-    auto asgs(Fabs(FF,std::get<2>(cse)));
+    auto asgs(Fabs(FF,std::get<2>(lcse)));
     size_t rindex(lm), moremul(0);
     if (notAbsOne(FF,asgs)) {
         for(const auto& iter: lmultiples) {
-            if ((std::get<1>(iter) == std::get<1>(cse)) &&
+            if ((std::get<1>(iter) == std::get<1>(lcse)) &&
                 (std::get<2>(iter) == asgs)) {
                 rindex = std::get<0>(iter);
                 break;
@@ -129,9 +151,10 @@ Pair<size_t> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
         }
         if (rindex == lm) {
             ssout << rav << lm << ":=";
-            printmulorjustdiv(ssout, tev, std::get<1>(cse),
+            printmulorjustdiv(ssout, tev, std::get<1>(lcse),
                               asgs, moremul, FF) << ';' << std::endl;
-            lmultiples.emplace_back(lm,std::get<1>(cse),asgs);
+// std::clog << "## ROC: " << rav << lm << ":=" << tev << std::get<1>(lcse) << '*' << asgs << std::endl;
+            lmultiples.emplace_back(lm,std::get<1>(lcse),asgs);
         }
     }
 
@@ -139,14 +162,14 @@ Pair<size_t> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
     savedmuls -= moremul;
 
         // Outputs the factor into a temporary variable
-    ssout << tev << lm << ":=" << tev << std::get<0>(cse);
-    if ( (FF.isMOne(asgs)) || (Fsign(FF,std::get<2>(cse))<0) ) {
+    ssout << tev << lm << ":=" << tev << std::get<0>(lcse);
+    if ( (FF.isMOne(asgs)) || (Fsign(FF,std::get<2>(lcse))<0) ) {
         ssout << '-';
     } else {
         ssout << '+';
     }
     if (isAbsOne(FF,asgs)) {
-        ssout << tev << std::get<1>(cse);
+        ssout << tev << std::get<1>(lcse);
     } else {
         ssout << rav << rindex;
     }
@@ -230,13 +253,15 @@ bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
             }
 
 #ifdef VERBATIM_PARSING
-            std::clog << "# Found: " << cse << '=' << maxfrq
-                      << ',' << score(AllPairs,Density,cse) << std::endl;
+            printEtriple(std::clog << "# Found: ", FF, cse) << '=' << maxfrq
+                                   << ',' << score(AllPairs,Density,cse)
+                                   << std::endl;
             for (const auto& [element, frequency] : PairMap) {
                 if ( (frequency == maxfrq) && (element != cse)) {
-                    std::clog << "# tied : " << element << '=' << maxfrq
-                              << ',' << score(AllPairs,Density,element)
-                              << std::endl;
+                    printEtriple(std::clog << "# tied : ", FF, element)
+                                           << '=' << maxfrq << ','
+                                           << score(AllPairs,Density,element)
+                                           << std::endl;
                 }
             }
 #endif
@@ -286,12 +311,10 @@ void FactorOutColumns(std::ostream& sout, _Mat& T,
                                   element, nbmul, FF) << ';' << std::endl;
                 multiples.emplace_back(m,j,element);
             }
-
                 // Outputs the coefficient into a temporary variable
             sout << tev << m << ":=";
             sout << rav << rindex << ';' << std::endl;
-            ++m;
-            T.resize(m, T.coldim());
+            T.resize(++m, T.coldim());
 
                 // Replace the coefficient in all rows by 1 or -1
             for(size_t k=0; k<frequency; ++k) {
@@ -357,6 +380,79 @@ void FactorOutRows(std::ostream& sout, _Mat& M, size_t& nbadd, const char tev,
     }
 }
 
+
+
+
+// Factors out triangles:
+// < ab | b > replaced by < 0 | b | b > then < 0 | 0 | 0 | 1>
+// < a  | . >             < 0 | . | 1 >      < 0 | . | 1 | 0>
+// With only 2 multiplications, by a, then by b, instead of 3
+template<typename triple, typename _Mat>
+bool Triangle(std::ostream& sout, _Mat& M, _Mat& T,
+              std::vector<triple>& multiples, size_t& nbadd, size_t& nbmul,
+              const char tev, const char rav, const size_t j) {
+
+    if (T[j].size() == 0) return false;
+    const auto& FF(T.field());
+    size_t m(T.rowdim());
+
+    bool found = false;
+    bool over(true);
+
+    do { over = true;
+
+    for(auto iter = T[j].begin(); iter != T[j].end();
+        ++iter) { if (notAbsOne(FF, iter->second)) {
+        auto next(iter);
+        for(++next; next != T[j].end(); ++next) { if (notAbsOne(FF,next->second)) {
+            const size_t i(next->first);
+            typename _Mat::Element quot; FF.init(quot);
+            const auto& rowi(M[i]);
+            FF.div(quot, next->second, iter->second); // nnz should be inv.
+            for(auto third=rowi.begin(); third != rowi.end();
+                ++third) { if ( (third->first != j)
+                                && (notAbsOne(FF,third->second)) ) {
+                typename _Mat::Element coeff; FF.init(coeff);
+                FF.div(coeff, quot, third->second);
+                if (isAbsOne(FF,coeff)) {
+                    found = true; // Triangle found !!!
+                    over = false; // will have to loop again
+
+                        // First, record one multiplication by a
+					sout << tev << m << ":=";
+                    auto ais(Fabs(FF,iter->second));
+                    if ( (Fsign(FF,iter->second) <0)
+                         || FF.isMOne(iter->second) ) sout << '-';
+                    printmulorjustdiv(sout, tev, j, ais,
+                                      nbmul, FF) << ';' << std::endl;
+                    multiples.emplace_back(m,j,iter->second);
+
+                        // Second, divide both column elements by a
+                    T[j].erase(next);
+                    T[j].erase(iter);
+                    T.resize(++m, T.coldim());
+                    T[m-1].emplace_back(iter->first, FF.one);
+                    T[m-1].emplace_back(next->first, quot);
+                    Transpose(M,T);
+
+                        // Third, record multiplication by b
+                        // Fourth, divide both row elements by b
+                    FactorOutRows(sout, M, nbadd, tev,
+                                  i, M[i].begin(), M[i].end());
+
+                    Transpose(T,M);
+                    break;
+            } } }
+            if (found) break;
+        } }
+        if (found) break;
+    } }
+    } while(!over);
+    return found;
+}
+
+
+
 // Sets new temporaries with the input values
 void input2Temps(std::ostream& sout, const size_t N,
                  const char inv, const char tev) {
@@ -409,6 +505,13 @@ std::ostream& ProgramGen(std::ostream& sout, _Mat& M,
     for(size_t i=0; i<M.rowdim(); ++i) {
         FactorOutRows(sout, M, addcount, tev, i, M[i].begin(), M[i].end());
     }
+
+    Transpose(T,M);
+    for(size_t j=0; j<M.coldim(); ++j) {
+        Triangle(sout, M, T, multiples, addcount, nbmul, tev, rav, j);
+    }
+
+
 
         // Computing remaining (simple) linear combinations
     for(size_t i=0; i<M.rowdim(); ++i) {
