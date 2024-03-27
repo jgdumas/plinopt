@@ -10,37 +10,6 @@
 #include "plinopt_optimize.h"
 
 
-template<typename Ring>
-std::ostream& printmulorjustdiv(std::ostream& out,
-                                const char c, const size_t i,
-                                const typename Ring::Element& e,
-                                size_t& nbmul, const Ring& F) {
-    out << c << i;
-    if (notAbsOne(F,e)) {
-        ++nbmul;
-        out << '*' << e;
-    }
-    return out;
-}
-
-template<>
-std::ostream& printmulorjustdiv(std::ostream& out,
-                                const char c, const size_t i,
-                                const Givaro::Rational& r,
-                                size_t& nbmul, const QRat& QQ) {
-    out << c << i;
-    if (!QQ.isOne(r)) {
-        ++nbmul;
-        if (Givaro::isOne(r.nume()))
-            out << '/' << r.deno();
-        else
-            out << '*' << r;
-    }
-    return out;
-}
-
-
-
 template<typename T1, typename T2>
 std::ostream& operator<<(std::ostream& out, const std::map<T1,T2>& v) {
     out << '{';
@@ -79,6 +48,40 @@ inline size_t score(const std::vector<std::vector<triple>>& AllPairs,
 }
 
 
+
+template<typename Ring>
+std::ostream& printmulorjustdiv(std::ostream& out,
+                                const char c, const size_t i,
+                                const typename Ring::Element& e,
+                                size_t& nbmul, const Ring& F) {
+    out << c << i;
+    if (notAbsOne(F,e)) {
+        ++nbmul;
+        out << '*' << e;
+    }
+    return out;
+}
+
+template<>
+std::ostream& printmulorjustdiv(std::ostream& out,
+                                const char c, const size_t i,
+                                const Givaro::Rational& r,
+                                size_t& nbmul, const QRat& QQ) {
+    out << c << i;
+    if (!QQ.isOne(r)) {
+        ++nbmul;
+        if (Givaro::isOne(r.nume()))
+            out << '/' << r.deno();
+        else
+            out << '*' << r;
+    }
+    return out;
+}
+
+
+
+
+
 template<typename triple, typename _Mat>
 Pair<size_t> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
                        std::vector<triple>& lmultiples, const triple& cse,
@@ -114,7 +117,7 @@ Pair<size_t> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
         // If coefficient was already applied
         //    then reuse the multiplication
         //    else put it in a temporary for future reuse
-    auto asgs(abs(std::get<2>(cse)));
+    auto asgs(Fabs(FF,std::get<2>(cse)));
     size_t rindex(lm), moremul(0);
     if (notAbsOne(FF,asgs)) {
         for(const auto& iter: lmultiples) {
@@ -126,7 +129,6 @@ Pair<size_t> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
         }
         if (rindex == lm) {
             ssout << rav << lm << ":=";
-            if (FF.isMOne(asgs)) ssout << '-';
             printmulorjustdiv(ssout, tev, std::get<1>(cse),
                               asgs, moremul, FF) << ';' << std::endl;
             lmultiples.emplace_back(lm,std::get<1>(cse),asgs);
@@ -138,7 +140,7 @@ Pair<size_t> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
 
         // Outputs the factor into a temporary variable
     ssout << tev << lm << ":=" << tev << std::get<0>(cse);
-    if ( (FF.isMOne(asgs)) || (sign(std::get<2>(cse))<0) ) {
+    if ( (FF.isMOne(asgs)) || (Fsign(FF,std::get<2>(cse))<0) ) {
         ssout << '-';
     } else {
         ssout << '+';
@@ -259,7 +261,7 @@ void FactorOutColumns(std::ostream& sout, _Mat& T,
 
     std::map<typename _Mat::Element, size_t> MapVals;
     for(Iter iter = start; iter != end; ++iter) {
-        MapVals[abs(iter->second)]++;
+        MapVals[Fabs(FF,iter->second)]++;
     }
 
 
@@ -281,7 +283,6 @@ void FactorOutColumns(std::ostream& sout, _Mat& T,
             }
             if (rindex == m) {
                 sout << rav << m << ":=";
-                if (FF.isMOne(element)) sout << '-';
                 printmulorjustdiv(sout, tev, j,
                                   element, nbmul, FF) << ';' << std::endl;
                 multiples.emplace_back(m,j,element);
@@ -297,8 +298,8 @@ void FactorOutColumns(std::ostream& sout, _Mat& T,
             for(size_t k=0; k<frequency; ++k) {
                 auto& row(T[j]);
                 for(auto iter=row.begin(); iter != row.end(); ++iter) {
-                    if (abs(iter->second) == element) {
-                        T[m-1].emplace_back(iter->first, (sign(iter->second) >= 0 ? 1 : -1));
+                    if (Fabs(FF,iter->second) == element) {
+                        T[m-1].emplace_back(iter->first, (Fsign(FF,iter->second) >= 0 ? FF.one : FF.mOne));
                         row.erase(iter);
                         break;
                     }
@@ -317,7 +318,7 @@ void FactorOutRows(std::ostream& sout, _Mat& M, size_t& nbadd, const char tev,
 
     std::map<typename _Mat::Element, size_t> MapVals;
     for(Iter iter = start; iter != end; ++iter) {
-        MapVals[abs(iter->second)]++;
+        MapVals[Fabs(FF,iter->second)]++;
     }
 
     size_t m(M.coldim());
@@ -333,8 +334,8 @@ void FactorOutRows(std::ostream& sout, _Mat& M, size_t& nbadd, const char tev,
                 // Remove elements that will be in the new sum
             auto& row(M[i]);
             for(auto iter=row.begin(); iter != row.end(); ++iter) {
-                if (abs(iter->second) == element) {
-                    if (sign(iter->second) < 0) sout << '-';
+                if (Fabs(FF,iter->second) == element) {
+                    if (Fsign(FF,iter->second) < 0) sout << '-';
                     sout << tev << iter->first;
                     row.erase(iter);
                     break;
@@ -343,9 +344,9 @@ void FactorOutRows(std::ostream& sout, _Mat& M, size_t& nbadd, const char tev,
                 // Precompute the new sum (to be multiplied afterwards)
             for(size_t k=1; k<frequency; ++k) {
                 for(auto iter=row.begin(); iter != row.end(); ++iter) {
-                    if (abs(iter->second) == element) {
+                    if (Fabs(FF,iter->second) == element) {
                         ++nbadd;
-                        sout << (sign(iter->second) < 0 ? '-' : '+')
+                        sout << (Fsign(FF,iter->second) < 0 ? '-' : '+')
                                   << tev << iter->first;
                         row.erase(iter);
                         break;
@@ -416,7 +417,7 @@ std::ostream& ProgramGen(std::ostream& sout, _Mat& M,
         if (row.size()>0) {
             sout << ouv << i << ":=";
 
-            auto arbs(abs(row.begin()->second));
+            auto arbs(Fabs(FF,row.begin()->second));
 
                 // If already multiplied, reuse it
             size_t rindex(M.coldim());
@@ -431,7 +432,7 @@ std::ostream& ProgramGen(std::ostream& sout, _Mat& M,
                 if (! FF.areEqual(arbs,row.begin()->second)) sout << '-';
                 sout << rav << rindex;
             } else {
-                if ( (sign(row.begin()->second) < 0)
+                if ( (Fsign(FF,row.begin()->second) < 0)
                      || FF.isMOne(row.begin()->second) ) sout << '-';
                 printmulorjustdiv(sout, tev, row.begin()->first,
                                   arbs, nbmul, FF);
@@ -441,7 +442,7 @@ std::ostream& ProgramGen(std::ostream& sout, _Mat& M,
             auto iter(row.begin());
             for(++iter; iter!= row.end(); ++iter) {
                 ++addcount;
-                auto ais(abs(iter->second));
+                auto ais(Fabs(FF,iter->second));
 
                     // If already multiplied, reuse it
                 size_t rindex(M.coldim());
@@ -457,7 +458,7 @@ std::ostream& ProgramGen(std::ostream& sout, _Mat& M,
                          << rav << rindex;
                 } else {
                         // otherwise next function will sout << '-'
-                    sout << ( ( (sign(iter->second) <0)
+                    sout << ( ( (Fsign(FF,iter->second) <0)
                                 || FF.isMOne(iter->second) ) ? '-' : '+');
                     printmulorjustdiv(sout, tev, iter->first,
                                       ais, nbmul, FF);
@@ -475,7 +476,6 @@ std::ostream& ProgramGen(std::ostream& sout, _Mat& M,
 #ifdef VERBATIM_PARSING
     std::clog << "# Program Generation done." << std::endl;
     std::clog << std::string(30,'#') << std::endl;
-//     M.write(std::clog << "M:=",FileFormat::Maple) << ';' << std::endl;
 #endif
 
     return sout;
