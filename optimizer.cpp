@@ -45,7 +45,7 @@ template<typename Field>
 int DKOptimiser(std::istream& input, const size_t randomloops,
                 const bool printMaple, const bool printPretty,
                 const bool tryDirect, const bool tryKernel,
-                const Field& F) {
+                const bool mostCSE, const bool allkernels, const Field& F) {
 
         // ============================================================
         // Read Matrix of Linear Transformation
@@ -55,7 +55,7 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
 
     Givaro::Timer chrono; chrono.start();
 
-    Matrix T(QQ); Transpose(T,M);
+    Matrix T(QQ,M.coldim(),M.rowdim()); Transpose(T,M);
 
     if (printPretty) {
         M.write(std::clog,FileFormat::Pretty) << ';' << std::endl;
@@ -66,8 +66,6 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
         M.write(std::clog << "M:=",FileFormat::Maple) << ';' << std::endl;
         std::clog << std::string(40,'#') << std::endl;
     }
-
-
 
         // ============================================================
         // Compute naive number of operations
@@ -80,7 +78,7 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
     std::clog << std::string(40,'#') << std::endl;
 
     std::ostringstream ssout;
-    std::pair<size_t,size_t> nbops{addinit,mulinit};
+    Pair<size_t> nbops{addinit,mulinit};
 
         // ============================================================
         // Rebind matrix type over sub field matrix type
@@ -135,11 +133,11 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
             }
         }
 
-        if (nbops == std::pair<size_t,size_t>{-1,-1}) {
+        if (nbops == Pair<size_t>{-1,-1}) {
                 // Zero dimensional kernel
             std::cerr << "# \033[1;36mFail: zero dimensional kernel.\033[0m\n"
                       << "# --> try direct or transposing." << std::endl;
-            nbops = std::pair<size_t,size_t>{0,0};
+            nbops = Pair<size_t>{0,0};
         }
     }
 
@@ -169,14 +167,107 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
     if ((nbops.first !=0 || nbops.second != 0)) {
         std::clog << std::string(40,'#') << std::endl;
         std::clog << "# \033[1;32m" << nbops.first << "\tadditions\tinstead of " << addinit
-                  << "\033[0m " << chrono << std::endl;
+                  << "\033[0m \t" << chrono << std::endl;
         std::clog << "# \033[1;32m" << nbops.second << "\tmultiplications\tinstead of " << mulinit << "\033[0m" << std::endl;
         std::clog << std::string(40,'#') << std::endl;
     }
 
+
+        // ============================================================
+        // Exhaustive nullspace permutation search (if # is <= 12!)
+    if (allkernels && (M.rowdim() < 13)) {
+        chrono.start();
+
+        const size_t m(M.rowdim());
+        std::vector<long> Fm { factorial(m) };
+        std::ostringstream kout;
+
+        auto knbops(nbops);
+
+#pragma omp parallel for shared(Fm,T,kout,knbops)
+        for(size_t i=0; i<Fm.back(); ++i) {
+            std::vector<size_t> l{kthpermutation(i,m,Fm)};
+            FMatrix lT(T, F);
+            std::ostringstream lkout;
+            FMatrix NullSpace(F,lT.coldim(),T.coldim());
+            auto lkops( nullspacedecomp(lkout, NullSpace, lT, l, mostCSE) );
+#ifdef VERBATIM_PARSING
+            std::clog << "# Found, kernel: " << lkops.first << "\tadditions, "
+                       << lkops.second << "\tmultiplications." << std::endl;
+#endif
+            if ( (kout.tellp() == std::streampos(0)) ||
+                 (lkops.first<knbops.first) ||
+                 ( (lkops.first==knbops.first) && (lkops.second<knbops.second) ) ) {
+                kout.clear(); kout.str(std::string());
+                kout << lkout.str();
+                knbops = lkops;
+            }
+        }
+
+        chrono.stop();
+        if ( (knbops.first < nbops.first) ||
+             ( (knbops.first == nbops.first) && (knbops.second < nbops.second) ) ) {
+            nbops = knbops;
+            std::clog << "# \033[1;36m"
+                      << "Exhaustive kernel permutation, found:"
+                      << "\033[0m" << std::endl;
+            std::cout << kout.str() << std::flush;
+
+            if ((knbops.first !=0 || knbops.second != 0)) {
+                std::clog << std::string(40,'#') << std::endl;
+                std::clog << "# \033[1;32m" << knbops.first << "\tadditions\tinstead of " << addinit
+                          << "\033[0m \t" << chrono << std::endl;
+                std::clog << "# \033[1;32m" << knbops.second << "\tmultiplications\tinstead of " << mulinit << "\033[0m" << std::endl;
+                std::clog << std::string(40,'#') << std::endl;
+            }
+        } else {
+                // Optimal was already found
+            std::clog << "# \033[1;36m"
+                      << "No kernel permutation has less additions.\033[0m \t"
+                      << chrono << std::endl;
+        }
+    }
+
+        // ============================================================
+        // MostCSE Greedy CSE search
+    if (mostCSE) {
+        chrono.start();
+
+        std::vector<std::ostringstream> out;
+        FMatrix lM(M, F);
+        FMatrix lT(T, F);
+        std::ostringstream iout;
+            // Cancellation-free optimization
+        input2Temps(iout, lM.coldim(), 'i', 't', lT);
+        auto rnbops( RecOptimizer(iout, lM, 'i', 'o', 't', 'r') );
+
+        chrono.stop();
+
+        if ( (rnbops.first < nbops.first) ||
+             ( (rnbops.first == nbops.first) && (rnbops.second < nbops.second) ) ) {
+            std::clog << "# \033[1;36m"
+                      << "Exhaustive greedy CSE search, found:"
+                      << "\033[0m" << std::endl;
+            std::cout << iout.str() << std::flush;
+
+            if ((rnbops.first !=0 || rnbops.second != 0)) {
+                std::clog << std::string(40,'#') << std::endl;
+                std::clog << "# \033[1;32m" << rnbops.first << "\tadditions\tinstead of " << addinit
+                          << "\033[0m \t" << chrono << std::endl;
+                std::clog << "# \033[1;32m" << rnbops.second << "\tmultiplications\tinstead of " << mulinit << "\033[0m" << std::endl;
+                std::clog << std::string(40,'#') << std::endl;
+            }
+        } else {
+                // Optimal was already found
+            std::clog << "# \033[1;36m"
+                      << "No CSE scheduling has less additions.\033[0m \t"
+                      << chrono << std::endl;
+        }
+    }
+
     return 0;
 }
-
+// ====================================================================
 
 
 
@@ -185,15 +276,16 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
 int Selector(std::istream& input, const size_t randomloops,
              const bool printMaple, const bool printPretty,
              const bool tryDirect, const bool tryKernel,
+             const bool mostCSE, const bool allkernels,
              const Givaro::Integer& q) {
     if (! Givaro::isZero(q)) {
         Givaro::Modular<Givaro::Integer> FF(q);
         return DKOptimiser(input, randomloops, printMaple, printPretty,
-                           tryDirect, tryKernel, FF);
+                           tryDirect, tryKernel, mostCSE, allkernels, FF);
     } else {
         QRat QQ;
         return DKOptimiser(input, randomloops, printMaple, printPretty,
-                           tryDirect, tryKernel, QQ);
+                           tryDirect, tryKernel, mostCSE, allkernels, QQ);
     }
 }
 // ============================================================
@@ -203,6 +295,8 @@ int Selector(std::istream& input, const size_t randomloops,
 // Main: select between file / std::cin
 // -D/-K options select direct/kernel methods only (default is both)
 // -P/-M option choose the printing format
+// -E option for exhaustive greedy CSE search
+// -N option for exhaustive nullspace permutation search
 // -q # search for linear map modulo # (default is over the rationals)
 // -O # search for reduced number of additions, then multiplications
 //      i.e. min of random # tries (requires definition of RANDOM_TIES)
@@ -210,10 +304,8 @@ int main(int argc, char** argv) {
 
         // ============================================================
         // Linear Transformation
-    bool printMaple(false),
-        printPretty(false),
-        directOnly(false),
-        kernelOnly(false);
+    bool printMaple(false), printPretty(false), mostCSE(false),
+        directOnly(false), kernelOnly(false), allkernels(false);
     size_t randomloops(DORANDOMSEARCH?DEFAULT_RANDOM_LOOPS:1);
     Givaro::Integer prime(0u);
 
@@ -223,11 +315,13 @@ int main(int argc, char** argv) {
         std::string args(argv[i]);
         if (args == "-h") {
             std::clog << "Usage: " << argv[0]
-                      << " [-h|-M|-P|-K|-D] [stdin|matrixfile.sms]\n";
+                      << " [-h|-M|-P|-K|-D|-E|-N|-q #|-O #] [stdin|matrixfile.sms]\n";
 
             std::clog
-                << "  -D/-K options: select direct/kernel methods only (default is both)\n"
-                << "  -P/-M options: choose the printing format\n"
+                << "  -D/-K: select direct/kernel methods only (default is both)\n"
+                << "  -E: exhaustive greedy CSE search (default is not)\n"
+                << "  -N: exhaustive nullspace permutations (default is not)\n"
+                << "  -P/-M: choose the printing format\n"
                 << "  -q #: search modulo (default is Rationals)\n"
                 << "  -O #: search for reduced number of additions, then multiplications\n";
 
@@ -237,6 +331,8 @@ int main(int argc, char** argv) {
         else if (args == "-P") { printPretty = true; }
         else if (args == "-D") { directOnly = true; }
         else if (args == "-K") { kernelOnly = true; }
+        else if (args == "-E") { mostCSE = true; }
+        else if (args == "-N") { allkernels = true; }
         else if (args == "-q") { prime = Givaro::Integer(argv[++i]); }
         else if (args == "-O") { randomloops = atoi(argv[++i]);
             if ( (randomloops>1) && (!DORANDOMSEARCH) ) {
@@ -253,15 +349,14 @@ int main(int argc, char** argv) {
 
     if (filename == "") {
         return Selector(std::cin, randomloops, printMaple, printPretty,
-                        tryDirect, tryKernel, prime);
+                        tryDirect, tryKernel, mostCSE, allkernels, prime);
     } else {
         std::ifstream inputmatrix(filename);
         if ( inputmatrix ) {
-            int rt = Selector(inputmatrix, randomloops,
-                              printMaple, printPretty,
-                              tryDirect, tryKernel, prime);
+            int s=Selector(inputmatrix, randomloops, printMaple, printPretty,
+                           tryDirect, tryKernel, mostCSE, allkernels, prime);
             inputmatrix.close();
-            return rt;
+            return s;
         }
     }
     return -1;

@@ -47,7 +47,7 @@ int Factorizer(std::istream& input, const FileFormat& matformat,
     Givaro::Timer elapsed;
     Matrix CoB(QQ, innerdim, M.coldim());
     Matrix Res(QQ, M.rowdim(), innerdim);
-    std::pair<size_t,size_t> nbops{backSolver(CoB, Res, M, QQ)};
+    Pair<size_t> nbops{backSolver(CoB, Res, M, QQ)};
 
     elapsed.start();
 #pragma omp parallel for shared(Res,CoB,M,QQ,nbops,innerdim)

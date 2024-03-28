@@ -95,9 +95,9 @@ int Tellegen(std::istream& input) {
     std::set<std::string> outSet;
     std::set<std::string> inSet;
 
-    std::pair<size_t, size_t> Nops(0,0);
+    std::pair<size_t,size_t> Nops(0,0);
 
-    std::clog << std::string(30,'#') << std::endl;
+    std::clog << std::string(40,'#') << std::endl;
 
         // ============================================================
         // ====================
@@ -234,7 +234,7 @@ int Tellegen(std::istream& input) {
         // End line by line parsing
         // ============================================================
 
-    std::clog << std::string(30,'#') << std::endl;
+    std::clog << std::string(40,'#') << std::endl;
 
         // ============================================================
         // Select only temporary variables (others are initialized)
@@ -246,11 +246,8 @@ int Tellegen(std::istream& input) {
         }
     }
 
-
         // ============================================================
         // Now Produce program reversed
-
-
 
         // ======================================
         // Outputs each line in reverse order
@@ -309,7 +306,6 @@ int Tellegen(std::istream& input) {
                 line[prev]='i';
             }
         }
-
             // ==================================
             // Now variable has been modified
             // --> will not be simplified anymore
@@ -335,21 +331,21 @@ int Tellegen(std::istream& input) {
     }
 #endif
 
-    std::clog << std::string(30,'#') << std::endl;
+    std::clog << std::string(40,'#') << std::endl;
         // Produce output results "oi:=xi;"
     for(const auto& iter: outSet) std::cout << iter << std::endl;
 
     const int dimOffset(inSet.size()-outSet.size());
 
 
-    std::clog << std::string(30,'#') << std::endl;
+    std::clog << std::string(40,'#') << std::endl;
     std::clog << "# \033[1;32m" << Nops.first << "\tadditions ("
               << (Nops.first-dimOffset)
               << (dimOffset<0?'-':'+') << abs(dimOffset)
               << ")\033[0m" << std::endl;
     std::clog << "# \033[1;32m" << Nops.second << "\tmultiplications"
               << "\033[0m" << std::endl;
-    std::clog << std::string(30,'#') << std::endl;
+    std::clog << std::string(40,'#') << std::endl;
 
     return 0;
 }
@@ -363,7 +359,7 @@ int main(int argc, char** argv) {
     if ( argc > 1 ) {
         std::string args(argv[1]);
         if (args == "-h") {
-            std::clog << "Usage: " << argv[0] << " [stdin|matrixfile.sms]\n";
+            std::clog << "Usage: " << argv[0] << " [stdin|file.prg]\n";
             exit(-1);
         }
 

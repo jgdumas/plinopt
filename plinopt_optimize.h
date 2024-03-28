@@ -36,6 +36,14 @@
 template<typename Ring>
 using Etriple = std::tuple<size_t, size_t, typename Ring::Element>;
 
+	// Printing tuples
+template<typename Ring>
+std::ostream& printEtriple(std::ostream& out,
+                           const Ring& R, const Etriple<Ring>& t) {
+    return R.write(out << '{' << std::get<0>(t)<< ','
+                   << std::get<1>(t)<< ',', std::get<2>(t)) << '}';
+}
+
 template<typename T1, typename T2>
 std::ostream& operator<<(std::ostream& out, const std::map<T1,T2>& v);
 
@@ -49,11 +57,25 @@ size_t score(const std::vector<std::vector<triple>>& AllPairs,
              const std::vector<size_t>& Density,
              const triple& cse);
 
-// Removing one pair
+// Direct program generateur from a matrix
+template<typename _Mat, typename triple>
+std::ostream& ProgramGen(std::ostream& sout, _Mat& M,
+                         std::vector<triple>& multiples,
+                         size_t& addcount, size_t& nbmul,
+                         const char inv, const char ouv,
+                         const char tev, const char rav);
+
+// Removing one CSE
 template<typename triple, typename _Mat>
 bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
             size_t& nbmul, const char tev, const char rav);
 
+// Recusive search for the best CSE
+template<typename triple,typename _Mat>
+bool RecSub(std::vector<std::string>& out, _Mat& Mat,
+            std::vector<triple>& multiples,
+            size_t& nbadd, size_t& nbmul, const size_t lvl,
+            const char tev, const char rav);
 
 // Factors out same coefficient in a column
 template<typename Iter, typename triple, typename _Mat>
@@ -67,6 +89,15 @@ template<typename Iter, typename _Mat>
 void FactorOutRows(std::ostream& sout, _Mat& M, size_t& nbadd, const char tev,
                    const size_t i, const Iter& start, const Iter& end);
 
+// Factors out triangles:
+// < ab | b > replaced by < 0 | b | b > then < 0 | 0 | 0 | 1>
+// < a  | . >             < 0 | . | 1 >      < 0 | . | 1 | 0>
+// With only 2 multiplications, by a, then by b, instead of 3
+template<typename triple, typename _Mat>
+bool Triangle(std::ostream& sout, _Mat& M, _Mat& T,
+              std::vector<triple>& multiples, size_t& nbadd, size_t& nbmul,
+              const char tev, const char rav, const size_t j);
+
 // Sets new temporaries with the input values
 void input2Temps(std::ostream& sout, const size_t N,
                  const char inv, const char tev);
@@ -75,18 +106,27 @@ void input2Temps(std::ostream& sout, const size_t N,
                  const char inv, const char tev, const _Mat& trsp);
 
 
-// Global optimization function (pairs and factors)
+// Global random optimization function (pairs and factors)
 template<typename _Mat>
-std::pair<size_t,size_t> Optimizer(std::ostream& sout, _Mat& M,
-                                   const char inv, const char ouv,
-                                   const char tev, const char rav);
+Pair<size_t> Optimizer(std::ostream& sout, _Mat& M,
+                       const char inv, const char ouv,
+                       const char tev, const char rav);
 
+// Global exhaustive optimization function (pairs and factors)
+template<typename _Mat>
+Pair<size_t> RecOptimizer(std::ostream& sout, _Mat& M,
+                          const char inv, const char ouv,
+                          const char tev, const char rav);
 
 // Precondition _Matrix A is upper triangular
 template<typename _Mat>
-std::pair<size_t,size_t> nullspacedecomp(std::ostream& sout,
-                                         _Mat& x, _Mat& A) ;
+Pair<size_t> nullspacedecomp(std::ostream& sout, _Mat& x, _Mat& A,
+                             const bool mostCSE=false);
 
+template<typename _Mat>
+Pair<size_t> nullspacedecomp(std::ostream& sout, _Mat& x, _Mat& A,
+                             std::vector<size_t>& l,
+                             const bool mostCSE=false);
 
 
 // prints c[i] * e, or c[i] / b for rational e=1/b
@@ -96,6 +136,7 @@ std::ostream& printmulorjustdiv(std::ostream& out,
                                 const char c, const size_t i,
                                 const typename Ring::Element& e,
                                 size_t& nbmul, const Ring& F);
+
 
 #include "plinopt_optimize.inl"
 #endif
