@@ -152,6 +152,11 @@ VProgram_t& programParser(VProgram_t& ProgramVector, std::stringstream& ssin) {
 // Test for no-op operations like a0 := r0 ;
 auto idempots {[](const std::vector<std::string>& s) {
     return ((s.size()==4) && (s[0]==s[2]));} };
+
+// Comparing two vectors by their first value within a pair
+typedef std::pair<std::string, std::vector<size_t>> pairSVs_t;
+auto prgorder {[](const pairSVs_t& a, const pairSVs_t& b) {
+    return a.second.front()<b.second.front();} };
 // ============================================================
 
 
@@ -163,8 +168,8 @@ auto idempots {[](const std::vector<std::string>& s) {
 //   [*] Removes all no-op operations like ai:=ai;
 //   [3] Backward reassingment of output variables
 //   [4] (optional) rewrites singly used variables in-place
-VProgram_t& variablesThiner(VProgram_t& P, const bool simplSingle=true,
-                            const char inchar = 'i', const char outchar = 'o') {
+size_t variablesThiner(VProgram_t& P, const bool simplSingle=true,
+                       const char inchar = 'i', const char outchar = 'o') {
         // ==================================
         // Find two unused variable name
     std::set<char> varsChar;
@@ -259,11 +264,11 @@ VProgram_t& variablesThiner(VProgram_t& P, const bool simplSingle=true,
     P.erase(std::remove_if(P.begin(), P.end(), idempots), P.end());
 
 
-    if (! simplSingle) return P;
+    if (! simplSingle) return 0;
 
         // ==================================
         // [4] Rewriting singly used variables
-    size_t tmpnum(0);
+    size_t tmpnum(0), merged(0);
 
         // Occurences of temporary variables
     std::map<std::string, std::vector<size_t> > varsSet, varsUse;
@@ -296,11 +301,21 @@ VProgram_t& variablesThiner(VProgram_t& P, const bool simplSingle=true,
         }
     }
 
+        // Need to sort map by (front of) values (first occurence of that var)
+        // Thus rewriting is done in the program order
+    std::vector<std::pair<std::string, std::vector<size_t>>> ordsUse;
+    for (const auto& [variable, occurences] : varsUse)
+        ordsUse.emplace_back(variable,occurences);
+    std::sort(ordsUse.begin(), ordsUse.end(), prgorder);
+
+
         // finding singly used variables and replacing them
-    for (const auto& [variable, occurences] : varsUse) {
+    for (const auto& [variable, occurences] : ordsUse) {
         if ( (variable[0] != outchar) && (occurences.size()==2) ) {
             const size_t i(occurences.front()), j(occurences.back());
             auto& init(P[i]); auto& line(P[j]);
+// printline(std::clog << "# P[" << i << "]:", init) << "  -->  ";
+// printline(std::clog << "# P[" << j << "]:", line) << std::endl;
 
                 // Single use of variable once set
             auto word(std::find(line.begin(), line.end(), variable));
@@ -310,12 +325,12 @@ VProgram_t& variablesThiner(VProgram_t& P, const bool simplSingle=true,
             for(auto iter(init.begin()+2); iter != penultimate; ++iter)
                 *word += *iter;
             *word += ')';
-
+            merged += (init.size()-3);
             P[i].resize(0); // No need for that variable anymore
         }
     }
 
-    return P;
+    return merged;
 }
 // ============================================================
 
@@ -341,12 +356,15 @@ std::ostream& Compacter(std::ostream& sout, std::istream& input,
     std::clog << std::string(40,'#') << std::endl;
 
         // Semantic line removal
-    sout << variablesThiner(ProgramVector, simplSingle);
+    size_t merged = variablesThiner(ProgramVector, simplSingle);
+    sout << ProgramVector;
     std::clog << std::string(40,'#') << std::endl;
 
+    const size_t PRs { merged + progSize(ProgramVector) };
+
         // Comparing number of elements in the programs
-    std::clog << "# \033[1;32m" << progSize(ProgramVector)
-              << "\telements\tinstead of " << PVs << "\033[0m" << std::endl;
+    std::clog << "# \033[1;32m" << PRs << "\telements\tinstead of "
+              << PVs << "\033[0m" << std::endl;
     std::clog << std::string(40,'#') << std::endl;
 
     return sout;

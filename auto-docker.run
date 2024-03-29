@@ -30,6 +30,6 @@ cd plinopt; make
 ./transpozer data/test.prg
 ./optimizer data/Pi.sms
 ./optimizer data/Li.sms |./compacter -s
-./matrix-transpose data/Pi.sms | ./optimizer -K | ./transpozer | ./compacter
+./matrix-transpose data/Pi.sms | ./optimizer -K | ./transpozer | ./compacter -s
 ./sparsifier -c 4 data/Lr.sms
 ./factorizer -k 6 data/Lr.sms
