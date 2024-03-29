@@ -42,6 +42,7 @@
 |`matrix-transpose`| transposes a matrix from an SMS file |
 |`sms2pretty`| pretty prints a matrix from an SMS file |
 |`MMchecker`| asserts correctness of bilinear program for matrix-multiplication |
+|`compacter`| rewrites a simple program using less variables |
 |  |  |
 
 
@@ -78,7 +79,9 @@
 - `./optimizer data/cyclic.sms`: a program computing that matrix-vector product
 - `./optimizer data/Rr.sms -q 3`: a program computing that matrix-vector product modulo 3
 - `./transpozer data/test.prg`: a program computing the transposed program
+- `./compacter data/test.prg`: a more compact program
 - `./optimizer -D data/Pi.sms`: a program computing that matrix-vector product
+- `./optimizer data/Li.sms |./compacter -s`: a compact program computing that matrix-vector product
 - `./matrix-transpose data/Pi.sms | ./optimizer -K | ./transpozer`: a program computing that matrix-vector product
 - `./sparsifier -c 4 data/Lr.sms`: a factorization of that matrix into a sparser one (also with many 1s) by an alternate change of basis(CoB) 4x4 matrix
 - `./factorizer -k 6 data/Lr.sms`: a factorization of that matrix into a 7x6 sparser one by a 6x4 matrix

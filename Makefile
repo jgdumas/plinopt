@@ -15,10 +15,10 @@ CXXFLAGS += ${OPTFLAGS} `pkg-config linbox --cflags`
 LOADLIBES+= `pkg-config linbox --libs |sed 's/-liml//;s/-lfplll//;s/-lflint//'`
 
 EXE = sms2pretty matrix-transpose MMchecker
-EXE += transpozer optimizer
+EXE += transpozer compacter
+EXE += optimizer
 EXE += sparsifier factorizer
 EXE += inplacer bilplacer
-
 SRC=${EXE:%=%.cpp}
 
 all: ${EXE}
