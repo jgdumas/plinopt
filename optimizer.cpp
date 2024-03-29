@@ -53,7 +53,8 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
     QMstream ms(QQ,input);
     Matrix M(ms); M.resize(M.rowdim(),M.coldim());
 
-    Givaro::Timer chrono; chrono.start();
+    Givaro::Timer chrono, global;
+    chrono.start();
 
     Matrix T(QQ,M.coldim(),M.rowdim()); Transpose(T,M);
 
@@ -141,42 +142,13 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
         }
     }
 
-    chrono.stop();
-
-    std::cout << ssout.str() << std::flush;
-
-
-#ifdef INPLACE_CHECKER
-    std::clog << std::string(40,'#') << std::endl;
-    std::clog << '<';
-    for(size_t i=0; i< M.rowdim(); ++i) {
-        if (i != 0) std::clog << '|' << std::endl;
-        std::clog << '<';
-        for(size_t j=0; j<M.coldim(); ++j) {
-            if (j != 0) std::clog << '+';
-            std::clog << 'i' << j << "*(" << M.getEntry(i,j) << ')';
-        }
-        std::clog << " - o" << i << '>';
-    }
-    std::clog << '>';
-    if (F.characteristic() > 0) std::clog << " mod " << F.characteristic();
-    std::clog << ';' << std::endl;
-#endif
-
-
-    if ((nbops.first !=0 || nbops.second != 0)) {
-        std::clog << std::string(40,'#') << std::endl;
-        std::clog << "# \033[1;32m" << nbops.first << "\tadditions\tinstead of " << addinit
-                  << "\033[0m \t" << chrono << std::endl;
-        std::clog << "# \033[1;32m" << nbops.second << "\tmultiplications\tinstead of " << mulinit << "\033[0m" << std::endl;
-        std::clog << std::string(40,'#') << std::endl;
-    }
-
+    chrono.stop(); global = chrono;
+// std::clog << ssout.str() << std::flush;
 
         // ============================================================
         // Exhaustive nullspace permutation search (if # is <= 12!)
     if (allkernels && (M.rowdim() < 13)) {
-        chrono.start();
+        chrono.clear(); chrono.start();
 
         const size_t m(M.rowdim());
         std::vector<long> Fm { factorial(m) };
@@ -197,21 +169,25 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
 #endif
             if ( (kout.tellp() == std::streampos(0)) ||
                  (lkops.first<knbops.first) ||
-                 ( (lkops.first==knbops.first) && (lkops.second<knbops.second) ) ) {
+                 ((lkops.first==knbops.first)&&(lkops.second<knbops.second))) {
                 kout.clear(); kout.str(std::string());
                 kout << lkout.str();
                 knbops = lkops;
             }
         }
 
-        chrono.stop();
+        chrono.stop(); global += chrono;
+
         if ( (knbops.first < nbops.first) ||
              ( (knbops.first == nbops.first) && (knbops.second < nbops.second) ) ) {
             nbops = knbops;
             std::clog << "# \033[1;36m"
                       << "Exhaustive kernel permutation, found:"
                       << "\033[0m" << std::endl;
-            std::cout << kout.str() << std::flush;
+
+// std::clog << kout.str() << std::flush;
+
+            ssout.str(kout.str());
 
             if ((knbops.first !=0 || knbops.second != 0)) {
                 std::clog << std::string(40,'#') << std::endl;
@@ -231,7 +207,7 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
         // ============================================================
         // MostCSE Greedy CSE search
     if (mostCSE) {
-        chrono.start();
+        chrono.clear(); chrono.start();
 
         std::vector<std::ostringstream> out;
         FMatrix lM(M, F);
@@ -241,14 +217,18 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
         input2Temps(iout, lM.coldim(), 'i', 't', lT);
         auto rnbops( RecOptimizer(iout, lM, 'i', 'o', 't', 'r') );
 
-        chrono.stop();
+        chrono.stop(); global += chrono;
 
         if ( (rnbops.first < nbops.first) ||
              ( (rnbops.first == nbops.first) && (rnbops.second < nbops.second) ) ) {
             std::clog << "# \033[1;36m"
                       << "Exhaustive greedy CSE search, found:"
                       << "\033[0m" << std::endl;
-            std::cout << iout.str() << std::flush;
+
+            ssout.str(iout.str());
+
+// std::clog << iout.str() << std::flush;
+
 
             if ((rnbops.first !=0 || rnbops.second != 0)) {
                 std::clog << std::string(40,'#') << std::endl;
@@ -264,6 +244,36 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
                       << chrono << std::endl;
         }
     }
+
+
+    std::cout << ssout.str() << std::flush;
+
+
+    if ((nbops.first !=0 || nbops.second != 0)) {
+        std::clog << std::string(40,'#') << std::endl;
+        std::clog << "# \033[1;32m" << nbops.first << "\tadditions\tinstead of " << addinit
+                  << "\033[0m \t" << global << std::endl;
+        std::clog << "# \033[1;32m" << nbops.second << "\tmultiplications\tinstead of " << mulinit << "\033[0m" << std::endl;
+        std::clog << std::string(40,'#') << std::endl;
+    }
+
+
+#ifdef INPLACE_CHECKER
+    std::clog << std::string(40,'#') << std::endl;
+    std::clog << '<';
+    for(size_t i=0; i< M.rowdim(); ++i) {
+        if (i != 0) std::clog << '|' << std::endl;
+        std::clog << '<';
+        for(size_t j=0; j<M.coldim(); ++j) {
+            if (j != 0) std::clog << '+';
+            std::clog << 'i' << j << "*(" << M.getEntry(i,j) << ')';
+        }
+        std::clog << " - o" << i << '>';
+    }
+    std::clog << '>';
+    if (F.characteristic() > 0) std::clog << " mod " << F.characteristic();
+    std::clog << ';' << std::endl;
+#endif
 
     return 0;
 }
