@@ -30,7 +30,7 @@
 |`sparsifier`| factors an MxN matrix into a sparser one, times an NxN matrix |
 |`factorizer`| factors an MxN matrix into a sparser MxK, times an KxN matrix |
 |`inplacer`| produces an in-place program from a linear transformation|
-|`bilplacer`| produces an in-place program from a bilinear transformation|
+|`trilplacer`| produces an in-place program from a trilinear transformation|
 |  |  |
 
 
@@ -38,8 +38,8 @@
 **Optimizing programs**:
 |  |  |
 | :--------- | :------ |
-|`transpozer`| transposes a program, via Tellegen's transposition principle|
 |`compacter`| rewrites a simple program using less variables |
+|`transpozer`| transposes a program, via Tellegen's transposition principle|
 |  |  |
 
 
@@ -93,5 +93,5 @@
 - `./sparsifier -c 4 data/Lr.sms`: a factorization of that matrix into a sparser one (also with many 1s) by an alternate change of basis(CoB) 4x4 matrix
 - `./factorizer -k 6 data/Lr.sms`: a factorization of that matrix into a 7x6 sparser one by a 6x4 matrix
 - `./inplacer data/Lw.sms`: in-place matrix-vector accumulating multiplication
-- `./bilplacer data/Lw.sms data/Rw.sms data/Pw.sms`: in-place version of Strassen-Winograd's fast 2x2 accumulating multiplication
-- `./bilplacer data/Lk.sms data/Rk.sms data/Pk.sms -e`: in-place version of Karatsuba's fast accumulating polynomial multiplication
+- `./trilplacer data/Lw.sms data/Rw.sms data/Pw.sms`: in-place version of Strassen-Winograd's fast 2x2 accumulating multiplication
+- `./trilplacer data/Lk.sms data/Rk.sms data/Pk.sms -e`: in-place version of Karatsuba's fast accumulating polynomial multiplication

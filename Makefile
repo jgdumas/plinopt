@@ -18,7 +18,7 @@ EXE = sms2pretty matrix-transpose MMchecker
 EXE += transpozer compacter
 EXE += optimizer
 EXE += sparsifier factorizer
-EXE += inplacer bilplacer
+EXE += inplacer trilplacer
 SRC=${EXE:%=%.cpp}
 
 all: ${EXE}
