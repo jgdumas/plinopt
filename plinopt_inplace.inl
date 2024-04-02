@@ -374,10 +374,10 @@ Tricounter SearchLinearAlgorithm(Program_t& Program, const Matrix& A,
 
 
 // ===============================================================
-// In-place program realizing a bilinear function
-Tricounter BiLinearAlgorithm(std::ostream& out,
-                             const Matrix& A, const Matrix& B,
-                             const Matrix& T, const bool oriented=false) {
+// In-place program realizing a trilinear function
+Tricounter TriLinearAlgorithm(std::ostream& out,
+                              const Matrix& A, const Matrix& B,
+                              const Matrix& T, const bool oriented=false) {
 
     const QRat& QQ = T.field();
 
@@ -660,8 +660,8 @@ Tricounter& operator+=(Tricounter& l, const Tricounter& r) {
 
 
 // ===============================================================
-// In-place program realizing a bilinear function
-Tricounter BiLinearProgram(std::ostream& out, const Matrix& A, const Matrix& B,
+// In-place program realizing a trilinear function
+Tricounter TriLinearProgram(std::ostream& out, const Matrix& A, const Matrix& B,
                            const Matrix& T, const bool oriented) {
     const QRat& QQ(T.field());
 
@@ -727,10 +727,10 @@ Tricounter BiLinearProgram(std::ostream& out, const Matrix& A, const Matrix& B,
 
 
 // ===============================================================
-// Searching the space of in-place bilinear programs
-Tricounter SearchBiLinearAlgorithm(std::ostream& out,
-                                   const Matrix& A, const Matrix& B,
-                                   const Matrix& T, size_t randomloops) {
+// Searching the space of in-place trilinear programs
+Tricounter SearchTriLinearAlgorithm(std::ostream& out,
+                                    const Matrix& A, const Matrix& B,
+                                    const Matrix& T, size_t randomloops) {
 
     if ( (A.rowdim() != B.rowdim()) || (A.rowdim() != T.rowdim()) ) {
         std::cerr << "Incorrect dimensions :" << std::endl;
@@ -744,7 +744,7 @@ Tricounter SearchBiLinearAlgorithm(std::ostream& out,
 
     Givaro::Timer elapsed;
     std::ostringstream sout, matout;
-    Tricounter nbops{ BiLinearProgram(sout, A, B, T, true) };
+    Tricounter nbops{ TriLinearProgram(sout, A, B, T, true) };
     std::string res(sout.str());
     std::clog << "# Oriented number of operations: " << nbops << std::endl;
 
@@ -773,7 +773,7 @@ Tricounter SearchBiLinearAlgorithm(std::ostream& out,
         }
 
         std::ostringstream lout, sout;
-        Tricounter lops{ BiLinearProgram(lout, pA, pB, pT, true) };
+        Tricounter lops{ TriLinearProgram(lout, pA, pB, pT, true) };
         if ( (std::get<0>(lops)<std::get<0>(nbops)) ||
              ( (std::get<0>(lops)==std::get<0>(nbops))
                && (std::get<1>(lops)<std::get<1>(nbops)) ) ) {
@@ -781,7 +781,7 @@ Tricounter SearchBiLinearAlgorithm(std::ostream& out,
             res = lout.str();
             std::clog << "# Found oriented [" << i << "], operations: " << lops << std::endl;
         }
-        lops = BiLinearProgram(sout, pA, pB, pT);
+        lops = TriLinearProgram(sout, pA, pB, pT);
         if ( (std::get<0>(lops)<std::get<0>(nbops)) ||
              ( (std::get<0>(lops)==std::get<0>(nbops))
                && (std::get<1>(lops)<std::get<1>(nbops)) ) ) {
@@ -795,7 +795,7 @@ Tricounter SearchBiLinearAlgorithm(std::ostream& out,
     out << res << std::flush;
     return nbops;
 
-//    return  BiLinearProgram(out, A, B, T);
+//    return  TriLinearProgram(out, A, B, T);
 
 
 

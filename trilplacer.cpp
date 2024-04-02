@@ -1,11 +1,11 @@
 // ==========================================================================
-// PLinOpt: a collection of C++ routines handling linear & bilinear programs
+// PLinOpt: C++ routines handling linear, bilinear & trilinear programs
 // Authors: J-G. Dumas, B. Grenet
 // ==========================================================================
 
 /****************************************************************
  * Returns an in-place program
- *          computing the bilinear function in HM representation
+ *          computing the trilinear function in HM representation
  *
  * Usage: L.sms R.sms P.sms [expansion]
  *          L.sms/R.sms/P.sms the 3 HM matrices
@@ -108,7 +108,7 @@ int main(int argc, char ** argv) {
             // to group them 2 by 2
         Matrix AA(QQ), BB(QQ), TT(QQ);
         DoubleExpand(AA,BB,TT, A,B,T);
-        opcount = BiLinearAlgorithm(std::cout, AA, BB, TT);
+        opcount = TriLinearAlgorithm(std::cout, AA, BB, TT);
     } else {
             // =================================
             // Direct computation
@@ -116,7 +116,7 @@ int main(int argc, char ** argv) {
         InitializeVariables('a',A.coldim(), 'b', B.coldim(), 'c', T.coldim());
 #endif
 
-        opcount = SearchBiLinearAlgorithm(std::cout, A, B, T, randomloops);
+        opcount = SearchTriLinearAlgorithm(std::cout, A, B, T, randomloops);
 
 #ifdef INPLACE_CHECKER
         CollectVariables('a',A.coldim(), 'b', B.coldim(), 'c', T.coldim());

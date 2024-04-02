@@ -49,7 +49,7 @@
 | :--------- | :------ |
 |`matrix-transpose`| transposes a matrix from an SMS file |
 |`sms2pretty`| pretty prints a matrix from an SMS file |
-|`MMchecker`| asserts correctness of bilinear program for matrix-multiplication |
+|`MMchecker`| asserts correctness of trilinear program for matrix-multiplication |
 |  |  |
 
 

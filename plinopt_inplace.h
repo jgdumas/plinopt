@@ -36,15 +36,15 @@ Tricounter SearchLinearAlgorithm(Program_t& Program, const Matrix& A,
                                  const bool transposed=false);
 
 // ===============================================================
-// In-place optimized program realizing a bilinear function
-Tricounter BiLinearProgram(std::ostream& out, const Matrix& A, const Matrix& B,
-                           const Matrix& T, const bool oriented=false);
+// In-place optimized program realizing a trilinear function
+Tricounter TriLinearProgram(std::ostream& out, const Matrix& A, const Matrix& B,
+                            const Matrix& T, const bool oriented=false);
 
 // ===============================================================
-// Searching the space of in-place bilinear programs
-Tricounter SearchBiLinearAlgorithm(std::ostream& out,
-                                   const Matrix& A, const Matrix& B,
-                                   const Matrix& T, size_t randomloops);
+// Searching the space of in-place trilinear programs
+Tricounter SearchTriLinearAlgorithm(std::ostream& out,
+                                    const Matrix& A, const Matrix& B,
+                                    const Matrix& T, size_t randomloops);
 
 // ===============================================================
 // Double expansion of an HM representation
