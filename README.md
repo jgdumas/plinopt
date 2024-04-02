@@ -1,5 +1,5 @@
 --------------------------------------------------------------------------------
-# PLinOpt: a collection of C++ routines handling linear & bilinear programs
+# PLinOpt: C++ routines handling linear, bilinear & trilinear programs
 --------------------------------------------------------------------------------
 
 **Authors**:  Jean-Guillaume Dumas, Bruno Grenet, Clément Pernet, Alexandre Sedoglavic
@@ -23,14 +23,22 @@
 
 
 
-**About**:
+**From matrices to programs**:
 |  |  |
 | :--------- | :------ |
-|`transpozer`| transposes a program, via Tellegen's transposition principle|
 |`optimizer`| produces a small program computing a linear transformation|
 |`sparsifier`| factors an MxN matrix into a sparser one, times an NxN matrix |
 |`factorizer`| factors an MxN matrix into a sparser MxK, times an KxN matrix |
 |`inplacer`| produces an in-place program from a bilinear transformation|
+|  |  |
+
+
+
+**Optimizing programs**:
+|  |  |
+| :--------- | :------ |
+|`transpozer`| transposes a program, via Tellegen's transposition principle|
+|`compacter`| rewrites a simple program using less variables |
 |  |  |
 
 
@@ -41,12 +49,11 @@
 |`matrix-transpose`| transposes a matrix from an SMS file |
 |`sms2pretty`| pretty prints a matrix from an SMS file |
 |`MMchecker`| asserts correctness of bilinear program for matrix-multiplication |
-|`compacter`| rewrites a simple program using less variables |
 |  |  |
 
 
 
-**Matrix Syntax**: SMS format, see [Sparse Integer Matrix Collection](https://hpac.imag.fr)
+**Matrix Syntax**: SMS format (numbering from 1 to m), see [Sparse Integer Matrix Collection](https://hpac.imag.fr)
 |  |  |  |  |
 | :--- | :--- | :--- | :--- |
 | Starts with| `m` | `n` | `'R'` |
