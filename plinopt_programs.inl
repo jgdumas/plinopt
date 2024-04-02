@@ -407,7 +407,7 @@ int Tellegen(std::istream& input) {
 
 
 // ============================================================
-// Creating a vectror of lines from a text file
+// Creating a vectror of lines from a text file program
 VProgram_t& programParser(VProgram_t& ProgramVector, std::stringstream& ssin) {
 
         // ============================================================
