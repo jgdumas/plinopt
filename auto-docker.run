@@ -35,3 +35,4 @@ cd plinopt; make
 ./matrix-transpose data/Pi.sms | ./optimizer -K | ./transpozer | ./compacter -s
 ./sparsifier -c 4 data/Lr.sms
 ./factorizer -k 6 data/Lr.sms
+make check

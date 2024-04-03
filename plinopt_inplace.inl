@@ -747,6 +747,7 @@ Tricounter SearchTriLinearAlgorithm(std::ostream& out,
     Tricounter nbops{ TriLinearProgram(sout, A, B, T, true) };
     std::string res(sout.str());
     std::clog << "# Oriented number of operations: " << nbops << std::endl;
+    omp_lock_t writelock; omp_init_lock(&writelock);
 
 #pragma omp parallel for shared(A,B,T,res,nbops)
     for(size_t i=0; i<randomloops; ++i) {
@@ -773,7 +774,12 @@ Tricounter SearchTriLinearAlgorithm(std::ostream& out,
         }
 
         std::ostringstream lout, sout;
+
+            // =============================================
+            // trying first a directed selection of variables
         Tricounter lops{ TriLinearProgram(lout, pA, pB, pT, true) };
+
+        omp_set_lock(&writelock);
         if ( (std::get<0>(lops)<std::get<0>(nbops)) ||
              ( (std::get<0>(lops)==std::get<0>(nbops))
                && (std::get<1>(lops)<std::get<1>(nbops)) ) ) {
@@ -781,7 +787,13 @@ Tricounter SearchTriLinearAlgorithm(std::ostream& out,
             res = lout.str();
             std::clog << "# Found oriented [" << i << "], operations: " << lops << std::endl;
         }
+        omp_unset_lock(&writelock);
+
+            // =============================================
+            // then trying a random selection of variables
         lops = TriLinearProgram(sout, pA, pB, pT);
+
+        omp_set_lock(&writelock);
         if ( (std::get<0>(lops)<std::get<0>(nbops)) ||
              ( (std::get<0>(lops)==std::get<0>(nbops))
                && (std::get<1>(lops)<std::get<1>(nbops)) ) ) {
@@ -789,6 +801,7 @@ Tricounter SearchTriLinearAlgorithm(std::ostream& out,
             res = sout.str();
             std::clog << "# Found combined [" << i << "], operations: " << lops << std::endl;
         }
+        omp_unset_lock(&writelock);
     }
 
         // Print the chosen algorithm
