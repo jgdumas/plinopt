@@ -240,8 +240,9 @@ int main(int argc, char** argv) {
                       << " m-v algorithm******\033[0m"
                       << std::endl;
 
-            A.write(std::clog, FileFormat::Pretty) << std::endl;
-            B.write(std::clog, FileFormat::Pretty) << std::endl;
+            A.write(std::clog<<"# Program:\n", FileFormat::Pretty);
+            B.write(std::clog<<"\n# Matrix:\n", FileFormat::Pretty);
+            R.write(std::clog<<"\n# diff:\n", FileFormat::Pretty) << std::endl;
         }
     } else
         A.write(std::clog, FileFormat::Pretty) << std::endl;
