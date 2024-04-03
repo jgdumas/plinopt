@@ -25,3 +25,7 @@ all: ${EXE}
 
 clean:
 	- \rm ${EXE}
+
+
+check: ${EXE}
+	./FDT.sh
