@@ -150,15 +150,15 @@ std::clog << std::string(40,'#') << std::endl;
             setRow(A,i,M,index,F);
         }
     }
-    
+
     _Mat T(F,A.coldim(), A.rowdim()); Transpose(T,A);
-    _Mat B(F,0, A.rowdim()); 
+    _Mat B(F,0, A.rowdim());
     for(const auto& [input, index] : inputs) {
         const size_t j(std::stoi(input.substr(1,std::string::npos)));
         if (j >= B.rowdim()) B.resize(j+1,T.coldim());
         setRow(B,j,T,index,F);
     }
-    
+
     Transpose(A,B);
 
 

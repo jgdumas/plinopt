@@ -153,7 +153,6 @@ Pair<size_t> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
             ssout << rav << lm << ":=";
             printmulorjustdiv(ssout, tev, std::get<1>(lcse),
                               asgs, moremul, FF) << ';' << std::endl;
-// std::clog << "## ROC: " << rav << lm << ":=" << tev << std::get<1>(lcse) << '*' << asgs << std::endl;
             lmultiples.emplace_back(lm,std::get<1>(lcse),asgs);
         }
     }
@@ -405,7 +404,8 @@ bool Triangle(std::ostream& sout, _Mat& M, _Mat& T,
     for(auto iter = T[j].begin(); iter != T[j].end();
         ++iter) { if (notAbsOne(FF, iter->second)) {
         auto next(iter);
-        for(++next; next != T[j].end(); ++next) { if (notAbsOne(FF,next->second)) {
+        for(++next; next != T[j].end();
+            ++next) { if (notAbsOne(FF,next->second)) {
             const size_t i(next->first);
             typename _Mat::Element quot; FF.init(quot);
             const auto& rowi(M[i]);
@@ -428,12 +428,13 @@ bool Triangle(std::ostream& sout, _Mat& M, _Mat& T,
                                       nbmul, FF) << ';' << std::endl;
                     multiples.emplace_back(m,j,iter->second);
 
-                        // Second, divide both column elements by a
+                        // Second, in j-th column, divide both elements by a
+                    const size_t k(iter->first);
                     T[j].erase(next);
                     T[j].erase(iter);
                     T.resize(++m, T.coldim());
-                    T[m-1].emplace_back(iter->first, FF.one);
-                    T[m-1].emplace_back(next->first, quot);
+                    T[m-1].emplace_back(k, FF.one);
+                    T[m-1].emplace_back(i, quot);
                     Transpose(M,T);
 
                         // Third, record multiplication by b
@@ -508,11 +509,10 @@ std::ostream& ProgramGen(std::ostream& sout, _Mat& M,
     }
 
     Transpose(T,M);
+
     for(size_t j=0; j<M.coldim(); ++j) {
         Triangle(sout, M, T, multiples, addcount, nbmul, tev, rav, j);
     }
-
-
 
         // Computing remaining (simple) linear combinations
     for(size_t i=0; i<M.rowdim(); ++i) {
@@ -593,7 +593,6 @@ Pair<size_t> Optimizer(std::ostream& sout, _Mat& M,
 
     using triple=std::tuple<size_t, size_t, typename _Mat::Element>;
     size_t nbadd(0), nbmul(0);
-
 
         // Factoring sums
     std::vector<triple> multiples;
@@ -846,6 +845,7 @@ bool RecSub(std::vector<std::string>& out, _Mat& Mat,
     _Mat bestM(FF,Mat.rowdim(),Mat.coldim()); sparse2sparse(bestM, Mat);
     std::vector<triple> bestmultiples(multiples);
     std::vector<std::string> bestdout;
+    omp_lock_t writelock; omp_init_lock(&writelock);
 
 #pragma omp parallel for shared(AllPairs,Mat,bestadds,bestmuls,bestM,bestmultiples,bestdout,tev,rav,multiples)
     for(size_t i=0; i<AllPairs.size(); ++i) {
@@ -868,6 +868,7 @@ bool RecSub(std::vector<std::string>& out, _Mat& Mat,
                 std::vector<std::string> sdout(1,ssout.str());
                 RecSub(sdout, lM, lmultiples, ladditions, lmuls, lvl+1, tev, rav);
 
+                omp_set_lock(&writelock);
                 if ( (ladditions < bestadds) ||
                      ( (ladditions == bestadds) && (lmuls < bestmuls) ) ) {
                     bestadds = ladditions;
@@ -876,6 +877,7 @@ bool RecSub(std::vector<std::string>& out, _Mat& Mat,
                     bestmultiples = lmultiples;
                     bestdout = sdout;
                 }
+                omp_unset_lock(&writelock);
             }
         }
     }
