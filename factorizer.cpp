@@ -48,6 +48,7 @@ int Factorizer(std::istream& input, const FileFormat& matformat,
     Matrix CoB(QQ, innerdim, M.coldim());
     Matrix Res(QQ, M.rowdim(), innerdim);
     Pair<size_t> nbops{backSolver(CoB, Res, M, QQ)};
+    omp_lock_t writelock; omp_init_lock(&writelock);
 
     elapsed.start();
 #pragma omp parallel for shared(Res,CoB,M,QQ,nbops,innerdim)
@@ -55,6 +56,9 @@ int Factorizer(std::istream& input, const FileFormat& matformat,
         Matrix lCoB(QQ, innerdim, M.coldim());
         Matrix lRes(QQ, M.rowdim(), innerdim);
         auto bSops{backSolver(lCoB, lRes, M, QQ)};
+
+
+        omp_set_lock(&writelock);
 #ifdef VERBATIM_PARSING
         std::clog << "# Res/CoB profile[" << i << "]: " << bSops << std::endl;
 #endif
@@ -66,6 +70,7 @@ int Factorizer(std::istream& input, const FileFormat& matformat,
             matrixCopy(CoB, lCoB, QQ);
             matrixCopy(Res, lRes, QQ);
         }
+        omp_unset_lock(&writelock);
     }
     elapsed.stop();
 

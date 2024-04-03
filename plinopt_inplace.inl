@@ -366,6 +366,7 @@ Tricounter SearchBiLinearAlgorithm(std::ostream& out,
     Tricounter nbops(BiLinearAlgorithm(sout, A, B, T, true));
     std::string res(sout.str());
     std::clog << "# Oriented number of operations: " << nbops << std::endl;
+    omp_lock_t writelock; omp_init_lock(&writelock);
 
 #pragma omp parallel for shared(A,B,T,res,nbops)
     for(size_t i=0; i<randomloops; ++i) {
@@ -400,6 +401,7 @@ Tricounter SearchBiLinearAlgorithm(std::ostream& out,
             // trying first a random selection of variables
         Tricounter lops(BiLinearAlgorithm(lout, pA, pB, pT,false));
 
+        omp_set_lock(&writelock);
         if ( (std::get<0>(lops)<std::get<0>(nbops)) ||
              ( (std::get<0>(lops)==std::get<0>(nbops))
                && (std::get<1>(lops)<std::get<1>(nbops)) ) ) {
@@ -407,11 +409,13 @@ Tricounter SearchBiLinearAlgorithm(std::ostream& out,
             res = lout.str();
             std::clog << "# Found algorithm[" << i << "], operations: " << lops << std::endl;
         }
+        omp_unset_lock(&writelock);
 
             // =============================================
             // then trying a directed selection of variables
         lops = BiLinearAlgorithm(oout, pA, pB, pT, true);
 
+        omp_set_lock(&writelock);
         if ( (std::get<0>(lops)<std::get<0>(nbops)) ||
              ( (std::get<0>(lops)==std::get<0>(nbops))
                && (std::get<1>(lops)<std::get<1>(nbops)) ) ) {
@@ -419,6 +423,7 @@ Tricounter SearchBiLinearAlgorithm(std::ostream& out,
             res = oout.str();
             std::clog << "# Found oriented [" << i << "], operations: " << lops << std::endl;
         }
+        omp_unset_lock(&writelock);
     }
 
         // Print the chosen algorithm
