@@ -1,5 +1,6 @@
 #!/bin/bash
 tmpfile=/tmp/fdt_plinopt.$$
+numopt=10
 
 if [ "$#" -ge 1 ]; then
     fics=("$@")
@@ -10,9 +11,8 @@ fi
 for fic in ${fics[@]}
 do
     echo "${fic}:"
-    ((./optimizer -O 10 $fic | ./compacter | ./PMchecker -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
-#     ((./matrix-transpose $fic | ./optimizer -O 10 | ./transpozer | ./PMchecker -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
-    ((./matrix-transpose $fic | ./optimizer -O 10 | ./transpozer | ./compacter | ./PMchecker -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
+    ((./optimizer -O ${numopt} $fic | ./compacter | ./PMchecker -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
+    ((./matrix-transpose $fic | ./optimizer -O ${numopt} | ./transpozer | ./compacter | ./PMchecker -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
 done
 
 tries=`wc -l ${tmpfile}|cut -d' ' -f1`

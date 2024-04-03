@@ -380,9 +380,6 @@ void FactorOutRows(std::ostream& sout, _Mat& M, size_t& nbadd, const char tev,
     }
 }
 
-
-
-
 // Factors out triangles:
 // < ab | b > replaced by < 0 | b | b > then < 0 | 0 | 0 | 1>
 // < a  | . >             < 0 | . | 1 >      < 0 | . | 1 | 0>
@@ -403,9 +400,8 @@ bool Triangle(std::ostream& sout, _Mat& M, _Mat& T,
 
     for(auto iter = T[j].begin(); iter != T[j].end();
         ++iter) { if (notAbsOne(FF, iter->second)) {
-        auto next(iter);
-        for(++next; next != T[j].end();
-            ++next) { if (notAbsOne(FF,next->second)) {
+        for(auto next = T[j].begin(); next != T[j].end();
+            ++next) { if ((next != iter) && notAbsOne(FF,next->second)) {
             const size_t i(next->first);
             typename _Mat::Element quot; FF.init(quot);
             const auto& rowi(M[i]);
@@ -429,12 +425,26 @@ bool Triangle(std::ostream& sout, _Mat& M, _Mat& T,
                     multiples.emplace_back(m,j,iter->second);
 
                         // Second, in j-th column, divide both elements by a
-                    const size_t k(iter->first);
-                    T[j].erase(next);
-                    T[j].erase(iter);
+#ifdef VERBATIM_PARSING
+                    std::clog << "# Found triangle: ("
+                              << k << ',' << j << ')' << '('
+                              << i << ',' << j << ')' << '('
+                              << i << ',' << third->first << ')' << std::endl;
+#endif
+
+                        //   second.i) add column with 1 and quot
                     T.resize(++m, T.coldim());
-                    T[m-1].emplace_back(k, FF.one);
-                    T[m-1].emplace_back(i, quot);
+                    T[m-1].emplace_back(iter->first, FF.one);
+                    T[m-1].emplace_back(next->first, quot);
+
+                        //   second.ii) remove iter & next from T[j]
+                    const auto& diter(*iter), & dnext(*next);
+                    auto isIorN {[diter,dnext](
+                        const typename _Mat::Row::value_type& p)
+                        { return ((p == diter) || (p == dnext));}};
+                    T[j].erase(std::remove_if(T[j].begin(), T[j].end(), isIorN),
+                               T[j].end());
+
                     Transpose(M,T);
 
                         // Third, record multiplication by b
