@@ -11,7 +11,7 @@ OPTFLAGS=-Ofast -D RANDOM_TIES
 # OPTFLAGS += -D COEFFICIENT_SEARCH=20u		# Default # sparsifier coeffs
 
 
-CXXFLAGS += ${OPTFLAGS} `pkg-config linbox --cflags`
+CXXFLAGS += ${OPTFLAGS} -fopenmp `pkg-config linbox --cflags`
 LOADLIBES+= `pkg-config linbox --libs |sed 's/-liml//;s/-lfplll//;s/-lflint//'`
 
 EXE = sms2pretty matrix-transpose MMchecker
