@@ -125,7 +125,9 @@ private:
 
 // ============================================================
 // Main parsing procedure, writing the ouput program
-int Tellegen(std::istream& input) {
+int Tellegen(std::istream& input,
+             const char ichar /* = 'i'*/, const char ochar /*= 'o'*/,
+             const char cchar /* = 'c'*/, const char zchar /* = 'z'*/) {
         // Files contains a program with the following SYNTAX
         // [+] constants name start with 'c'
         // [+] input variables start with 'i' --> transformed into 'o'
@@ -164,7 +166,7 @@ int Tellegen(std::istream& input) {
             std::vector<std::string> wordVector;
             wordVector.push_back(line.substr(0,postassign));
                 // Constants are left unmodified
-            if (wordVector.front()[0] == 'c') {
+            if (wordVector.front()[0] == cchar) {
 #ifdef VERBATIM_PARSING
                 std::clog << "# Constant found, unmodified : "
                           << line << std::endl;
@@ -173,10 +175,10 @@ int Tellegen(std::istream& input) {
                 continue;
             }
                 // Outputs are transposed into inputs
-            if (wordVector.front()[0] == 'o') {
+            if (wordVector.front()[0] == ochar) {
                 std::string oneout(wordVector.front());
                 inSet.insert( oneout );
-                oneout[0] = 'i';
+                oneout[0] = ichar;
 #ifdef VERBATIM_PARSING
                 std::clog << "# Output found, " << wordVector.front()
                           << ", becomes input: " << oneout<< std::endl;
@@ -246,9 +248,9 @@ int Tellegen(std::istream& input) {
                     // input variables are transposed into output
                 const std::string variable(*iter); ++iter;
 
-                if (variable[0] == 'i') {
+                if (variable[0] == ichar) {
                     std::string onein(fixvar);
-                    onein[0] = 'o';
+                    onein[0] = ochar;
                     onein += ":="; onein += fixvar; onein += ';';
                     outSet.insert(onein);
 #ifdef VERBATIM_PARSING
@@ -318,6 +320,10 @@ int Tellegen(std::istream& input) {
             //          directly write "xi:=...;"
         const auto varlen = line.find(":=",0);
         const std::string variable(line.substr(0,varlen));
+
+            // 'o' is replaced by 'z' in computations
+        if (line[0] == ochar) line[0]=zchar;
+
         const auto varposvec =
             std::find(varVector.begin(), varVector.end(), variable);
 
@@ -342,23 +348,26 @@ int Tellegen(std::istream& input) {
             varVector.erase(varposvec);
         }
 
-
             // ==================================
             // Instead of "o1:=i1; t1:=o1 + ...;"
             //     directly write "t1:=i1 + ...;"
             //     parsing the RHS with successive monomials
         const auto lhslen = line.find(":=",0);
         for(size_t prev(lhslen+2), pos(0);
-            (pos = line.find_first_of("+-*/;", prev)) !=
-                std::string::npos; prev = pos+1) {
-            if ((line[prev] == 'o') &&
-                (modSet.find(line.substr(prev, pos-prev)) == modSet.end())){
+            (pos = line.find_first_of("+-*/;", prev)) != std::string::npos;
+            prev = pos+1) {
+            if (line[prev] == ochar) {
+                if (modSet.find(line.substr(prev, pos-prev)) == modSet.end()){
 #ifdef VERBATIM_PARSING
-                std::clog << "# Unmodified input usage of: " << line.substr(prev, pos-prev) << ", is simplified in RHS: " << line << std::endl;
+                    std::clog << "# Unmodified input usage of: " << line.substr(prev, pos-prev) << ", is simplified in RHS: " << line << std::endl;
 #endif
-                line[prev]='i';
+                    line[prev]=ichar;
+                } else {
+                    line[prev]=zchar; // 'o' is replaced by 'z' in computations
+                }
             }
         }
+
             // ==================================
             // Now variable has been modified
             // --> will not be simplified anymore
@@ -564,9 +573,9 @@ size_t variablesThiner(VProgram_t& P, const bool simplSingle,
         // [3] Backward substitution of outputs
         //     --> from the end of the program, look for output variables
     for(auto line(P.rbegin()); line != P.rend(); ++line) {
-        if ((line->size() == 4) && (line->front()[0] != inchar) ) {
-
-            std::string& outvar(line->front()), &invar(*(line->begin()+2));
+        std::string& outvar(line->front()), &invar(*(line->begin()+2));
+        if ((line->size() == 4) && (invar[0] != inchar)
+            && (invar[0] != outchar) ) {
             for(auto next(line+1); next != P.rend(); ++next) {
                     // if variable is set, stop substituting
                 if (next->front() == invar) {

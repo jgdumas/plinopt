@@ -49,7 +49,9 @@ typedef std::vector<std::vector<std::string>> VProgram_t;
 
 // ============================================================
 // Main parsing procedure, writing the ouput program
-int Tellegen(std::istream& input);
+int Tellegen(std::istream& input,
+             const char ichar = 'i', const char ochar = 'o',
+             const char cchar = 'c', const char zchar = 'z');
 // ============================================================
 
 
