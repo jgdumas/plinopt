@@ -468,7 +468,7 @@ VProgram_t& programParser(VProgram_t& ProgramVector, std::stringstream& ssin) {
                 //     until end of string (npos)
             size_t prev(postassign+2);
             for(size_t pos(0);
-                (pos = line.find_first_of("()+-*/;", prev)) != std::string::npos;
+                (pos = line.find_first_of(")(+-*/;", prev)) != std::string::npos;
                 prev = pos+1) {
                     // One of '+', '-', '*', '/', ';'
                 std::string delimiter(line.substr(pos, 1));
@@ -516,9 +516,6 @@ VProgram_t& programParser(VProgram_t& ProgramVector, std::stringstream& ssin) {
     return ProgramVector;
 }
 // ============================================================
-
-
-
 
 
 
@@ -862,24 +859,33 @@ size_t extractParenthesis(VProgram_t& newP, std::vector<std::string>& line,
     size_t ep(0);
     auto openp = std::find(line.begin(),line.end(),"(");
     if (openp != line.end()) {
-        auto closp = std::find(line.rbegin(),line.rend(),")");
+        size_t depth(1);
+        const auto ocp = { "(", ")" };
+        auto closp = openp;
+        do {
+            closp = std::find_first_of(closp+1,line.end(),ocp.begin(),ocp.end());
+
+            if (*closp == ")") --depth;
+            else ++depth;
+        } while(depth>0);
         std::vector<std::string> newline;
         std::string newvar;
         newvar += freechar; newvar += std::to_string(++tmpnum);
         newline.push_back(newvar);
         newline.emplace_back(":=");
-        newline.insert(newline.end(), openp+1, (closp+1).base());
+        newline.insert(newline.end(), openp+1, closp);
         newline.emplace_back(";");
         *openp = newvar;
-        line.erase(openp+1, closp.base());
+        line.erase(openp+1, closp+1);
 #ifdef VERBATIM_PARSING
         std::clog << "# new created line: " << newline  << std::endl;
         std::clog << "# replaced    line: " << line  << std::endl;
 #endif
         ep = extractParenthesis(newP, newline, freechar, tmpnum);
         newP.push_back(newline);
+        return ep+1;
     }
-    return ep+1;
+    return 0;
 }
 // ============================================================
 
@@ -901,7 +907,10 @@ VProgram_t& parenthesisExpand(VProgram_t& P) {
 
     VProgram_t nProgram;
     for(auto& line: P) {
-        extractParenthesis(nProgram, line, freechar, tmpnum);
+        size_t ep(0);
+        do {
+            ep = extractParenthesis(nProgram, line, freechar, tmpnum);
+        } while(ep>0);
         nProgram.push_back(std::move(line));
     }
     return P=std::move(nProgram);

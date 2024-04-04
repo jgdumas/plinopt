@@ -64,11 +64,12 @@ int PMcheck(const std::string& prgname, const std::string& matname,
         QRat QQ;
         QMstream ms(QQ, matfile);
         Matrix M(ms); M.resize(M.rowdim(),M.coldim());
-        FMatrix B(M, F);
-        const size_t m(B.rowdim()), n(B.coldim());
-        FMatrix R(F,m,n);
+        const size_t m(M.rowdim()), n(M.coldim());
+        FMatrix B(M,F);
+        LinBox::DenseMatrix<Field> dB(F,m,n),dA(F,m,n),R(F,m,n);
+        sparse2dense(dA,A); sparse2dense(dB,B);
         LinBox::MatrixDomain<Field> BMD(F);
-        BMD.sub(R,B,A);
+        BMD.sub(R,dB,dA);
 
         if (BMD.isZero (R))
             std::clog <<"# \033[1;32mSUCCESS: correct "
