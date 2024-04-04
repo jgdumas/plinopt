@@ -27,8 +27,10 @@ _Mat& PMbuilder(_Mat& A, std::istream& input) {
         // Line by line parsing
     VProgram_t ProgramVector; programParser(ProgramVector, ssin);
     const size_t PVs { progSize(ProgramVector) };
+    std::clog << ProgramVector << std::endl;
     std::clog << std::string(40,'#') << std::endl;
     parenthesisExpand(ProgramVector);
+    std::clog << ProgramVector << std::endl;
     std::clog << std::string(40,'#') << std::endl;
 
     return matrixBuilder(A, ProgramVector);
@@ -63,8 +65,10 @@ int PMcheck(const std::string& prgname, const std::string& matname,
         std::ifstream matfile(matname);
         QRat QQ;
         QMstream ms(QQ, matfile);
-        Matrix M(ms); M.resize(M.rowdim(),M.coldim());
-        const size_t m(M.rowdim()), n(M.coldim());
+        Matrix M(ms);
+        const size_t m(std::max(M.rowdim(),A.rowdim()));
+        const size_t n(std::max(M.coldim(),A.coldim()));
+        M.resize(m,n); A.resize(m,n);
         FMatrix B(M,F);
         LinBox::DenseMatrix<Field> dB(F,m,n),dA(F,m,n),R(F,m,n);
         sparse2dense(dA,A); sparse2dense(dB,B);
