@@ -45,9 +45,10 @@ inline void opRow(_Mat& M, const size_t i, const typename _Mat::Row& s,
 
 
 // ============================================================
-template<typename _Mat, typename Field>
-_Mat& matrixBuilder(_Mat& A, const VProgram_t& P, const Field& F, const char outchar = 'o') {
-
+template<typename _Mat>
+_Mat& matrixBuilder(_Mat& A, const VProgram_t& P, const char outchar = 'o') {
+    using Field=typename _Mat::Field;
+    const Field& F(A.field());
     _Mat M(F);
     std::map<std::string,size_t> inputs;
     std::map<std::string,size_t> variables;
@@ -176,8 +177,9 @@ std::clog << std::string(40,'#') << std::endl;
 
 
 // ============================================================
+// Parsing a program and building the associated matrix
 template<typename _Mat>
-_Mat& PMcheck(_Mat& A, std::istream& input) {
+_Mat& PMbuilder(_Mat& A, std::istream& input) {
     std::stringstream ssin; ssin << input.rdbuf();
 
         // Line by line parsing
@@ -185,49 +187,43 @@ _Mat& PMcheck(_Mat& A, std::istream& input) {
     const size_t PVs { progSize(ProgramVector) };
     std::clog << std::string(40,'#') << std::endl;
 
-    QRat QQ;
-
-
-    return matrixBuilder(A, ProgramVector, QQ);
+    return matrixBuilder(A, ProgramVector);
 }
 // ============================================================
 
 
 
-
 // ============================================================
-// Main: select between file / std::cin
-int main(int argc, char** argv) {
-    std::string prgname, matname;
+// Checking a linear program with a matrix
+template<typename Field>
+int PMcheck(const std::string& prgname, const std::string& matname,
+            const Field& F) {
 
-    for (int i = 1; argc>i; ++i) {
-        std::string args(argv[i]);
-        if (args == "-h") {
-            std::clog << "Usage: " << argv[0] << "[-M file.sms] [stdin|file.prg] \n";
-            exit(-1);
-        } else if (args == "-M") { matname = std::string(argv[++i]); }
-        else { prgname = args; }
-    }
+        // ============================================================
+        // Rebind matrix type over sub field matrix type
+    using FMatrix=typename Matrix::template rebind<Field>::other;
 
-    QRat QQ;
-    Matrix A(QQ);
+    FMatrix A(F);
 
     if (prgname == "") {
-        PMcheck(A, std::cin);
+        PMbuilder(A, std::cin);
     } else {
         std::ifstream ifile(prgname);
         if ( ifile ) {
-            PMcheck(A, ifile);
+            PMbuilder(A, ifile);
             ifile.close();
         }
     }
 
     if (matname != "") {
         std::ifstream matfile(matname);
+        QRat QQ;
         QMstream ms(QQ, matfile);
-        Matrix B(ms); const size_t m(B.rowdim()), n(B.coldim());
-        Matrix R(QQ,m,n);
-        LinBox::MatrixDomain<QRat> BMD(QQ);
+        Matrix M(ms); M.resize(M.rowdim(),M.coldim());
+        FMatrix B(M, F);
+        const size_t m(B.rowdim()), n(B.coldim());
+        FMatrix R(F,m,n);
+        LinBox::MatrixDomain<Field> BMD(F);
         BMD.sub(R,B,A);
 
         if (BMD.isZero (R))
@@ -247,7 +243,37 @@ int main(int argc, char** argv) {
     } else
         A.write(std::clog, FileFormat::Pretty) << std::endl;
 
-
     return 0;
+}
+
+
+
+
+// ============================================================
+// Main: select between file / std::cin
+int main(int argc, char** argv) {
+    std::string prgname, matname;
+    Givaro::Integer q(0u);
+
+    for (int i = 1; argc>i; ++i) {
+        std::string args(argv[i]);
+        if (args == "-h") {
+            std::clog << "Usage: " << argv[0] << "[-q #] [-M file.sms] [stdin|file.prg] \n"
+                      << "  -M f: Matrix file (compared to program file)\n"
+                      << "  -q #: search modulo (default is Rationals)\n";
+            exit(-1);
+        }
+        else if (args == "-M") { matname = std::string(argv[++i]); }
+        else if (args == "-q") { q = Givaro::Integer(argv[++i]); }
+        else { prgname = args; }
+    }
+
+    if (! Givaro::isZero(q)) {
+        Givaro::Modular<Givaro::Integer> FF(q);
+        return PMcheck(prgname, matname, FF);
+    } else {
+        QRat QQ;
+        return PMcheck(prgname, matname, QQ);
+    }
 }
 // ============================================================

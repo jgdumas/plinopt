@@ -1,6 +1,7 @@
 #!/bin/bash
 tmpfile=/tmp/fdt_plinopt.$$
 numopt=10
+modulus=65521
 
 if [ "$#" -ge 1 ]; then
     fics=("$@")
@@ -12,6 +13,7 @@ for fic in ${fics[@]}
 do
     echo "${fic}:"
     ((./optimizer -O ${numopt} $fic | ./compacter | ./PMchecker -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
+    ((./matrix-transpose $fic | ./optimizer -q ${modulus} -O ${numopt} | ./transpozer | ./compacter | ./PMchecker  -q ${modulus} -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
     ((./matrix-transpose $fic | ./optimizer -O ${numopt} | ./transpozer | ./compacter | ./PMchecker -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
 done
 

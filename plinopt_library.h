@@ -75,14 +75,17 @@ template<typename _Mat1, typename _Mat2, typename _Field>
 _Mat1& matrixCopy(_Mat1&, const _Mat2&, const _Field&);
 
 	// Replace row i of A, by row j of B
-Matrix& setRow(Matrix& A, size_t i, const Matrix& B, size_t j, const QRat&);
-
-	// Negate row i of A
-Matrix& negRow(Matrix& A, size_t i, const QRat& QQ);
+template<typename _Mat1, typename _Mat2, typename _Field>
+_Mat1& setRow(_Mat1& A, size_t i, const _Mat2& B, size_t j, const _Field&);
 
 	// Replace row i of A, by v
-template<typename _Mat, typename Vector>
-_Mat& setRow(_Mat& A, size_t i, const Vector& v, const QRat& QQ);
+template<typename _Mat, typename _Vector, typename _Field>
+_Mat& setRow(_Mat& A, size_t i, const _Vector& v, const _Field& QQ);
+
+	// Negate row i of A
+template<typename _Mat, typename _Field>
+_Mat& negRow(_Mat& A, size_t i, const _Field& F);
+
 
 	// permute rows
 template<typename _Mat1, typename _Mat2>
