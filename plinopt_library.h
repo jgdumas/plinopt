@@ -96,6 +96,11 @@ template<typename _Mat1, typename _Mat2>
 _Mat1& permuteRows(_Mat1& R, const Permutation& P, const _Mat2& A,
                    const QRat& QQ);
 
+	// copy sparse matrix M into dense matrix A
+template<typename _DMat, typename _SMat>
+inline _DMat& sparse2dense(_DMat& A, const _SMat& M);
+
+
 // ============================================
 
 	// Printing tuples

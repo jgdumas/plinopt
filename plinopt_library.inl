@@ -11,8 +11,7 @@
 
 template<typename _Mat1, typename _Mat2>
 inline _Mat1& Transpose(_Mat1& T, const _Mat2& A) {
-    T.resize(0,0);
-    T.resize(A.coldim(), A.rowdim());
+    T.resize(0,0); T.resize(A.coldim(), A.rowdim());
     for(auto it = A.IndexedBegin(); it != A.IndexedEnd(); ++it)
         T.setEntry(it.colIndex(),it.rowIndex(), it.value());
     return T;
@@ -20,8 +19,7 @@ inline _Mat1& Transpose(_Mat1& T, const _Mat2& A) {
 
 template<typename _Mat1, typename _Mat2>
 inline _Mat1& NegTranspose(_Mat1& T, const _Mat2& A) {
-    T.resize(0,0);
-    T.resize(A.coldim(), A.rowdim());
+    T.resize(0,0); T.resize(A.coldim(), A.rowdim());
     typename _Mat1::Element tmp; T.field().init(tmp);
     for(auto it = A.IndexedBegin(); it != A.IndexedEnd(); ++it)
         T.setEntry(it.colIndex(),it.rowIndex(), T.field().neg(tmp,it.value()));
@@ -80,7 +78,7 @@ inline void opRow(_Mat& M, const size_t i, const typename _Mat::Row& s,
 
 	// copy dense matrix M into sparse matrix A
 inline Matrix& dense2sparse(Matrix& A, const DenseMatrix& M, const QRat& QQ) {
-    A.resize(M.rowdim(), M.coldim());
+    A.resize(0,0); A.resize(M.rowdim(), M.coldim());
     for(size_t i=0; i<A.rowdim(); ++i) {
         setRow(A,i,M[i],QQ);
     }
@@ -88,9 +86,9 @@ inline Matrix& dense2sparse(Matrix& A, const DenseMatrix& M, const QRat& QQ) {
 }
 
 	// copy sparse matrix M into dense matrix A
-template<typename _Mat>
-inline DenseMatrix& sparse2dense(DenseMatrix& A, const _Mat& M) {
-    A.resize(M.rowdim(), M.coldim());
+template<typename _DMat, typename _SMat>
+inline _DMat& sparse2dense(_DMat& A, const _SMat& M) {
+    A.resize(0,0); A.resize(M.rowdim(), M.coldim());
     for(auto indices = M.IndexedBegin(); indices != M.IndexedEnd(); ++indices) {
         A.setEntry(indices.rowIndex(), indices.colIndex(), indices.value());
     }
@@ -100,7 +98,7 @@ inline DenseMatrix& sparse2dense(DenseMatrix& A, const _Mat& M) {
 	// copy sparse matrix B into sparse matrix A
 template<typename _Mat>
 inline _Mat& sparse2sparse(_Mat& A, const _Mat& B) {
-    A.resize(B.rowdim(), B.coldim());
+    A.resize(0,0); A.resize(B.rowdim(), B.coldim());
     std::copy(B.rowBegin(), B.rowEnd(), A.rowBegin());
     return A;
 }

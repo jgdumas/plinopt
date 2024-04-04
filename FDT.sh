@@ -6,7 +6,7 @@ modulus=65521
 if [ "$#" -ge 1 ]; then
     fics=("$@")
 else
-    fics=("data/*sms")
+    fics=(data/*sms)
 fi
 
 for fic in ${fics[@]}
@@ -17,7 +17,8 @@ do
     ((./matrix-transpose $fic | ./optimizer -O ${numopt} | ./transpozer | ./compacter -s | ./PMchecker -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
 done
 
-tries=`wc -l ${tmpfile}|cut -d' ' -f1`
+
+let tries=3*${#fics[@]}
 success=`grep SUCCESS ${tmpfile} | wc -l`
 
 echo -ne "\033[1;93mSUCCESS: "
