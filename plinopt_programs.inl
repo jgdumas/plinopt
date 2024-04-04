@@ -758,7 +758,7 @@ _Mat& matrixBuilder(_Mat& A, const VProgram_t& P, const char outchar /* ='o'*/) 
 
     for(const auto& line: P) {
 #ifdef VERBATIM_PARSING
-printline(std::clog << "# line: ", line) << std::endl;
+        printline(std::clog << "# line: ", line) << std::endl;
 #endif
         const auto& output(line.front());
 
@@ -789,22 +789,22 @@ printline(std::clog << "# line: ", line) << std::endl;
                     M.resize(m,n+1);
                 }
                 const size_t j = inputs[*word]; ++word;
+                typename Field::Element tmp; F.init(tmp);
                 if (*word == "*") {
                     ++word;
-                    typename Field::Element tmp;
                     std::stringstream ssin; ssin << word->c_str();
                     F.read(ssin, tmp);
                     F.mulin(coeff,tmp);
                 } else if (*word == "/") {
                     ++word;
-                    typename Field::Element tmp;
                     std::stringstream ssin; ssin << word->c_str();
                     F.read(ssin, tmp);
                     F.divin(coeff, tmp);
                 }  else {
                     --word;
                 }
-                M.setEntry(i,j,coeff);
+                F.assign(tmp, M.getEntry(i,j)); // might be zero (no refEntry)
+                M.setEntry(i,j, F.addin(tmp, coeff) );
             } else {
                 const size_t j(variables[*word]);
 // std::clog << "### row[" << i << "] : " << output << std::endl;
@@ -832,15 +832,15 @@ printline(std::clog << "# line: ", line) << std::endl;
 
 // M.write(std::clog << "# BEF opR M:", FileFormat::Pretty) << std::endl;
                 opRow(M, i, M[j], coeff, F);
-//  M.write(F.write(std::clog << "# AFT ", coeff) << " opR M:", FileFormat::Pretty) << std::endl;
+// M.write(F.write(std::clog << "# AFT ", coeff) << " opR M:", FileFormat::Pretty) << std::endl;
             }
         }
 
 #ifdef VERBATIM_PARSING
-std::clog << "# I: " << inputs << std::endl;
-std::clog << "# V: " << variables << std::endl;
-M.write(std::clog << "# M:", FileFormat::Pretty) << std::endl;
-std::clog << std::string(40,'#') << std::endl;
+        std::clog << "# I: " << inputs << std::endl;
+        std::clog << "# V: " << variables << std::endl;
+        M.write(std::clog << "# M:", FileFormat::Pretty) << std::endl;
+        std::clog << std::string(40,'#') << std::endl;
 #endif
 
     }
