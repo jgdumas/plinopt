@@ -86,6 +86,10 @@ _Mat& setRow(_Mat& A, size_t i, const _Vector& v, const _Field& QQ);
 template<typename _Mat, typename _Field>
 _Mat& negRow(_Mat& A, size_t i, const _Field& F);
 
+    // M[i] <- M[i] + c * s
+template<typename _Mat, typename Field>
+inline void opRow(_Mat& M, const size_t i, const typename _Mat::Row& s,
+                  const typename Field::Element& c, const Field& F);
 
 	// permute rows
 template<typename _Mat1, typename _Mat2>
