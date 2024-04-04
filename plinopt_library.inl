@@ -88,7 +88,7 @@ inline Matrix& dense2sparse(Matrix& A, const DenseMatrix& M, const QRat& QQ) {
 	// copy sparse matrix M into dense matrix A
 template<typename _DMat, typename _SMat>
 inline _DMat& sparse2dense(_DMat& A, const _SMat& M) {
-    A.resize(0,0); A.resize(M.rowdim(), M.coldim());
+    A.init(M.rowdim(), M.coldim());
     for(auto indices = M.IndexedBegin(); indices != M.IndexedEnd(); ++indices) {
         A.setEntry(indices.rowIndex(), indices.colIndex(), indices.value());
     }

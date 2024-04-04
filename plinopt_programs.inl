@@ -509,10 +509,8 @@ VProgram_t& programParser(VProgram_t& ProgramVector, std::stringstream& ssin) {
             std::clog << std::endl;
 #endif
             ProgramVector.push_back(wordVector);
-
         }
     }
-
     return ProgramVector;
 }
 // ============================================================
@@ -879,13 +877,17 @@ size_t extractParenthesis(VProgram_t& newP, std::vector<std::string>& line,
         line.erase(openp+1, closp+1);
 #ifdef VERBATIM_PARSING
         std::clog << "# new created line: " << newline  << std::endl;
-        std::clog << "# replaced    line: " << line  << std::endl;
 #endif
         ep = extractParenthesis(newP, newline, freechar, tmpnum);
         newP.push_back(newline);
+#ifdef VERBATIM_PARSING
+        std::clog << "# replaced    line: " << line
+                  << " (" << (ep+1) << ')' << std::endl;
+#endif
+        ep += extractParenthesis(newP, line, freechar, tmpnum);
         return ep+1;
-    }
-    return 0;
+    } else
+        return 0;
 }
 // ============================================================
 
@@ -907,10 +909,7 @@ VProgram_t& parenthesisExpand(VProgram_t& P) {
 
     VProgram_t nProgram;
     for(auto& line: P) {
-        size_t ep(0);
-        do {
-            ep = extractParenthesis(nProgram, line, freechar, tmpnum);
-        } while(ep>0);
+        extractParenthesis(nProgram, line, freechar, tmpnum);
         nProgram.push_back(std::move(line));
     }
     return P=std::move(nProgram);
