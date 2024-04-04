@@ -39,11 +39,10 @@ std::ostream& Compacter(std::ostream& sout, std::istream& input,
     std::clog << std::string(40,'#') << std::endl;
 
         // Semantic line removal
-    int merged = variablesTrimer(ProgramVector, simplSingle);
+    variablesTrimer(ProgramVector, simplSingle);
     sout << ProgramVector;
+    const size_t PRs { progSize(ProgramVector) };
     std::clog << std::string(40,'#') << std::endl;
-
-    const size_t PRs { merged + progSize(ProgramVector) };
 
         // Comparing number of elements in the programs
     std::clog << "# \033[1;32m" << PRs << "\telements\tinstead of "
@@ -53,7 +52,6 @@ std::ostream& Compacter(std::ostream& sout, std::istream& input,
     return sout;
 }
 // ============================================================
-
 
 
 
