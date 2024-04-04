@@ -95,6 +95,9 @@ auto prgorder {[](const pairSVs_t& a, const pairSVs_t& b) {
 auto isAddSub {[](const std::string& s) {
     return (s=="+") || (s=="-");} };
 
+auto isMulDiv {[](const std::string& s) {
+    return (s=="*") || (s=="/");} };
+
 // Echange '+' with '-' and vice-versa
 void swapsign(std::string& s) {
     if (s=="+") { s.replace(0,1,1,'-'); }
@@ -518,6 +521,28 @@ VProgram_t& programParser(VProgram_t& ProgramVector, std::stringstream& ssin) {
 
 
 // ============================================================
+// Rotates lines starting with a '-'
+bool rotateMinus(std::vector<std::string>& line) {
+    if (line[2] == "-") {
+        size_t depth(0);
+        for(size_t i=2; i<line.size(); ++i) {
+            if (line[i] == "(") ++depth;
+            if (line[i] == ")") --depth;
+            if ((depth ==0) && (line[i] == "+")) {
+                std::rotate(line.begin()+2,line.begin()+i,line.end()-1);
+                line.erase(line.begin()+2); // no need for '+' anymore
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+// ============================================================
+
+
+
+// ============================================================
 // Rewrites:
 //   [1] temporarily replaces output variables by temporary, except last ones
 //   [2] replaces variable only assigned to temporary, directly by input
@@ -606,25 +631,14 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
 
         // ==================================
         // [*] Rotates lines starting with a '-'
-    for(auto& line : P) {
-        if (line[2] == "-") {
-            for(size_t i=2; i<line.size(); ++i) {
-                if (line[i] == "+") {
-                    std::rotate(line.begin()+2,line.begin()+i,line.end()-1);
-                    line.erase(line.begin()+2); // no need for '+' anymore
-                    break;
-                }
-            }
-        }
-    }
-
+    for(auto& line : P) rotateMinus(line);
 
     if (! simplSingle) return 0;
 
         // ==================================
         // [4] Rewriting singly used variables
         //     --> "x:= ...;" folllowed by "y:=... x ...;";
-    size_t tmpnum(0), merged(0);
+    size_t tmpnum(0);
 
         // Occurences of temporary variables
     std::map<std::string, std::vector<size_t> > varsSet, varsUse;
@@ -669,6 +683,12 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
             const size_t i(occurences.front()), j(occurences.back());
             auto& init(P[i]); auto& line(P[j]);
 
+#ifdef VERBATIM_PARSING
+            std::clog << "# variable: " << variable
+                      << ", P[" << i << "]: " << init
+                      << ", P[" << j << "]: " << line << std::endl;
+#endif
+
                 // Single use of variable once set, not as storage
             size_t varloc(2);
             for(; varloc<line.size(); ++varloc) {
@@ -685,7 +705,7 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
 
                     // Whether replacement requires parenthesis
                 const auto penultimate(init.end()-1);
-                for(auto iter(init.begin()+2); iter != penultimate; ++iter) {
+                for(auto iter(init.begin()+3); iter != penultimate; ++iter) {
                     if (isAddSub(*iter)) {
                         if (changesign) swapsign(*iter);
                         multimonomial = true;
@@ -694,17 +714,22 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
 
                     // Replacement expression
                 const auto replength(init.end()-init.begin()-2);
-                line.erase(line.begin()+varloc); // remove previous variable
-                line.insert(line.begin()+varloc,init.begin()+2,penultimate);
-                if (multimonomial) {
+                line[varloc] = std::move(init[2]); // replace previous variable
+                const bool tobeneg(line[varloc-1] == "-");
+                const bool tobemul(isMulDiv(line[varloc+1]));
+                line.insert(line.begin()+varloc+1,init.begin()+3,penultimate);
+                if (multimonomial && (tobemul || tobeneg)) {
                     line.insert(line.begin()+varloc,"(");
                     line.insert(line.begin()+varloc+replength,")");
-                        // Do not count parenthesis
-                    merged -= 2;
                 }
 
                 P[i].resize(0); // No need for that variable (& line) anymore
             }
+#ifdef VERBATIM_PARSING
+            std::clog << "#         : " << variable
+                      << " --> P[" << j << "]: " << line << std::endl;
+#endif
+
         }
     }
 
@@ -712,11 +737,13 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
         // [*] Removes empty lines
     P.erase(std::remove_if(P.begin(), P.end(), emptyline), P.end());
 
-    return merged;
+        // ==================================
+        // [*] Rotates lines starting with a '-'
+    for(auto& line : P) rotateMinus(line);
+
+    return tmpnum;
 }
 // ============================================================
-
-
 
 
 
