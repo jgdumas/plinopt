@@ -30,40 +30,36 @@ inline _Mat1& NegTranspose(_Mat1& T, const _Mat2& A) {
 
 
 	// Replace row i of A, by row j of B
-inline Matrix& setRow(Matrix& A, size_t i, const Matrix& B, size_t j,
-                      const QRat& QQ) {
+template<typename _Mat1, typename _Mat2, typename _Field>
+inline _Mat1& setRow(_Mat1& A, size_t i, const _Mat2& B, size_t j,
+                     const _Field& F) {
     A[i].resize(0);
     for(const auto& iter: B[j]) {
-        if (! QQ.isZero(iter.second)) A.setEntry(i,iter.first,iter.second);
+        if (! F.isZero(iter.second)) A.setEntry(i,iter.first,iter.second);
     }
     return A;
 }
 
 	// Replace row i of A, by v
-template<typename Vector>
-inline Matrix& setRow(Matrix& A, size_t i, const Vector& v, const QRat& QQ) {
+template<typename _Mat, typename _Vector, typename _Field>
+inline _Mat& setRow(_Mat& A, size_t i, const _Vector& v, const _Field& F) {
     A[i].resize(0);
-    for(size_t j=0; j<v.size(); ++j) {
-        if (! QQ.isZero(v[j])) A.setEntry(i,j,v[j]);
-    }
+    for(size_t j=0; j<v.size(); ++j) if (! F.isZero(v[j])) A.setEntry(i,j,v[j]);
     return A;
 }
 
-template<typename Vector>
+template<typename _Vector, typename _Field>
 inline DenseMatrix& setRow(DenseMatrix& A, size_t i,
-                           const Vector& v, const QRat& QQ) {
-    for(size_t j=0; j<v.size(); ++j) {
-        A.setEntry(i,j,v[j]);
-    }
+                           const _Vector& v, const _Field& F) {
+    for(size_t j=0; j<v.size(); ++j) A.setEntry(i,j,v[j]);
     return A;
 }
 
 
-	// Negate row i of A
-inline Matrix& negRow(Matrix& A, size_t i, const QRat& QQ) {
-    for(auto& iter: A[i]) {
-        QQ.negin(iter.second);
-    }
+	// Negate row i of (sparse) A
+template<typename _Mat, typename _Field>
+inline _Mat& negRow(_Mat& A, size_t i, const _Field& F) {
+    for(auto& iter: A[i]) F.negin(iter.second);
     return A;
 }
 
