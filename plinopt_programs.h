@@ -68,10 +68,22 @@ VProgram_t& programParser(VProgram_t& ProgramVector, std::stringstream& ssin);
 //   [*] Removes all no-op operations like ai:=ai;
 //   [3] Backward reassingment of output variables
 //   [4] (optional) rewrites singly used variables in-place
-size_t variablesThiner(VProgram_t& P, const bool simplSingle=true,
+size_t variablesTrimer(VProgram_t& P, const bool simplSingle=true,
                        const char inchar = 'i', const char outchar = 'o');
 // ============================================================
 
+
+// ============================================================
+// Recreate matrix from Program
+template<typename _Mat>
+_Mat& matrixBuilder(_Mat& A, const VProgram_t& P, const char outchar = 'o');
+// ============================================================
+
+
+// ============================================================
+// Transform program by creating temporaries for parenthesis blocks
+VProgram_t& parenthesisExpand(VProgram_t& P);
+// ============================================================
 
 
 // ============================================================
@@ -90,6 +102,8 @@ size_t progSize(const VProgram_t& P) ;
 
 // ===============================================================
 std::ostream& operator<<(std::ostream& sout, const VProgram_t& P);
+std::ostream& operator<<(std::ostream& out,
+                         const std::map<std::string,size_t>& m);
 // ===============================================================
 
 // ============================================================
@@ -97,6 +111,10 @@ std::ostream& operator<<(std::ostream& sout, const VProgram_t& P);
 struct stackbuf;
 // ============================================================
 
+// ============================================================
+// Find unused variable name
+char unusedChar(const std::set<char>& C, const char cstart = 'a'-1);
+// ============================================================
 
 
 #include "plinopt_programs.inl"

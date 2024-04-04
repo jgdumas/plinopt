@@ -63,6 +63,21 @@ inline _Mat& negRow(_Mat& A, size_t i, const _Field& F) {
     return A;
 }
 
+
+// M[i] <- M[i] + c * s
+template<typename _Mat, typename Field>
+inline void opRow(_Mat& M, const size_t i, const typename _Mat::Row& s,
+                  const typename Field::Element& c, const Field& F) {
+    for(auto e: s) {
+        const size_t j(e.first);
+        typename Field::Element t; F.init(t);
+        F.assign(t,M.getEntry(i,j)); // might be zero (can't use refEntry)
+        F.axpyin(t,c,e.second);
+        M.setEntry(i,j,t);
+    }
+}
+
+
 	// copy dense matrix M into sparse matrix A
 inline Matrix& dense2sparse(Matrix& A, const DenseMatrix& M, const QRat& QQ) {
     A.resize(M.rowdim(), M.coldim());

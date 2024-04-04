@@ -53,6 +53,16 @@ inline std::ostream& operator<<(std::ostream& sout, const VProgram_t& P) {
 // ============================================================
 
 
+// ============================================================
+std::ostream& operator<<(std::ostream& out,
+                         const std::map<std::string,size_t>& m) {
+    out << '{';
+    for(const auto& [variable, index] : m)
+        out << variable << '(' << index << ')' << ',';
+    return out << '}';
+}
+// ============================================================
+
 
 // ============================================================
 inline std::ostream& printline(std::ostream& sout,
@@ -120,6 +130,25 @@ private:
     }
     std::vector<std::string> d_lines;
 };
+// ============================================================
+
+
+
+// ============================================================
+// Find unused variable name
+char unusedChar(const std::set<char>& C, const char cstart /* = 'a'-1 */) {
+    if (C.size() > 50) {
+        std::cerr << "\033[1;31m**** ERROR ****\033[0m"
+                  << "not enough free single char variables." << std::endl;
+        exit(-1);
+    }
+    char tmpchar(cstart);
+    for(; C.find(++tmpchar) != C.end();){}
+    if (tmpchar > 'z') {
+        for(tmpchar='A'; C.find(tmpchar)!=C.end();++tmpchar){}
+    }
+    return tmpchar;
+}
 // ============================================================
 
 
@@ -439,7 +468,7 @@ VProgram_t& programParser(VProgram_t& ProgramVector, std::stringstream& ssin) {
                 //     until end of string (npos)
             size_t prev(postassign+2);
             for(size_t pos(0);
-                (pos = line.find_first_of("+-*/;", prev)) != std::string::npos;
+                (pos = line.find_first_of("()+-*/;", prev)) != std::string::npos;
                 prev = pos+1) {
                     // One of '+', '-', '*', '/', ';'
                 std::string delimiter(line.substr(pos, 1));
@@ -450,7 +479,7 @@ VProgram_t& programParser(VProgram_t& ProgramVector, std::stringstream& ssin) {
                     if ((delimiter == "/") && isNatural(node)) {
                             // Found rational number, get next natural
                         prev = pos+1;
-                        pos = line.find_first_of("+-*;", prev);
+                        pos = line.find_first_of("()+-*;", prev);
                         const std::string nnod(line.substr(prev, pos-prev));
 #ifdef VERBATIM_PARSING
                         std::clog << "# Rational found: "
@@ -500,32 +529,16 @@ VProgram_t& programParser(VProgram_t& ProgramVector, std::stringstream& ssin) {
 //   [*] Removes all no-op operations like ai:=ai;
 //   [3] Backward reassingment of output variables
 //   [4] (optional) rewrites singly used variables in-place
-size_t variablesThiner(VProgram_t& P, const bool simplSingle,
+size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
                        const char inchar, const char outchar) {
         // ==================================
         // Find two unused variable names
     std::set<char> varsChar;
-    for(const auto& line: P) {
-        for(const auto& word: line) {
-            varsChar.insert(word[0]);
-        }
-    }
-    if (varsChar.size() > 50) {
-        std::cerr << "\033[1;31m**** ERROR ****\033[0m"
-                  << "not enough free single char variables." << std::endl;
-        exit(-1);
-    }
-    char freechar('a');
-    for( ; varsChar.find(freechar) != varsChar.end(); ++freechar){}
-    if (freechar > 'z') {
-        for(freechar='A'; varsChar.find(freechar)!=varsChar.end();++freechar){}
-    }
-    char tmpchar(freechar);
-    for(++tmpchar ; varsChar.find(tmpchar) != varsChar.end(); ++tmpchar){}
-    if (tmpchar > 'z') {
-        for(tmpchar='A'; varsChar.find(tmpchar)!=varsChar.end();++tmpchar){}
-    }
+    for(const auto& line: P) for(const auto& word: line)
+        varsChar.insert(word[0]);
 
+    char freechar(unusedChar(varsChar));
+    char tmpchar(unusedChar(varsChar,freechar));
 
         // ==================================
         // [1] Use output variables only at the end of the program
@@ -628,7 +641,7 @@ size_t variablesThiner(VProgram_t& P, const bool simplSingle,
              && (varsSet.find(variable) != varsSet.end()) ) {
                 // Variable is overwritten, change it
             variable = tmpchar;
-            variable += std::to_string(tmpnum);
+            variable += std::to_string(++tmpnum);
 
             for(size_t j=i+1; j<P.size(); ++j) {
                 auto& nextline(P[j]);
@@ -638,8 +651,6 @@ size_t variablesThiner(VProgram_t& P, const bool simplSingle,
                     }
                 }
             }
-
-            ++tmpnum;
         }
         varsSet[variable].emplace_back(i);
         for(const auto& word: line) {
@@ -707,5 +718,192 @@ size_t variablesThiner(VProgram_t& P, const bool simplSingle,
     P.erase(std::remove_if(P.begin(), P.end(), emptyline), P.end());
 
     return merged;
+}
+// ============================================================
+
+
+
+
+
+// ============================================================
+template<typename _Mat>
+_Mat& matrixBuilder(_Mat& A, const VProgram_t& P, const char outchar /* ='o'*/) {
+    using Field=typename _Mat::Field;
+    const Field& F(A.field());
+    _Mat M(F);
+    std::map<std::string,size_t> inputs;
+    std::map<std::string,size_t> variables;
+
+    for(const auto& line: P) {
+#ifdef VERBATIM_PARSING
+printline(std::clog << "# line: ", line) << std::endl;
+#endif
+        const auto& output(line.front());
+
+        if (variables.find(output) == variables.end()) {
+            const size_t m(M.rowdim()), n(M.coldim());
+            variables[output] = m;
+            M.resize(m+1,n);
+        }
+        const size_t i(variables[output]);
+        for(auto word=line.begin()+2; word !=line.end(); ++word) {
+// std::clog << "## word: " << *word << std::endl;
+            typename Field::Element coeff; F.init(coeff); F.assign(coeff, F.one);
+            if (*word == ";") break;
+            if (*word == "-") {
+                F.mulin(coeff, F.mOne); ++word;
+            } else if (*word == "+") {
+                ++word;
+            }
+            if (*word == output) {
+                if (F.isMOne(coeff)) negRow(M, i, F);
+                continue;
+            }
+            if (variables.find(*word) == variables.end()) {
+                    // Input found
+                if (inputs.find(*word) == inputs.end()) {
+                    const size_t m(M.rowdim()), n(M.coldim());
+                    inputs[*word] = n;
+                    M.resize(m,n+1);
+                }
+                const size_t j = inputs[*word]; ++word;
+                if (*word == "*") {
+                    ++word;
+                    typename Field::Element tmp;
+                    std::stringstream ssin; ssin << word->c_str();
+                    F.read(ssin, tmp);
+                    F.mulin(coeff,tmp);
+                } else if (*word == "/") {
+                    ++word;
+                    typename Field::Element tmp;
+                    std::stringstream ssin; ssin << word->c_str();
+                    F.read(ssin, tmp);
+                    F.divin(coeff, tmp);
+                }  else {
+                    --word;
+                }
+                M.setEntry(i,j,coeff);
+            } else {
+                const size_t j(variables[*word]);
+// std::clog << "### row[" << i << "] : " << output << std::endl;
+// std::clog << "### & row[" << j << "] : " << *word << std::endl;
+
+                ++word;
+
+                if (*word == "*") {
+                    ++word;
+                    typename Field::Element tmp;
+                    std::stringstream ssin; ssin << word->c_str();
+                    F.read(ssin, tmp);
+                    F.mulin(coeff,tmp);
+// std::clog << "### mul : " << coeff << std::endl;
+                } else if (*word == "/") {
+                    ++word;
+                    typename Field::Element tmp;
+                    std::stringstream ssin; ssin << word->c_str();
+                    F.read(ssin, tmp);
+                    F.divin(coeff, tmp);
+// std::clog << "### div : " << coeff << std::endl;
+                } else {
+                    --word;
+                }
+
+// M.write(std::clog << "# BEF opR M:", FileFormat::Pretty) << std::endl;
+                opRow(M, i, M[j], coeff, F);
+//  M.write(F.write(std::clog << "# AFT ", coeff) << " opR M:", FileFormat::Pretty) << std::endl;
+            }
+        }
+
+#ifdef VERBATIM_PARSING
+std::clog << "# I: " << inputs << std::endl;
+std::clog << "# V: " << variables << std::endl;
+M.write(std::clog << "# M:", FileFormat::Pretty) << std::endl;
+std::clog << std::string(40,'#') << std::endl;
+#endif
+
+    }
+
+    const size_t n(inputs.size());
+    A.resize(0,n);
+    for(const auto& [variable, index] : variables) {
+        if(variable[0] == outchar) {
+            const size_t i(std::stoi(variable.substr(1,std::string::npos)));
+            if (i >= A.rowdim()) A.resize(i+1,n);
+            setRow(A,i,M,index,F);
+        }
+    }
+
+    _Mat T(F,A.coldim(), A.rowdim()); Transpose(T,A);
+    _Mat B(F,0, A.rowdim());
+    for(const auto& [input, index] : inputs) {
+        const size_t j(std::stoi(input.substr(1,std::string::npos)));
+        if (j >= B.rowdim()) B.resize(j+1,T.coldim());
+        setRow(B,j,T,index,F);
+    }
+
+    Transpose(A,B);
+
+
+// A.write(std::clog, FileFormat::Pretty) << std::endl;
+
+    return A;
+}
+// ============================================================
+
+
+
+// ============================================================
+// Recursive extraction of parenthesis into a new variable
+size_t extractParenthesis(VProgram_t& newP, std::vector<std::string>& line,
+                          const char freechar, size_t& tmpnum) {
+#ifdef VERBATIM_PARSING
+    std::clog << "# initial    line: " << line  << std::endl;
+#endif
+    size_t ep(0);
+    auto openp = std::find(line.begin(),line.end(),"(");
+    if (openp != line.end()) {
+        auto closp = std::find(line.rbegin(),line.rend(),")");
+        std::vector<std::string> newline;
+        std::string newvar;
+        newvar += freechar; newvar += std::to_string(++tmpnum);
+        newline.push_back(newvar);
+        newline.emplace_back(":=");
+        newline.insert(newline.end(), openp+1, (closp+1).base());
+        newline.emplace_back(";");
+        *openp = newvar;
+        line.erase(openp+1, closp.base());
+#ifdef VERBATIM_PARSING
+        std::clog << "# new created line: " << newline  << std::endl;
+        std::clog << "# replaced    line: " << line  << std::endl;
+#endif
+        ep = extractParenthesis(newP, newline, freechar, tmpnum);
+        newP.push_back(newline);
+    }
+    return ep+1;
+}
+// ============================================================
+
+
+
+
+
+
+// ============================================================
+// Transform program by creating temporaries for parenthesis blocks
+VProgram_t& parenthesisExpand(VProgram_t& P) {
+        // ==================================
+        // Find two unused variable names
+    std::set<char> varsChar;
+    for(const auto& line: P) for(const auto& word: line)
+        varsChar.insert(word[0]);
+    char freechar(unusedChar(varsChar));
+    size_t tmpnum(0);
+
+    VProgram_t nProgram;
+    for(auto& line: P) {
+        extractParenthesis(nProgram, line, freechar, tmpnum);
+        nProgram.push_back(std::move(line));
+    }
+    return P=std::move(nProgram);
 }
 // ============================================================

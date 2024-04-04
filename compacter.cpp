@@ -39,7 +39,7 @@ std::ostream& Compacter(std::ostream& sout, std::istream& input,
     std::clog << std::string(40,'#') << std::endl;
 
         // Semantic line removal
-    int merged = variablesThiner(ProgramVector, simplSingle);
+    int merged = variablesTrimer(ProgramVector, simplSingle);
     sout << ProgramVector;
     std::clog << std::string(40,'#') << std::endl;
 

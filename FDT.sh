@@ -12,9 +12,9 @@ fi
 for fic in ${fics[@]}
 do
     echo "${fic}:"
-    ((./optimizer -O ${numopt} $fic | ./compacter | ./PMchecker -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
-    ((./matrix-transpose $fic | ./optimizer -q ${modulus} -O ${numopt} | ./transpozer | ./compacter | ./PMchecker  -q ${modulus} -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
-    ((./matrix-transpose $fic | ./optimizer -O ${numopt} | ./transpozer | ./compacter | ./PMchecker -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
+    ((./optimizer -O ${numopt} $fic | ./compacter -s | ./PMchecker -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
+    ((./matrix-transpose $fic | ./optimizer -q ${modulus} -O ${numopt} | ./transpozer | ./compacter -s | ./PMchecker  -q ${modulus} -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
+    ((./matrix-transpose $fic | ./optimizer -O ${numopt} | ./transpozer | ./compacter -s | ./PMchecker -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
 done
 
 tries=`wc -l ${tmpfile}|cut -d' ' -f1`
