@@ -601,7 +601,6 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
         // [*] Removes all idempotents "x := x ;"
     P.erase(std::remove_if(P.begin(), P.end(), idempots), P.end());
 
-
         // ==================================
         // [3] Backward substitution of outputs
         //     --> from the end of the program, look for output variables
@@ -627,7 +626,6 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
         // ==================================
         // [*] Removes all idempotents "x := x ;"
     P.erase(std::remove_if(P.begin(), P.end(), idempots), P.end());
-
 
         // ==================================
         // [*] Rotates lines starting with a '-'
@@ -779,6 +777,11 @@ _Mat& matrixBuilder(_Mat& A, const VProgram_t& P, const char outchar /* ='o'*/) 
             }
             if (*word == output) {
                 if (F.isMOne(coeff)) negRow(M, i, F);
+                continue;
+            }
+            if (std::find_if(word->begin(),word->end(), [](const char&c) { return std::isalpha(c); } ) == word->end()) {
+                    // Constant found: should be zero
+                assert(std::stoi(*word)==0);
                 continue;
             }
             if (variables.find(*word) == variables.end()) {
