@@ -12,7 +12,8 @@
 template<typename _Mat1, typename _Mat2>
 inline _Mat1& Transpose(_Mat1& T, const _Mat2& A) {
     T.resize(0,0); T.resize(A.coldim(), A.rowdim());
-    for(auto it = A.IndexedBegin(); it != A.IndexedEnd(); ++it)
+    if (A.rowdim() != 0)
+      for(auto it = A.IndexedBegin(); it != A.IndexedEnd(); ++it)
         T.setEntry(it.colIndex(),it.rowIndex(), it.value());
     return T;
 }
@@ -21,7 +22,8 @@ template<typename _Mat1, typename _Mat2>
 inline _Mat1& NegTranspose(_Mat1& T, const _Mat2& A) {
     T.resize(0,0); T.resize(A.coldim(), A.rowdim());
     typename _Mat1::Element tmp; T.field().init(tmp);
-    for(auto it = A.IndexedBegin(); it != A.IndexedEnd(); ++it)
+    if (A.rowdim() != 0)
+      for(auto it = A.IndexedBegin(); it != A.IndexedEnd(); ++it)
         T.setEntry(it.colIndex(),it.rowIndex(), T.field().neg(tmp,it.value()));
     return T;
 }
@@ -89,9 +91,9 @@ inline Matrix& dense2sparse(Matrix& A, const DenseMatrix& M, const QRat& QQ) {
 template<typename _DMat, typename _SMat>
 inline _DMat& sparse2dense(_DMat& A, const _SMat& M) {
     A.init(M.rowdim(), M.coldim());
-    for(auto indices = M.IndexedBegin(); indices != M.IndexedEnd(); ++indices) {
+    if (M.rowdim() != 0)
+      for(auto indices = M.IndexedBegin(); indices != M.IndexedEnd(); ++indices)
         A.setEntry(indices.rowIndex(), indices.colIndex(), indices.value());
-    }
     return A;
 }
 

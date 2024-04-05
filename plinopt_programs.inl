@@ -858,8 +858,8 @@ _Mat& matrixBuilder(_Mat& A, const VProgram_t& P, const char outchar /* ='o'*/) 
         }
     }
 
-    _Mat T(F,A.coldim(), A.rowdim()); Transpose(T,A);
-    _Mat B(F,0, A.rowdim());
+    _Mat T(F, A.coldim(), A.rowdim()); Transpose(T,A);
+    _Mat B(F, 0, A.rowdim());
     for(const auto& [input, index] : inputs) {
         const size_t j(std::stoi(input.substr(1,std::string::npos)));
         if (j >= B.rowdim()) B.resize(j+1,T.coldim());
