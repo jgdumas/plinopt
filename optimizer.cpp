@@ -152,7 +152,6 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
     }
 
     chrono.stop(); global = chrono;
-// std::clog << ssout.str() << std::flush;
 
         // ============================================================
         // Exhaustive nullspace permutation search (if # is <= 12!)
@@ -238,9 +237,6 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
                       << "\033[0m" << std::endl;
 
             ssout.str(iout.str());
-
-// std::clog << iout.str() << std::flush;
-
 
             if ((rnbops.first !=0 || rnbops.second != 0)) {
                 std::clog << std::string(40,'#') << std::endl;

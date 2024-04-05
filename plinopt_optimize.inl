@@ -578,13 +578,10 @@ std::ostream& ProgramGen(std::ostream& sout, _Mat& M,
             }
             sout << ';' << std::endl;
         }
-#ifdef VERBATIM_PARSING
         else {
             sout << ouv << i << ":=0;" << std::endl;
         }
-#endif
     }
-
 #ifdef VERBATIM_PARSING
     std::clog << "# Program Generation done." << std::endl;
     std::clog << std::string(30,'#') << std::endl;
