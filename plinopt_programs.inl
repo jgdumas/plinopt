@@ -606,8 +606,8 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
         //     --> from the end of the program, look for output variables
     for(auto line(P.rbegin()); line != P.rend(); ++line) {
         std::string& outvar(line->front()), &invar(*(line->begin()+2));
-        if ((line->size() == 4) && (invar[0] != inchar)
-            && (invar[0] != outchar) ) {
+        if ((line->size() == 4) && (invar != "0") &&
+            (invar[0] != inchar) && (invar[0] != outchar) ) {
             for(auto next(line+1); next != P.rend(); ++next) {
                     // if variable is set, stop substituting
                 if (next->front() == invar) {
@@ -858,8 +858,8 @@ _Mat& matrixBuilder(_Mat& A, const VProgram_t& P, const char outchar /* ='o'*/) 
         }
     }
 
-    _Mat T(F,A.coldim(), A.rowdim()); Transpose(T,A);
-    _Mat B(F,0, A.rowdim());
+    _Mat T(F, A.coldim(), A.rowdim()); Transpose(T,A);
+    _Mat B(F, 0, A.rowdim());
     for(const auto& [input, index] : inputs) {
         const size_t j(std::stoi(input.substr(1,std::string::npos)));
         if (j >= B.rowdim()) B.resize(j+1,T.coldim());
