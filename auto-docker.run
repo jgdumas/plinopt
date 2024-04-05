@@ -1,6 +1,6 @@
 #####################################################
-### PLinOpt: a collection of C++ routines handling
-###          linear & bilinear programs    (c) 2024
+### PLinOpt: C++ routines handling linear, bilinear
+###          & trilinear programs          (c) 2024
 ### J-G. Dumas, B. Grenet, C. Pernet, A. Sedoglavic
 #####################################################
 
@@ -24,10 +24,13 @@ cd plinopt; make
 ./matrix-transpose data/Pw.sms
 ./MMchecker data/Lw.sms data/Rw.sms data/Pw.sms
 ./MMchecker data/Lo.sms data/Ro.sms data/Po.sms 32 3 1013
+./compacter data/test.prg
 ./optimizer data/cyclic.sms
 ./optimizer data/Rr.sms -q 3
 ./transpozer data/test.prg
 ./optimizer data/Pi.sms
-./matrix-transpose data/Pi.sms | ./optimizer -K |./transpozer
+./optimizer data/Li.sms |./compacter -s
+./matrix-transpose data/Pi.sms | ./optimizer -K | ./transpozer | ./compacter -s
 ./sparsifier -c 4 data/Lr.sms
 ./factorizer -k 6 data/Lr.sms
+make check

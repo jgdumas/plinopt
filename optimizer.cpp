@@ -1,5 +1,5 @@
 // ==========================================================================
-// PLinOpt: a collection of C++ routines handling linear & bilinear programs
+// PLinOpt: C++ routines handling linear, bilinear & trilinear programs
 // Authors: J-G. Dumas, C. Pernet, A. Sedoglavic
 // ==========================================================================
 
@@ -81,6 +81,8 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
     std::ostringstream ssout;
     Pair<size_t> nbops{addinit,mulinit};
 
+    omp_lock_t writelock; omp_init_lock(&writelock);
+
         // ============================================================
         // Rebind matrix type over sub field matrix type
     typedef typename Matrix::template rebind<Field>::other FMatrix;
@@ -97,6 +99,9 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
                 // Cancellation-free optimization
             input2Temps(lssout, lM.coldim(), 'i', 't', lT);
             auto lnbops( Optimizer(lssout, lM, 'i', 'o', 't', 'r') );
+
+
+            omp_set_lock(&writelock);
 #ifdef VERBATIM_PARSING
             std::clog << "# Found, direct: " << lnbops.first << "\tadditions, "
                        << lnbops.second << "\tmultiplications." << std::endl;
@@ -108,6 +113,7 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
                 ssout << lssout.str();
                 nbops = lnbops;
             }
+            omp_unset_lock(&writelock);
         }
     }
 
@@ -121,6 +127,8 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
             std::ostringstream lssout;
             FMatrix NullSpace(F,lT.coldim(),T.coldim());
             auto lnbops( nullspacedecomp(lssout, NullSpace, lT) );
+
+            omp_set_lock(&writelock);
 #ifdef VERBATIM_PARSING
             std::clog << "# Found, kernel: " << lnbops.first << "\tadditions, "
                        << lnbops.second << "\tmultiplications." << std::endl;
@@ -132,6 +140,7 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
                 ssout << lssout.str();
                 nbops = lnbops;
             }
+            omp_unset_lock(&writelock);
         }
 
         if (nbops == Pair<size_t>{-1,-1}) {
@@ -163,6 +172,8 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
             std::ostringstream lkout;
             FMatrix NullSpace(F,lT.coldim(),T.coldim());
             auto lkops( nullspacedecomp(lkout, NullSpace, lT, l, mostCSE) );
+
+            omp_set_lock(&writelock);
 #ifdef VERBATIM_PARSING
             std::clog << "# Found, kernel: " << lkops.first << "\tadditions, "
                        << lkops.second << "\tmultiplications." << std::endl;
@@ -174,6 +185,7 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
                 kout << lkout.str();
                 knbops = lkops;
             }
+            omp_unset_lock(&writelock);
         }
 
         chrono.stop(); global += chrono;

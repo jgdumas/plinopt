@@ -1,5 +1,5 @@
 // ==========================================================================
-// PLinOpt: a collection of C++ routines handling linear & bilinear programs
+// PLinOpt: C++ routines handling linear, bilinear & trilinear programs
 // Authors: J-G. Dumas, B. Grenet
 // ==========================================================================
 

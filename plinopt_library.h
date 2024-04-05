@@ -1,5 +1,5 @@
 // ==========================================================================
-// PLinOpt: a collection of C++ routines handling linear & bilinear programs
+// PLinOpt: C++ routines handling linear, bilinear & trilinear programs
 // Authors: J-G. Dumas, B. Grenet, C. Pernet, A. Sedoglavic
 // ==========================================================================
 
@@ -75,19 +75,31 @@ template<typename _Mat1, typename _Mat2, typename _Field>
 _Mat1& matrixCopy(_Mat1&, const _Mat2&, const _Field&);
 
 	// Replace row i of A, by row j of B
-Matrix& setRow(Matrix& A, size_t i, const Matrix& B, size_t j, const QRat&);
-
-	// Negate row i of A
-Matrix& negRow(Matrix& A, size_t i, const QRat& QQ);
+template<typename _Mat1, typename _Mat2, typename _Field>
+_Mat1& setRow(_Mat1& A, size_t i, const _Mat2& B, size_t j, const _Field&);
 
 	// Replace row i of A, by v
-template<typename _Mat, typename Vector>
-_Mat& setRow(_Mat& A, size_t i, const Vector& v, const QRat& QQ);
+template<typename _Mat, typename _Vector, typename _Field>
+_Mat& setRow(_Mat& A, size_t i, const _Vector& v, const _Field& QQ);
+
+	// Negate row i of A
+template<typename _Mat, typename _Field>
+_Mat& negRow(_Mat& A, size_t i, const _Field& F);
+
+    // M[i] <- M[i] + c * s
+template<typename _Mat, typename Field>
+inline void opRow(_Mat& M, const size_t i, const typename _Mat::Row& s,
+                  const typename Field::Element& c, const Field& F);
 
 	// permute rows
 template<typename _Mat1, typename _Mat2>
 _Mat1& permuteRows(_Mat1& R, const Permutation& P, const _Mat2& A,
                    const QRat& QQ);
+
+	// copy sparse matrix M into dense matrix A
+template<typename _DMat, typename _SMat>
+inline _DMat& sparse2dense(_DMat& A, const _SMat& M);
+
 
 // ============================================
 
