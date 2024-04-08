@@ -1,7 +1,7 @@
 #!/bin/bash
 tmpfile=/tmp/fdt_plinopt.$$
 numopt=10
-modulus=65521
+modulus=101
 
 if [ "$#" -ge 1 ]; then
     fics=("$@")

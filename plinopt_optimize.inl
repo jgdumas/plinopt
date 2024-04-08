@@ -391,7 +391,6 @@ bool Triangle(std::ostream& sout, _Mat& M, _Mat& T,
 
     if (T[j].size() == 0) return false;
     const auto& FF(T.field());
-    size_t m(T.rowdim());
 
     bool found = false;
     bool over(true);
@@ -412,6 +411,7 @@ bool Triangle(std::ostream& sout, _Mat& M, _Mat& T,
                 typename _Mat::Element coeff; FF.init(coeff);
                 FF.div(coeff, quot, third->second);
                 if (isAbsOne(FF,coeff)) {
+                    size_t m(T.rowdim());
                     found = true; // Triangle found !!!
                     over = false; // will have to loop again
 
@@ -426,8 +426,9 @@ bool Triangle(std::ostream& sout, _Mat& M, _Mat& T,
 
                         // Second, in j-th column, divide both elements by a
 #ifdef VERBATIM_PARSING
-                    std::clog << "# Found triangle: ("
-                              << k << ',' << j << ')' << '('
+                    printmulorjustdiv(std::clog << "# Found Triangle [",
+                                      tev, j, ais, nbmul, FF);
+                    std::clog << "]: (" << iter->first << ',' << j << ')' << '('
                               << i << ',' << j << ')' << '('
                               << i << ',' << third->first << ')' << std::endl;
 #endif
