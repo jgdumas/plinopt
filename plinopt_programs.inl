@@ -181,9 +181,9 @@ int Tellegen(std::istream& input,
     std::ostream sout(&sbuf);
 
         // Sets of variables
-    std::set<std::string> varSet;
-    std::set<std::string> outSet;
-    std::set<std::string> inSet;
+    std::set<std::string> varSet;   // List of found variables
+    VProgram_t outSet;              // Final program with outputs
+    std::set<std::string> inSet;    // List of input variables
 
     std::pair<size_t,size_t> Nops(0,0);
 
@@ -200,6 +200,7 @@ int Tellegen(std::istream& input,
         if (postassign != std::string::npos) {
             std::vector<std::string> wordVector;
             wordVector.push_back(line.substr(0,postassign));
+
                 // Constants are left unmodified
             if (wordVector.front()[0] == cchar) {
 #ifdef VERBATIM_PARSING
@@ -282,12 +283,12 @@ int Tellegen(std::istream& input,
 
                     // input variables are transposed into output
                 const std::string variable(*iter); ++iter;
+                if (variable == "0") continue;
 
                 if (variable[0] == ichar) {
                     std::string onein(fixvar);
                     onein[0] = ochar;
-                    onein += ":="; onein += fixvar; onein += ';';
-                    outSet.insert(onein);
+                    outSet.push_back( { onein, ":=", fixvar, ";" });
 #ifdef VERBATIM_PARSING
                     std::clog << "# Input found, " << variable
                               << ", becomes output: " << onein << std::endl;
@@ -330,10 +331,7 @@ int Tellegen(std::istream& input,
         // Select only temporary variables (others are initialized)
     std::vector<std::string> varVector;
     for(const auto& iter: varSet) {
-        if ((outSet.find(iter) == outSet.end()) &&
-            (inSet.find(iter) == inSet.end())) {
-            varVector.push_back(iter);
-        }
+        if (inSet.find(iter) == inSet.end()) varVector.push_back(iter);
     }
 
         // ============================================================
@@ -349,6 +347,7 @@ int Tellegen(std::istream& input,
 
     for(auto iter=sbuf.rbegin(); iter != sbuf.rend(); ++iter) {
         std::string line(*iter);
+        if (line.size() == 0) continue;
 
             // ==================================
             // Instead of "xi:=0; xi:=xi + ... ;"
@@ -364,13 +363,16 @@ int Tellegen(std::istream& input,
 
         if ( varposvec != varVector.end()) {
 #ifdef VERBATIM_PARSING
-            std::clog << "# First temporary, accumulation with " << variable << "=0 is simplified in: " << line << std::endl;
+            std::clog << "# First temporary, accumulation with " << variable
+                      << "=0 is simplified in: " << line << std::endl;
 #endif
             const auto accupos = line.find(variable, varlen);
 
 #if DEBUG
             if (accupos != varlen+2) {
-                std::cerr << "Problem, first occurence of temporary is not an accumulation." << std::endl;
+                std::cerr << "\033[1;31m**** ERROR ****\033[0m"
+                          << " first occurence of temporary " << variable
+                          << " is not an accumulation." << std::endl;
                 exit(-1);
             }
 #endif
@@ -394,7 +396,10 @@ int Tellegen(std::istream& input,
             if (line[prev] == ochar) {
                 if (modSet.find(line.substr(prev, pos-prev)) == modSet.end()){
 #ifdef VERBATIM_PARSING
-                    std::clog << "# Unmodified input usage of: " << line.substr(prev, pos-prev) << ", is simplified in RHS: " << line << std::endl;
+                    std::clog << "# Unmodified input usage of: "
+                              << line.substr(prev, pos-prev)
+                              << ", is simplified in RHS: " << line
+                              << std::endl;
 #endif
                     line[prev]=ichar;
                 } else {
@@ -426,11 +431,30 @@ int Tellegen(std::istream& input,
         for(const auto& iter:varVector) std::cerr << iter << ' ';
         std::cerr << std::endl;
     }
+
+    if (varSet != modSet) {
+        std::cerr << "\033[1;31m**** ERROR ****\033[0m"
+                  << " found varSet differ from modSet : \n"
+                  << varSet << std::endl
+                  << modSet << std::endl;
+    }
 #endif
 
     std::clog << std::string(40,'#') << std::endl;
+
         // Produce output results "oi:=xi;"
-    for(const auto& iter: outSet) std::cout << iter << std::endl;
+    for(const auto& iter: outSet) {
+#if DEBUG
+        if ((iter[1] != ":=") || (iter[3] != ";")) {
+            std::cerr << "\033[1;31m**** ERROR ****\033[0m"
+                      << " malformed output :" << iter << std::endl;
+        }
+#endif
+        std::cout << iter.front() << ":="
+                  << (modSet.find(iter[2]) == modSet.end() ? "0" : iter[2])
+                  << ';' << std::endl;
+    }
+
 
     const int dimOffset(inSet.size()-outSet.size());
 
