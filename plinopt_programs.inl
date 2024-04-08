@@ -98,6 +98,9 @@ auto isAddSub {[](const std::string& s) {
 auto isMulDiv {[](const std::string& s) {
     return (s=="*") || (s=="/");} };
 
+auto isParAff {[](const std::string& s) {
+    return (s=="(") || (s==":=");} };
+
 // Echange '+' with '-' and vice-versa
 void swapsign(std::string& s) {
     if (s=="+") { s.replace(0,1,1,'-'); }
@@ -537,8 +540,104 @@ bool rotateMinus(std::vector<std::string>& line) {
     }
     return false;
 }
+// ============================================================
+
 
 // ============================================================
+size_t countMinus(const VProgram_t& P) {
+    size_t cm(0);
+    for(auto& line : P) if (line[2] == "-") ++cm;
+    return cm;
+}
+// ============================================================
+
+
+// ============================================================
+// Negates some temporary vairables if it reduces the leading minuses
+size_t swapMinus(VProgram_t & P, const char outchar) {
+    for(auto& line : P) rotateMinus(line);
+    size_t pm( countMinus(P) );
+    if (pm == 0) return 0;
+
+
+    for(size_t i=0; i<P.size(); ++i) {
+        if ( (P[i])[2] == "-" && (P[i].front()[0] != outchar) ) {
+            std::map<size_t, std::vector<std::string>> mP;
+            size_t depth(0);
+                // Negating line
+            auto varline(P[i]);
+            for(size_t j=2; j<varline.size(); ++j) {
+                if (varline[j] == "(") ++depth;
+                if (varline[j] == ")") --depth;
+                if (depth == 0) {
+                    if (varline[j] == "-") {
+                        if (isParAff(varline[j-1])) {
+                            std::rotate(varline.begin()+j,varline.begin()+j+1,
+                                        varline.end());
+                            varline.pop_back();
+                            --j;
+                        } else {
+                            varline[j]= "+";
+                        }
+                    } else if (varline[j] == "+") {
+                            // should not happen after rotateMinus
+                        varline[j]= "-";
+                    }
+                }
+            }
+            mP[i] = varline;
+
+                // Negating variable
+            const auto& variable(varline[0]);
+            for( ; ++i < P.size() ; ) {
+                bool linmod(false);
+                auto line(P[i]);
+                for(size_t j=2; j<line.size(); ++j) {
+                    if (line[j] == variable) {
+                        if (line[j-1] == "+") {
+                            line[j-1] = "-";
+                        } else if (line[j-1] == "-") {
+                            if (isParAff(line[j-2])) {
+                                std::rotate(line.begin()+j-1,line.begin()+j,
+                                            line.end());
+                                line.pop_back();
+                            } else {
+                                line[j-1] = "+";
+                            }
+                        } else if (isParAff(line[j-1])) {
+                            line.push_back("-");
+                            std::rotate(line.begin()+j,line.end()-1,line.end());
+                            ++j;
+                        }
+                        linmod = true;
+                    }
+                }
+                if (linmod) {
+                    rotateMinus(line);
+                    mP[i] = line;
+                }
+                if (P[i].front() == variable) break;
+            }
+
+            size_t cm(pm);
+            for (const auto& [k, line] : mP) {
+                if ( (P[k][2] == "-") && (mP[k][2] != "-") ) --cm;
+                if ( (mP[k][2] == "-") && (P[k][2] != "-") ) ++cm;
+            }
+            if (cm < pm) {
+#ifdef VERBATIM_PARSING
+                std::clog << "# Reduced leading minus from " << pm
+                          << " to " << cm << std::endl;
+#endif
+                for (const auto& [k, line] : mP) P[k] = std::move(line);
+                pm = cm;
+            }
+        }
+    }
+    return pm;
+}
+// ============================================================
+
 
 
 
@@ -736,8 +835,9 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
     P.erase(std::remove_if(P.begin(), P.end(), emptyline), P.end());
 
         // ==================================
-        // [*] Rotates lines starting with a '-'
-    for(auto& line : P) rotateMinus(line);
+        // [*] Tries to reduce lines starting with a '-'
+        //     by negating some temporary variables
+    swapMinus(P, outchar);
 
     return tmpnum;
 }
