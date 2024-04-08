@@ -248,7 +248,7 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
         } else {
                 // Optimal was already found
             std::clog << "# \033[1;36m"
-                      << "No CSE scheduling has less additions.\033[0m \t"
+                      << "No greedy CSE schedule has less additions.\033[0m \t"
                       << chrono << std::endl;
         }
     }
