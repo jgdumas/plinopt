@@ -55,8 +55,8 @@ std::ostream& FindProgram(std::ostream& out, std::istream& input,
     out << Program << std::flush;
 
 #ifdef INPLACE_CHECKER
-    CollectVariable('m',M.coldim(), 'L');
     std::clog << std::string(30,'#') << std::endl;
+    CollectVariable('m',M.coldim(), 'L');
 #endif
         // =================================
         // Resulting program operation count
