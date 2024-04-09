@@ -89,7 +89,7 @@ int PMcheck(const std::string& prgname, const std::string& matname,
             R.write(std::clog<<"\n# diff:\n", FileFormat::Pretty) << std::endl;
         }
     } else
-        A.write(std::cout, FileFormat::SMS) << std::endl;
+        A.write(std::cout, FileFormat(5)) << std::endl;
 
     return 0;
 }
