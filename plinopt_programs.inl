@@ -86,7 +86,7 @@ auto idempots {[](const std::vector<std::string>& s) {
 auto emptyline {[](const std::vector<std::string>& s) {
     return (s.size()==0);} };
 
-// Comparing two vectors by their first value within a pair
+// Comparing two vectors by their first (front) value, as second in a pair
 typedef std::pair<std::string, std::vector<size_t>> pairSVs_t;
 auto prgorder {[](const pairSVs_t& a, const pairSVs_t& b) {
     return a.second.front()<b.second.front();} };
@@ -797,7 +797,6 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
         ordsUse.emplace_back(variable,occurences);
     std::sort(ordsUse.begin(), ordsUse.end(), prgorder);
 
-
         // finding singly used variables and replacing them
     for (const auto& [variable, occurences] : ordsUse) {
         if ( (variable[0] != outchar) && (occurences.size()==2) ) {
@@ -826,9 +825,12 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
 
                     // Whether replacement requires parenthesis
                 const auto penultimate(init.end()-1);
+                size_t depth(0);
                 for(auto iter(init.begin()+3); iter != penultimate; ++iter) {
-                    if (isAddSub(*iter)) {
-                        if (changesign) swapsign(*iter);
+                    if (*iter == "(") ++depth;
+                    else if (*iter == ")") --depth;
+                    else if (isAddSub(*iter)) {
+                        if (changesign && (depth ==0)) swapsign(*iter);
                         multimonomial = true;
                     }
                 }

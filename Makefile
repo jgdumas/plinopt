@@ -3,7 +3,7 @@
 # Authors: J-G. Dumas, C. Pernet, A. Sedoglavic
 ####################################################################
 
-OPTFLAGS=-Ofast -D RANDOM_TIES
+OPTFLAGS=-Ofast -D RANDOM_TIES -D INPLACE_CHECKER
 
 # OPTFLAGS += -D INPLACE_CHECKER		# adds Maple checks
 # OPTFLAGS += -D VERBATIM_PARSING		# Verbose output
