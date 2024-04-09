@@ -669,13 +669,11 @@ Pair<size_t> backSolver(Matrix& CoB, Matrix& Res,
     LinBox::Permutation<QRat> T(QQ,r);
 
         // Select n independent rows
-    Matrix A2(QQ,s,n);
-    size_t t(0);
     for(size_t i=0; i<n; ++i) {
-        for(size_t j=i+t;j<r;++j) {
+        size_t rk;
+        for(size_t j=i;j<r;++j) {
             setRow(CoB, i, M, j, QQ);
-            size_t r;
-            if (rank(r,CoB) == (i+1)) {
+            if (rank(rk,CoB) == (i+1)) {
                 if (i != j) {
                     T.permute(i,j);
                     std::swap(M[i],M[j]);
@@ -683,14 +681,20 @@ Pair<size_t> backSolver(Matrix& CoB, Matrix& Res,
                 break;
             }
         }
+        if (rk != (i+1)) {
+//             CoB.resize(i,n);
+            CoB[i].resize(0);
+            break;
+        }
     }
         // Add up to k rows
     for(size_t j=n; j<k; ++j) {
         setRow(CoB,j, M, j, QQ);
     }
         // Other rows to be solved for
-    for(size_t j=k+t; j<r; ++j)
-        setRow(A2,t++, M, j, QQ);
+    Matrix A2(QQ,s,n);
+    for(size_t j=k; j<r; ++j)
+        setRow(A2,j-k, M, j, QQ);
 
 #ifdef VERBATIM_PARSING
     T.write(std::clog << "# Initial permutation: ") << std::endl;
