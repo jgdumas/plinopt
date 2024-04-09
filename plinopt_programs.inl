@@ -802,6 +802,7 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
         if ( (variable[0] != outchar) && (occurences.size()==2) ) {
             const size_t i(occurences.front()), j(occurences.back());
             auto& init(P[i]); auto& line(P[j]);
+            rotateMinus(init); // less sign changes if possible
 
 #ifdef VERBATIM_PARSING
             std::clog << "# variable: " << variable
