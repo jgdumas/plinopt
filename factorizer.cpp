@@ -48,7 +48,6 @@ int Factorizer(const _Mat& M, const FileFormat& matformat,
     FMatrix CoB(F, innerdim, M.coldim());
     FMatrix Res(F, M.rowdim(), innerdim);
     Pair<size_t> nbops{backSolver(CoB, Res, M)};
-    omp_lock_t writelock; omp_init_lock(&writelock);
 
     elapsed.start();
 #pragma omp parallel for shared(Res,CoB,M,F,nbops,innerdim)
@@ -58,19 +57,23 @@ int Factorizer(const _Mat& M, const FileFormat& matformat,
         auto bSops{backSolver(lCoB, lRes, M)};
 
 
-        omp_set_lock(&writelock);
+#pragma omp critical
+        {
 #ifdef VERBATIM_PARSING
-        std::clog << "# Res/CoB profile[" << i << "]: " << bSops << std::endl;
+            std::clog << "# Res/CoB profile[" << i << "]: "
+                      << bSops << std::endl;
 #endif
-        if ( (bSops.first<nbops.first) ||
-             ( (bSops.first==nbops.first)
-               && (bSops.second<nbops.second) ) ) {
-            nbops = bSops;
-            std::clog << "# Found [" << i << "], R/CB profile: " << bSops << std::endl;
-            sparse2sparse(CoB, lCoB);
-            sparse2sparse(Res, lRes);
+            if ( (bSops.first<nbops.first) ||
+                 ( (bSops.first==nbops.first)
+                   && (bSops.second<nbops.second) ) ) {
+                nbops = bSops;
+                sparse2sparse(CoB, lCoB);
+                sparse2sparse(Res, lRes);
+
+                std::clog << "# Found [" << i << "], R/CB profile: "
+                          << bSops << std::endl;
+            }
         }
-        omp_unset_lock(&writelock);
     }
     elapsed.stop();
 
