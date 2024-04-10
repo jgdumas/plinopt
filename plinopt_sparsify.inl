@@ -41,10 +41,12 @@ inline Vector& augment(Vector& v, const Givaro::Integer& i, const QRat& QQ) {
 }
 
 	// Computes the rank of A
-inline size_t& rank(size_t& r, const Matrix& A) {
-    static QRat QQ;
-    static LinBox::GaussDomain<QRat> GD(QQ);
-    Matrix copyA(QQ); matrixCopy(copyA, A, QQ);
+template<typename _Mat>
+inline size_t& rank(size_t& r, const _Mat& A) {
+    using Field = typename _Mat::Field;
+    const Field& FF(A.field());
+    LinBox::GaussDomain<Field> GD(FF);
+    _Mat copyA(FF); matrixCopy(copyA, A);
     return GD.rankInPlace(r, copyA);
 }
 
@@ -54,28 +56,31 @@ inline _Mat1& inverseTranspose(_Mat1& TI, const _Mat2& A) {
     assert(A.rowdim() == A.coldim());
     const size_t n(A.rowdim());
 
-    static QRat QQ;
-    static LinBox::GaussDomain<QRat> GD(QQ);
+    using Field = typename _Mat1::Field;
+    using FVector = LinBox::DenseVector<Field>;
+    const Field& FF(A.field());
+
+    LinBox::GaussDomain<Field> GD(FF);
 
     TI.resize(n,n);
-    Matrix U(QQ); matrixCopy(U, A, QQ);
+    _Mat1 U(FF); matrixCopy(U, A);
 
-    Givaro::Rational Det;
+    typename Field::Element Det;
     size_t Rank;
-    Matrix L(QQ, n, n);
-    LinBox::Permutation<QRat> Q(QQ,n);
-    LinBox::Permutation<QRat> P(QQ,n);
+    _Mat1 L(FF, n, n);
+    LinBox::Permutation<Field> Q(FF,n);
+    LinBox::Permutation<Field> P(FF,n);
 
     GD.QLUPin(Rank, Det, Q, L, U, P, n, n );
 
-    QVector x(QQ,n), w(QQ,n), Iv(QQ, n);
-    for(size_t i=0; i<Iv.size(); ++i) Iv[i] = QQ.zero;
+    FVector x(FF,n), w(FF,n), Iv(FF, n);
+    for(size_t i=0; i<Iv.size(); ++i) Iv[i] = FF.zero;
 
     for(size_t i=0; i<n; ++i) {
-        Iv[i] = QQ.one;
+        Iv[i] = FF.one;
         GD.solve(x, w, Rank, Q, L, U, P, Iv);
-        Iv[i] = QQ.zero;
-        setRow(TI, i, x, QQ);
+        Iv[i] = FF.zero;
+        setRow(TI, i, x);
     }
 
     return TI;
@@ -143,7 +148,8 @@ inline std::vector<Matrix>& separateColumnBlocks(
     return V;
 }
 
-size_t density(const Matrix& M) {
+template<typename _Mat>
+size_t density(const _Mat& M) {
     size_t ss(0);
     for(auto it=M.rowBegin();it!=M.rowEnd();++it) {
         ss += it->size();
@@ -153,7 +159,8 @@ size_t density(const Matrix& M) {
 
     // Prints out density profile of M
     // returns total density
-std::ostream& densityProfile(std::ostream& out, size_t& ss, const Matrix& M) {
+template<typename _Mat>
+std::ostream& densityProfile(std::ostream& out, size_t& ss, const _Mat& M) {
     ss = 0;
     for(auto it=M.rowBegin();it!=M.rowEnd();++it) {
         ss += it->size();
@@ -176,7 +183,7 @@ inline bool testLinComb(Pair<int>& weight, Matrix& LCoB, Matrix& Cand,
     static QArray v(TM.coldim()); v.resize(TM.coldim());
 
         // Check independency
-    setRow(Cand,num,w,QQ);
+    setRow(Cand,num,w);
     size_t r; rank(r, Cand);
 
     if (r>num) {
@@ -196,7 +203,7 @@ inline bool testLinComb(Pair<int>& weight, Matrix& LCoB, Matrix& Cand,
             weight.first = rlHw;
             weight.second = clHw;
                 // Register best linear combination so far
-            setRow(LCoB,num,w,QQ);
+            setRow(LCoB,num,w);
             return true;
         }
     }
@@ -287,7 +294,7 @@ Matrix& Sparsifier(Matrix& TCoB, Matrix& TM, const size_t maxnumcoeff) {
                                            LCoB.rowdim()-(offsetblock)));
 
         for(size_t num=0; num<firstcolumns; ++num) {
-            matrixCopy(A, LCoB, QQ);
+            matrixCopy(A, LCoB);
             Pair<int> weight{-1,-1}; // Best Hamming weight so far
             bool found((block == 0) && (num == 0));
             if (found) {
@@ -339,8 +346,8 @@ Matrix& Sparsifier(Matrix& TCoB, Matrix& TM, const size_t maxnumcoeff) {
     BMD.mul(TS,LCoB,TCoB); // Direct matrix multiplication
 
         // Need sparse representation
-    dense2sparse(TM,TR,QQ);
-    dense2sparse(TCoB,TS,QQ);
+    dense2sparse(TM,TR);
+    dense2sparse(TCoB,TS);
 
     return TCoB;
 }
@@ -440,12 +447,12 @@ inline bool sparseLU(Matrix& QL, Matrix& A, const size_t sparsity) {
 
     const size_t m(A.rowdim()), n(A.coldim());
 #ifdef DEBUG
-    DenseMatrix TR(QQ,m,n); matrixCopy(TR, A, QQ);
+    DenseMatrix TR(QQ,m,n); any2dense(TR, A);
 #endif
 
     Givaro::Rational Det;
     size_t Rank;
-    Matrix U(QQ,m,n); matrixCopy(U, A, QQ);
+    Matrix U(QQ,m,n); matrixCopy(U, A);
     Matrix L(QQ,m,m);
     LinBox::Permutation<QRat> Q(QQ,m);
     LinBox::Permutation<QRat> P(QQ,n);
@@ -457,13 +464,13 @@ inline bool sparseLU(Matrix& QL, Matrix& A, const size_t sparsity) {
             // use it
         DenseMatrix R(QQ,U.rowdim(), U.coldim()), B(QQ,U.rowdim(), U.coldim()),
             S(QQ, L.rowdim(),L.coldim()), C(QQ, L.rowdim(),L.coldim());
-        matrixCopy(R, U, QQ);
-        matrixCopy(S, L, QQ);
+        matrixCopy(R, U);
+        matrixCopy(S, L);
         P.applyLeft(B, R);
         Q.applyRight(C, S);
 
-        dense2sparse(A, B, QQ);
-        dense2sparse(QL, C, QQ);
+        dense2sparse(A, B);
+        dense2sparse(QL, C);
     }
 
 #ifdef DEBUG
@@ -496,7 +503,7 @@ inline bool sparseILU(Matrix& TC, Matrix& A, const size_t sparsity) {
     if (sparser) {
         DenseMatrix K(QQ,m,m);
         applyInverse(K, QL, TC, QQ, BMD);
-        dense2sparse(TC, K, QQ);
+        dense2sparse(TC, K);
     }
 
 #ifdef DEBUG
@@ -644,8 +651,15 @@ int blockSparsifier(Givaro::Timer& elapsed, Matrix& CoB, Matrix& Res,
 //   (Res=[identity,lower part])*(CoB=[upperpart])
 //   with prescribed inner dimension
 // precondition: upper part is full-rank
-Pair<size_t> backSolver(Matrix& CoB, Matrix& Res,
-                                    const Matrix& iM, const QRat& QQ) {
+template<typename _Mat>
+Pair<size_t> backSolver(_Mat& CoB, _Mat& Res, const _Mat& iM) {
+    using Field = typename _Mat::Field;
+    using FMatrix = _Mat;
+    using DenseFMatrix = LinBox::DenseMatrix<Field>;
+    using FVector = LinBox::DenseVector<Field>;
+
+
+    const Field& FF(iM.field());
 
     const size_t r(iM.rowdim()), n(iM.coldim()), k(CoB.rowdim());
     const size_t s(r-k);
@@ -653,27 +667,25 @@ Pair<size_t> backSolver(Matrix& CoB, Matrix& Res,
     assert( Res.coldim() == k );
     assert( CoB.coldim() == n );  // CoB is (k x n)
 
-    Matrix M(QQ, iM.rowdim(), iM.coldim());
+    FMatrix M(FF, iM.rowdim(), iM.coldim());
 #ifdef RANDOM_TIES
-    DenseMatrix dM(QQ, iM.rowdim(), iM.coldim());
-    LinBox::Permutation<QRat> S(QQ,r);
+    DenseFMatrix dM(FF, iM.rowdim(), iM.coldim());
+    LinBox::Permutation<Field> S(FF,r);
     S.random(Givaro::BaseTimer::seed());
     S.applyRight(dM, iM);
-    matrixCopy(M,dM,QQ);
+    matrixCopy(M,dM);
 #else
-    matrixCopy(M,iM,QQ);
+    matrixCopy(M,iM);
 #endif
 
-    LinBox::Permutation<QRat> T(QQ,r);
+    LinBox::Permutation<Field> T(FF,r);
 
         // Select n independent rows
-    Matrix A2(QQ,s,n);
-    size_t t(0);
+    size_t rk(0);
     for(size_t i=0; i<n; ++i) {
-        for(size_t j=i+t;j<r;++j) {
-            setRow(CoB, i, M, j, QQ);
-            size_t r;
-            if (rank(r,CoB) == (i+1)) {
+        for(size_t j=i;j<r;++j) {
+            setRow(CoB, i, M, j);
+            if (rank(rk,CoB) == (i+1)) {
                 if (i != j) {
                     T.permute(i,j);
                     std::swap(M[i],M[j]);
@@ -681,32 +693,38 @@ Pair<size_t> backSolver(Matrix& CoB, Matrix& Res,
                 break;
             }
         }
+        if (rk != (i+1)) {
+            CoB[i].resize(0);
+            break;
+        }
     }
+
         // Add up to k rows
-    for(size_t j=n; j<k; ++j) {
-        setRow(CoB,j, M, j, QQ);
+    for(size_t j=rk; j<k; ++j) {
+        setRow(CoB,j, M, j);
     }
         // Other rows to be solved for
-    for(size_t j=k+t; j<r; ++j)
-        setRow(A2,t++, M, j, QQ);
+    FMatrix A2(FF,s,n);
+    for(size_t j=k; j<r; ++j)
+        setRow(A2,j-k, M, j);
 
 #ifdef VERBATIM_PARSING
-    T.write(std::clog << "# Initial permutation: ") << std::endl;
-    CoB.write(std::clog << "# Full row rank: ", FileFormat::Pretty) << std::endl;
-    A2.write(std::clog << "# Free profile : ", FileFormat::Pretty) << std::endl;
+    T.write(std::clog   << "# Initial perm.: ") << std::endl;
+    CoB.write(std::clog << "# Full row rank: ",FileFormat::Pretty) << std::endl;
+    A2.write(std::clog  << "# Free profile : ",FileFormat::Pretty) << std::endl;
 #endif
 
-    Matrix U(QQ,n,k); Transpose(U, CoB); // U is (n x k)
-    Matrix B(QQ,n,s); Transpose(B, A2);  // B is (n x s)
+    FMatrix U(FF,n,k); Transpose(U, CoB); // U is (n x k)
+    FMatrix B(FF,n,s); Transpose(B, A2);  // B is (n x s)
 
-    Givaro::Rational Det;
+    typename Field::Element Det;
     size_t Rank;
-    Matrix L(QQ, n, n);
-    LinBox::Permutation<QRat> P(QQ,n);
-    LinBox::Permutation<QRat> Q(QQ,k);
+    FMatrix L(FF, n, n);
+    LinBox::Permutation<Field> P(FF,n);
+    LinBox::Permutation<Field> Q(FF,k);
 
         // Gaussian elimination of the CoB upper part
-    static LinBox::GaussDomain<QRat> GD(QQ);
+    LinBox::GaussDomain<Field> GD(FF);
     GD.QLUPin(Rank, Det, P, L, U, Q, n, k );
 
 
@@ -718,43 +736,48 @@ Pair<size_t> backSolver(Matrix& CoB, Matrix& Res,
 #endif
 
         // Upper part is identity
-    for(size_t i=0; i<k; ++i) Res.setEntry(i,i,QQ.one);
+    for(size_t i=0; i<k; ++i) Res.setEntry(i,i,FF.one);
 
         // Solving for each vector of the lower part
-    DenseMatrix TY(QQ,s,n); Transpose(TY,B);
-    QVector x(QQ,k), w(QQ,k), bi(QQ,n);
+    DenseFMatrix TY(FF,s,n); Transpose(TY,B);
+    FVector x(FF,k), w(FF,k), bi(FF,n);
     for(size_t i=0; i<s; ++i) {
         for(size_t j=0; j<n; ++j)
             bi[j] = TY[i][j];
         GD.solve(x, w, r, P, L, U, Q, bi);
-        setRow(Res, k+i, x, QQ);
+        setRow(Res, k+i, x);
     }
 
-    DenseMatrix R(QQ, r, k);
+    DenseFMatrix R(FF, r, k);
     T.solveRight(R, Res);
 #ifdef RANDOM_TIES
-    DenseMatrix R2(QQ, r, k);
+    DenseFMatrix R2(FF, r, k);
     S.solveRight(R2, R);
-    dense2sparse(Res, R2, QQ);
+    dense2sparse(Res, R2);
 #else
-    dense2sparse(Res, R, QQ);
+    dense2sparse(Res, R);
 #endif
     return Pair<size_t>{density(Res),density(CoB)};
 }
 
 // ============================================================
 // Consistency check of M == R.C
-template<typename _Mat>
-std::ostream& consistency(std::ostream& out, const _Mat& M,
-                          const Matrix& R, const DenseMatrix& C) {
-    static QRat QQ;
-    static LinBox::MatrixDomain<QRat> BMD(QQ);
+template<typename _Mat1, typename _Mat2, typename _DMat>
+std::ostream& consistency(std::ostream& out, const _Mat1& M,
+                          const _Mat2& R, const _DMat& C) {
+
+    using Field = typename _Mat1::Field;
+    using DenseFMatrix = LinBox::DenseMatrix<Field>;
+
+    const Field& FF(M.field());
+
+    LinBox::MatrixDomain<Field> BMD(FF);
 
     assert( M.rowdim() == R.rowdim() );
     assert( M.coldim() == C.coldim() );
     assert( R.coldim() == C.rowdim() );
 
-    DenseMatrix A(QQ, R.rowdim(), C.coldim() );
+    DenseFMatrix A(FF, R.rowdim(), C.coldim() );
 
     BMD.mul(A,R,C);
     BMD.subin(A,M);
@@ -764,10 +787,10 @@ std::ostream& consistency(std::ostream& out, const _Mat& M,
     else{
         std::cerr << "# \033[1;31m****** ERROR inconsistency ******\033[0m"
                   << std::endl;
-        DenseMatrix dM(QQ, M.rowdim(), M.coldim()); matrixCopy(dM,M,QQ);
+        DenseFMatrix dM(FF, M.rowdim(), M.coldim()); any2dense(dM,M);
         dM.write(out,FileFormat::Maple) << std::endl;
         out << " != " << std::endl;
-        DenseMatrix dR(QQ, R.rowdim(), R.coldim()); matrixCopy(dR,R,QQ);
+        DenseFMatrix dR(FF, R.rowdim(), R.coldim()); any2dense(dR,R);
         dR.write(out,FileFormat::Maple) << std::endl;
         out << " * " << std::endl;
         C.write(out,FileFormat::Maple) << std::endl;

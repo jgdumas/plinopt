@@ -40,7 +40,8 @@ inline size_t score(const std::vector<std::vector<triple>>& AllPairs,
                     const triple& cse) {
     size_t score(0);
     for(size_t k=0; k<Density.size(); ++k) {
-        if (std::find(AllPairs[k].begin(), AllPairs[k].end(), cse) != AllPairs[k].end()) {
+        if (std::find(AllPairs[k].begin(), AllPairs[k].end(), cse)
+            != AllPairs[k].end()) {
             score += Density[k]*Density[k];
         }
     }
@@ -851,7 +852,6 @@ bool RecSub(std::vector<std::string>& out, _Mat& Mat,
     _Mat bestM(FF,Mat.rowdim(),Mat.coldim()); sparse2sparse(bestM, Mat);
     std::vector<triple> bestmultiples(multiples);
     std::vector<std::string> bestdout;
-    omp_lock_t writelock; omp_init_lock(&writelock);
 
 #pragma omp parallel for shared(AllPairs,Mat,bestadds,bestmuls,bestM,bestmultiples,bestdout,tev,rav,multiples)
     for(size_t i=0; i<AllPairs.size(); ++i) {
@@ -874,16 +874,17 @@ bool RecSub(std::vector<std::string>& out, _Mat& Mat,
                 std::vector<std::string> sdout(1,ssout.str());
                 RecSub(sdout, lM, lmultiples, ladditions, lmuls, lvl+1, tev, rav);
 
-                omp_set_lock(&writelock);
-                if ( (ladditions < bestadds) ||
-                     ( (ladditions == bestadds) && (lmuls < bestmuls) ) ) {
-                    bestadds = ladditions;
-                    bestmuls = lmuls;
-                    sparse2sparse(bestM, lM);
-                    bestmultiples = lmultiples;
-                    bestdout = sdout;
+#pragma omp critical
+                {
+                    if ( (ladditions < bestadds) ||
+                         ( (ladditions == bestadds) && (lmuls < bestmuls) ) ) {
+                        bestadds = ladditions;
+                        bestmuls = lmuls;
+                        sparse2sparse(bestM, lM);
+                        bestmultiples = lmultiples;
+                        bestdout = sdout;
+                    }
                 }
-                omp_unset_lock(&writelock);
             }
         }
     }

@@ -81,8 +81,6 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
     std::ostringstream ssout;
     Pair<size_t> nbops{addinit,mulinit};
 
-    omp_lock_t writelock; omp_init_lock(&writelock);
-
         // ============================================================
         // Rebind matrix type over sub field matrix type
     typedef typename Matrix::template rebind<Field>::other FMatrix;
@@ -101,19 +99,22 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
             auto lnbops( Optimizer(lssout, lM, 'i', 'o', 't', 'r') );
 
 
-            omp_set_lock(&writelock);
+#pragma omp critical
+            {
 #ifdef VERBATIM_PARSING
-            std::clog << "# Found, direct: " << lnbops.first << "\tadditions, "
-                       << lnbops.second << "\tmultiplications." << std::endl;
+                std::clog << "# Found, direct: "
+                          << lnbops.first << "\tadditions, "
+                          << lnbops.second << "\tmultiplications." << std::endl;
 #endif
-            if ( (ssout.tellp() == std::streampos(0)) ||
-                 (lnbops.first<nbops.first) ||
-                 ( (lnbops.first==nbops.first) && (lnbops.second<nbops.second) ) ) {
-                ssout.clear(); ssout.str(std::string());
-                ssout << lssout.str();
-                nbops = lnbops;
+                if ( (ssout.tellp() == std::streampos(0)) ||
+                     (lnbops.first<nbops.first) ||
+                     ( (lnbops.first==nbops.first)
+                       && (lnbops.second<nbops.second) ) ) {
+                    ssout.clear(); ssout.str(std::string());
+                    ssout << lssout.str();
+                    nbops = lnbops;
+                }
             }
-            omp_unset_lock(&writelock);
         }
     }
 
@@ -123,24 +124,26 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
 #pragma omp parallel for shared(T,ssout,nbops)
         for(size_t i=0; i<randomloops; ++i) {
             FMatrix lT(T, F);
-//             Matrix lT(QQ,T.rowdim(),T.coldim()); matrixCopy(lT,T,QQ);
             std::ostringstream lssout;
             FMatrix NullSpace(F,lT.coldim(),T.coldim());
             auto lnbops( nullspacedecomp(lssout, NullSpace, lT) );
 
-            omp_set_lock(&writelock);
+#pragma omp critical
+            {
 #ifdef VERBATIM_PARSING
-            std::clog << "# Found, kernel: " << lnbops.first << "\tadditions, "
-                       << lnbops.second << "\tmultiplications." << std::endl;
+                std::clog << "# Found, kernel: "
+                          << lnbops.first << "\tadditions, "
+                          << lnbops.second << "\tmultiplications." << std::endl;
 #endif
-            if ( (ssout.tellp() == std::streampos(0)) ||
-                 (lnbops.first<nbops.first) ||
-                 ( (lnbops.first==nbops.first) && (lnbops.second<nbops.second) ) ) {
-                ssout.clear(); ssout.str(std::string());
-                ssout << lssout.str();
-                nbops = lnbops;
+                if ( (ssout.tellp() == std::streampos(0)) ||
+                     (lnbops.first<nbops.first) ||
+                     ( (lnbops.first==nbops.first)
+                       && (lnbops.second<nbops.second) ) ) {
+                    ssout.clear(); ssout.str(std::string());
+                    ssout << lssout.str();
+                    nbops = lnbops;
+                }
             }
-            omp_unset_lock(&writelock);
         }
 
         if (nbops == Pair<size_t>{-1,-1}) {
@@ -172,25 +175,29 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
             FMatrix NullSpace(F,lT.coldim(),T.coldim());
             auto lkops( nullspacedecomp(lkout, NullSpace, lT, l, mostCSE) );
 
-            omp_set_lock(&writelock);
+#pragma omp critical
+            {
 #ifdef VERBATIM_PARSING
-            std::clog << "# Found, kernel: " << lkops.first << "\tadditions, "
-                       << lkops.second << "\tmultiplications." << std::endl;
+                std::clog << "# Found, kernel: "
+                          << lkops.first << "\tadditions, "
+                          << lkops.second << "\tmultiplications." << std::endl;
 #endif
-            if ( (kout.tellp() == std::streampos(0)) ||
-                 (lkops.first<knbops.first) ||
-                 ((lkops.first==knbops.first)&&(lkops.second<knbops.second))) {
-                kout.clear(); kout.str(std::string());
-                kout << lkout.str();
-                knbops = lkops;
+                if ( (kout.tellp() == std::streampos(0)) ||
+                     (lkops.first<knbops.first) ||
+                     ((lkops.first==knbops.first)
+                      && (lkops.second<knbops.second))) {
+                    kout.clear(); kout.str(std::string());
+                    kout << lkout.str();
+                    knbops = lkops;
+                }
             }
-            omp_unset_lock(&writelock);
         }
 
         chrono.stop(); global += chrono;
 
         if ( (knbops.first < nbops.first) ||
-             ( (knbops.first == nbops.first) && (knbops.second < nbops.second) ) ) {
+             ( (knbops.first == nbops.first)
+               && (knbops.second < nbops.second) ) ) {
             nbops = knbops;
             std::clog << "# \033[1;36m"
                       << "Exhaustive kernel permutation, found:"
