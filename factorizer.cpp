@@ -44,9 +44,26 @@ int Factorizer(const _Mat& M, const FileFormat& matformat,
         return -1;
     }
 
-    Givaro::Timer elapsed;
     FMatrix CoB(F, innerdim, M.coldim());
     FMatrix Res(F, M.rowdim(), innerdim);
+
+    if (M.rowdim() == M.coldim()) {
+            // Res can be identity and CoB=M
+        M.write(std::cout, matformat) << std::endl;
+
+        std::clog <<"# Identity\n";
+        for(size_t i(0); i<Res.rowdim(); ++i) Res.setEntry(i, i, F.one);
+        Res.write(std::clog, matformat)<< std::endl;
+
+        std::clog << std::string(30,'#') << std::endl;
+        std::clog <<"# \033[1;32mSUCCESS: identity factorization\033[0m\n";
+
+        return 0;
+    }
+
+
+    Givaro::Timer elapsed;
+
     Pair<size_t> nbops{backSolver(CoB, Res, M)};
 
     elapsed.start();
