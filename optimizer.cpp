@@ -123,7 +123,6 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
 #pragma omp parallel for shared(T,ssout,nbops)
         for(size_t i=0; i<randomloops; ++i) {
             FMatrix lT(T, F);
-//             Matrix lT(QQ,T.rowdim(),T.coldim()); matrixCopy(lT,T,QQ);
             std::ostringstream lssout;
             FMatrix NullSpace(F,lT.coldim(),T.coldim());
             auto lnbops( nullspacedecomp(lssout, NullSpace, lT) );

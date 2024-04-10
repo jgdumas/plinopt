@@ -22,14 +22,14 @@
  ****************************************************************/
 
 // ============================================================
-int Factorizer(std::istream& input, const FileFormat& matformat,
+template<typename _Mat>
+int Factorizer(const _Mat& M, const FileFormat& matformat,
                const size_t selectinnerdim, const size_t randomloops) {
 
-        // ============================================================
-        // Read Matrix of Linear Transformation
-    QRat QQ;
-    QMstream ms(QQ,input);
-    Matrix M(ms); M.resize(M.rowdim(),M.coldim());
+    using FMatrix = _Mat;
+    using Field = typename _Mat::Field;
+    const Field& F(M.field());
+
     size_t sc,sb,sr;
     densityProfile(std::clog << "# Initial profile: ", sc, M)
                              << std::endl;
@@ -38,24 +38,24 @@ int Factorizer(std::istream& input, const FileFormat& matformat,
     M.write(std::clog,FileFormat::Pretty) << std::endl;
 #endif
     size_t innerdim(selectinnerdim == 0 ? M.coldim() : selectinnerdim);
-    if ( (innerdim >= M.rowdim()) ||
+    if ( (innerdim > M.rowdim()) ||
          (innerdim < M.coldim()) ) {
-        std::cerr << "# \033[1;36mFail: inner dimension has to be between " << M.coldim() << " and " << (M.rowdim()-1) << ".\033[0m\n";
+        std::cerr << "# \033[1;36mFail: inner dimension has to be between " << M.coldim() << " and " << M.rowdim() << ".\033[0m\n";
         return -1;
     }
 
     Givaro::Timer elapsed;
-    Matrix CoB(QQ, innerdim, M.coldim());
-    Matrix Res(QQ, M.rowdim(), innerdim);
-    Pair<size_t> nbops{backSolver(CoB, Res, M, QQ)};
+    FMatrix CoB(F, innerdim, M.coldim());
+    FMatrix Res(F, M.rowdim(), innerdim);
+    Pair<size_t> nbops{backSolver(CoB, Res, M)};
     omp_lock_t writelock; omp_init_lock(&writelock);
 
     elapsed.start();
-#pragma omp parallel for shared(Res,CoB,M,QQ,nbops,innerdim)
+#pragma omp parallel for shared(Res,CoB,M,F,nbops,innerdim)
     for(size_t i=0; i<randomloops; ++i) {
-        Matrix lCoB(QQ, innerdim, M.coldim());
-        Matrix lRes(QQ, M.rowdim(), innerdim);
-        auto bSops{backSolver(lCoB, lRes, M, QQ)};
+        FMatrix lCoB(F, innerdim, M.coldim());
+        FMatrix lRes(F, M.rowdim(), innerdim);
+        auto bSops{backSolver(lCoB, lRes, M)};
 
 
         omp_set_lock(&writelock);
@@ -67,8 +67,8 @@ int Factorizer(std::istream& input, const FileFormat& matformat,
                && (bSops.second<nbops.second) ) ) {
             nbops = bSops;
             std::clog << "# Found [" << i << "], R/CB profile: " << bSops << std::endl;
-            matrixCopy(CoB, lCoB, QQ);
-            matrixCopy(Res, lRes, QQ);
+            sparse2sparse(CoB, lCoB);
+            sparse2sparse(Res, lRes);
         }
         omp_unset_lock(&writelock);
     }
@@ -88,7 +88,6 @@ int Factorizer(std::istream& input, const FileFormat& matformat,
                    sr, Res) << "\033[0m" << std::endl;
     Res.write(std::clog, matformat)<< std::endl;
 
-
         // Final check that we computed a factorization M=Res.CoB
     std::clog << std::string(30,'#') << std::endl;
     consistency(std::clog, M, Res, CoB)
@@ -96,10 +95,33 @@ int Factorizer(std::istream& input, const FileFormat& matformat,
         << " by " << CoB.rowdim() << 'x' << CoB.coldim() << " with "
         << sr << " non-zeroes (" << sb << " alt.) instead of " << sc
         << "\033[0m:" << ' ' << elapsed << std::endl;
-
     return 0;
 }
 
+
+// ============================================================
+// Checking a linear program with a matrix
+int Fmain(std::istream& input, const Givaro::Integer& q,
+          const FileFormat& mformat, const size_t innerdim, const size_t loops){
+        // ============================================================
+        // Read Matrix of Linear Transformation
+    QRat QQ;
+    QMstream ms(QQ,input);
+    Matrix rM(ms); rM.resize(rM.rowdim(),rM.coldim());
+
+    if (! Givaro::isZero(q)) {
+            // ============================================================
+            // Rebind matrix type over sub field matrix type
+        using Field = Givaro::Modular<Givaro::Integer>;
+        using FMatrix=typename Matrix::template rebind<Field>::other;
+
+        const Field FF(q);
+        FMatrix fM(rM, FF);
+        return Factorizer(fM, mformat, innerdim, loops);
+    } else {
+        return Factorizer(rM, mformat, innerdim, loops);
+    }
+}
 
 // ============================================================
 // Main: select between file / std::cin
@@ -113,16 +135,17 @@ int main(int argc, char** argv) {
     std::string filename;
     size_t innerdim(0);					// will default to columndimension
     size_t randomloops(DORANDOMSEARCH?DEFAULT_RANDOM_LOOPS:1);
+    Givaro::Integer q(0u);
 
     for (int i = 1; i<argc; ++i) {
         std::string args(argv[i]);
         if (args == "-h") {
-            std::clog << "Usage: " << argv[0]
-                      << " [-h|-M|-P|-S|-L|-k #|-O #] [stdin|matrixfile.sms]\n";
-
             std::clog
+                << "Usage: " << argv[0]
+                << " [-h|-M|-P|-S|-L|-k #|-O #] [stdin|matrixfile.sms]\n"
                 << "  -k #: inner dimension (default is column dimension)\n"
                 << "  -M/-P/-S/-L: selects the ouput format\n"
+                << "  -q #: search modulo (default is Rationals)\n"
                 << "  -O #: search for reduced randomized sparsity\n";
 
             exit(-1);
@@ -132,6 +155,7 @@ int main(int argc, char** argv) {
         else if (args == "-P") { matformat = FileFormat(8); } // Pretty
         else if (args == "-L") { matformat = FileFormat(12); }// Linalg
         else if (args == "-k") { innerdim = atoi(argv[++i]); }
+        else if (args == "-q") { q = Givaro::Integer(argv[++i]); }
         else if (args == "-O") {
             randomloops = atoi(argv[++i]);
             if ( (randomloops>1) && (!DORANDOMSEARCH) ) {
@@ -144,12 +168,10 @@ int main(int argc, char** argv) {
     }
 
     if (filename == "") {
-        return Factorizer(std::cin, matformat, innerdim, randomloops);
+        return Fmain(std::cin, q, matformat, innerdim, randomloops);
     } else {
         std::ifstream inputmatrix(filename);
-        return Factorizer(inputmatrix, matformat, innerdim, randomloops);
+        return Fmain(inputmatrix, q, matformat, innerdim, randomloops);
     }
-
-    return -1;
 }
 // ============================================================

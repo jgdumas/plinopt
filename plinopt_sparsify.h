@@ -87,8 +87,8 @@ int blockSparsifier(Givaro::Timer& elapsed, Matrix& CoB, Matrix& Res,
 // Decomposing the matrix into:
 //   (Res=[identity,lower part])*(CoB=[upperpart])
 //   with prescribed inner dimension
-Pair<size_t> backSolver(Matrix& CoB, Matrix& Res,
-                        const Matrix& iM, const QRat& QQ);
+template<typename _Mat>
+Pair<size_t> backSolver(_Mat& Res, _Mat& CoB, const _Mat& iM);
 
 
 // ============================================================
@@ -100,13 +100,14 @@ bool testLinComb(Pair<int>& weight, Matrix& LCoB, Matrix& Cand,
 
 
     // Consistency check of M == R.C
-template<typename AMatrix>
-std::ostream& consistency(std::ostream& out, const AMatrix& M,
-                          const Matrix& R, const DenseMatrix& C);
+template<typename _Mat1, typename _Mat2, typename _DMat>
+std::ostream& consistency(std::ostream& out, const _Mat1& M,
+                          const _Mat2& R, const _DMat& C);
 
     // Prints out density profile of M
     // returns total density
-std::ostream& densityProfile(std::ostream& out, size_t& s, const Matrix& M);
+template<typename _Mat>
+std::ostream& densityProfile(std::ostream& out, size_t& s, const _Mat& M);
 
 	// Computes the transposed inverse of A
 template<typename _Mat1, typename _Mat2>
@@ -119,7 +120,8 @@ DenseMatrix& applyInverse(DenseMatrix& R, const _Mat1& T, const _Mat2& A,
                           const QRat& QQ, const LinBox::MatrixDomain<QRat>& BMD);
 
 	// Computes the rank of A
-size_t& rank(size_t& r, const Matrix& A);
+template<typename _Mat>
+size_t& rank(size_t& r, const _Mat& A);
 
 
 // ============================================================

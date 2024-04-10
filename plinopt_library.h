@@ -55,6 +55,15 @@ typedef LinBox::SparseMatrix<QRat,
 typedef LinBox::DenseMatrix<QRat> DenseMatrix;
 typedef LinBox::Permutation<QRat> Permutation;
 
+
+
+template<typename _Field>
+using SMatrix=LinBox::SparseMatrix<_Field,
+                                   LinBox::SparseMatrixFormat::SparseSeq >;
+template<typename _Field>
+using DMatrix=LinBox::DenseMatrix<_Field>;
+
+
 typedef std::vector<Givaro::Rational> QArray;
 typedef LinBox::DenseVector<QRat> QVector;
 
@@ -71,16 +80,16 @@ template<typename _Mat1, typename _Mat2>
 inline _Mat1& NegTranspose(_Mat1& T, const _Mat2& A);
 
 	// Copy (and convert) a matrix
-template<typename _Mat1, typename _Mat2, typename _Field>
-_Mat1& matrixCopy(_Mat1&, const _Mat2&, const _Field&);
+template<typename _Mat1, typename _Mat2>
+_Mat1& matrixCopy(_Mat1&, const _Mat2&);
 
 	// Replace row i of A, by row j of B
-template<typename _Mat1, typename _Mat2, typename _Field>
-_Mat1& setRow(_Mat1& A, size_t i, const _Mat2& B, size_t j, const _Field&);
+template<typename _Mat1, typename _Mat2>
+_Mat1& setRow(_Mat1& A, size_t i, const _Mat2& B, size_t j);
 
 	// Replace row i of A, by v
-template<typename _Mat, typename _Vector, typename _Field>
-_Mat& setRow(_Mat& A, size_t i, const _Vector& v, const _Field& QQ);
+template<typename _Mat, typename _Vector>
+_Mat& setRow(_Mat& A, size_t i, const _Vector& v);
 
 	// Negate row i of A
 template<typename _Mat, typename _Field>

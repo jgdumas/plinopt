@@ -30,9 +30,10 @@ inline _Mat1& NegTranspose(_Mat1& T, const _Mat2& A) {
 
 
 	// Replace row i of A, by row j of B
-template<typename _Mat1, typename _Mat2, typename _Field>
-inline _Mat1& setRow(_Mat1& A, size_t i, const _Mat2& B, size_t j,
-                     const _Field& F) {
+template<typename _Mat1, typename _Mat2>
+inline _Mat1& setRow(_Mat1& A, size_t i, const _Mat2& B, size_t j) {
+    using Field = typename _Mat1::Field;
+    const Field& F(A.field());
     A[i].resize(0);
     for(const auto& iter: B[j]) {
         if (! F.isZero(iter.second)) A.setEntry(i,iter.first,iter.second);
@@ -41,16 +42,17 @@ inline _Mat1& setRow(_Mat1& A, size_t i, const _Mat2& B, size_t j,
 }
 
 	// Replace row i of A, by v
-template<typename _Mat, typename _Vector, typename _Field>
-inline _Mat& setRow(_Mat& A, size_t i, const _Vector& v, const _Field& F) {
+template<typename _Mat, typename _Vector>
+inline _Mat& setRow(_Mat& A, size_t i, const _Vector& v) {
+    using Field = typename _Mat::Field;
+    const Field& F(A.field());
     A[i].resize(0);
     for(size_t j=0; j<v.size(); ++j) if (! F.isZero(v[j])) A.setEntry(i,j,v[j]);
     return A;
 }
 
-template<typename _Vector, typename _Field>
-inline DenseMatrix& setRow(DenseMatrix& A, size_t i,
-                           const _Vector& v, const _Field& F) {
+template<typename _Vector>
+inline DenseMatrix& setRow(DenseMatrix& A, size_t i, const _Vector& v) {
     for(size_t j=0; j<v.size(); ++j) A.setEntry(i,j,v[j]);
     return A;
 }
@@ -79,21 +81,12 @@ inline void opRow(_Mat& M, const size_t i, const typename _Mat::Row& s,
 
 
 	// copy dense matrix M into sparse matrix A
-inline Matrix& dense2sparse(Matrix& A, const DenseMatrix& M, const QRat& QQ) {
+template<typename _Mat, typename _DMat>
+inline _Mat& dense2sparse(_Mat& A, const _DMat& M) {
     A.resize(0,0); A.resize(M.rowdim(), M.coldim());
     for(size_t i=0; i<A.rowdim(); ++i) {
-        setRow(A,i,M[i],QQ);
+        setRow(A,i,M[i]);
     }
-    return A;
-}
-
-	// copy sparse matrix M into dense matrix A
-template<typename _DMat, typename _SMat>
-inline _DMat& sparse2dense(_DMat& A, const _SMat& M) {
-    A.init(M.rowdim(), M.coldim());
-    if (M.rowdim() != 0)
-      for(auto indices = M.IndexedBegin(); indices != M.IndexedEnd(); ++indices)
-        A.setEntry(indices.rowIndex(), indices.colIndex(), indices.value());
     return A;
 }
 
@@ -106,25 +99,40 @@ inline _Mat& sparse2sparse(_Mat& A, const _Mat& B) {
 }
 
 
-template<>
-inline Matrix& matrixCopy(Matrix& C, const Matrix& A, const QRat& QQ) {
+	// copy matrix M into dense matrix A
+template<typename _DMat, typename _SMat>
+inline _DMat& any2dense(_DMat& A, const _SMat& M) {
+    A.init(M.rowdim(), M.coldim());
+    if (M.rowdim() != 0)
+      for(auto indices = M.IndexedBegin(); indices != M.IndexedEnd(); ++indices)
+        A.setEntry(indices.rowIndex(), indices.colIndex(), indices.value());
+    return A;
+}
+
+	// Copy (and convert) a matrix
+template<typename _Field>
+inline SMatrix<_Field>& matrixCopy(SMatrix<_Field>& C,
+                                   const SMatrix<_Field>& A){
     return sparse2sparse(C,A);
 }
 
-template<>
-inline Matrix& matrixCopy(Matrix& C, const DenseMatrix& A, const QRat& QQ) {
-    return dense2sparse(C,A,QQ);
-}
-
-template<>
-inline DenseMatrix& matrixCopy(DenseMatrix& C, const Matrix& A, const QRat& QQ) {
-    return sparse2dense(C,A);
+template<typename _Field>
+inline SMatrix<_Field>& matrixCopy(SMatrix<_Field>& C,
+                                   const DMatrix<_Field>& A){
+    return dense2sparse(C,A);
 }
 
 
-template<>
-inline DenseMatrix& matrixCopy(DenseMatrix& C, const DenseMatrix& A, const QRat& QQ) {
-    return sparse2dense(C,A);
+template<typename _Field>
+inline DMatrix<_Field>& matrixCopy(DMatrix<_Field>& C,
+                                   const SMatrix<_Field>& A){
+    return any2dense(C,A);
+}
+
+template<typename _Field>
+inline DMatrix<_Field>& matrixCopy(DMatrix<_Field>& C,
+                                   const DMatrix<_Field>& A){
+    return any2dense(C,A);
 }
 
 
@@ -138,7 +146,7 @@ inline DenseMatrix& permuteRows(DenseMatrix& R, const Permutation& P,
 template<>
 inline DenseMatrix& permuteRows(DenseMatrix& R, const Permutation& P,
                          const Matrix& A, const QRat& QQ) {
-    DenseMatrix dA(QQ,A.rowdim(),A.coldim()); matrixCopy(dA, A, QQ);
+    DenseMatrix dA(QQ,A.rowdim(),A.coldim()); any2dense(dA, A);
     return P.applyRight(R,dA);
 }
 
@@ -147,16 +155,16 @@ inline Matrix& permuteRows(Matrix& R, const Permutation& P,
                     const DenseMatrix& A, const QRat& QQ) {
     DenseMatrix dR(QQ,A.rowdim(),A.coldim());
     P.applyRight(dR, A);
-    return dense2sparse(R, dR, QQ);
+    return dense2sparse(R, dR);
 }
 
 template<>
 inline Matrix& permuteRows(Matrix& R, const Permutation& P,
                     const Matrix& A, const QRat& QQ) {
-    DenseMatrix dA(QQ,A.rowdim(),A.coldim()); matrixCopy(dA, A, QQ);
+    DenseMatrix dA(QQ,A.rowdim(),A.coldim()); any2dense(dA, A);
     DenseMatrix dR(QQ,A.rowdim(),A.coldim());
     P.applyRight(dR, dA);
-    return dense2sparse(R, dR, QQ);
+    return dense2sparse(R, dR);
 }
 
 

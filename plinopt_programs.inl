@@ -981,7 +981,7 @@ _Mat& matrixBuilder(_Mat& A, const VProgram_t& P, const char outchar /* ='o'*/) 
         if(variable[0] == outchar) {
             const size_t i(std::stoi(variable.substr(1,std::string::npos)));
             if (i >= A.rowdim()) A.resize(i+1,n);
-            setRow(A,i,M,index,F);
+            setRow(A,i,M,index);
         }
     }
 
@@ -990,7 +990,7 @@ _Mat& matrixBuilder(_Mat& A, const VProgram_t& P, const char outchar /* ='o'*/) 
     for(const auto& [input, index] : inputs) {
         const size_t j(std::stoi(input.substr(1,std::string::npos)));
         if (j >= B.rowdim()) B.resize(j+1,T.coldim());
-        setRow(B,j,T,index,F);
+        setRow(B,j,T,index);
     }
 
     Transpose(A,B);
