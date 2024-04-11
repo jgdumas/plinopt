@@ -34,6 +34,7 @@ std::ostream& FindProgram(std::ostream& out, std::istream& input,
     QRat QQ; QMstream qs(QQ, input); Matrix M(qs);
     const char inchar(transposed?'t':'i'), tmpchar('z'), outchar('o');
     const size_t outdim(transposed?M.rowdim():M.coldim());
+    const size_t innerdim(transposed?M.coldim():M.rowdim());
 
 #ifdef VERBATIM_PARSING
     M.write(std::clog << "M:=Matrix(",FileFormat::Maple) << ");" << std::endl;
@@ -41,17 +42,18 @@ std::ostream& FindProgram(std::ostream& out, std::istream& input,
     std::clog << std::string(40,'#') << std::endl;
 
     Tricounter opcount; AProgram_t Program;
+    LinBox::Permutation<QRat> P(QQ, innerdim);
 
     if (transposed) {
         Matrix T(QQ, M.coldim(), M.rowdim()); Transpose(T, M);
-        opcount = SearchLinearAlgorithm(Program, T, tmpchar, randomloops);
+        opcount = SearchLinearAlgorithm(Program, P, T, tmpchar, randomloops);
     } else {
-        opcount = SearchLinearAlgorithm(Program, M, tmpchar, randomloops);
+        opcount = SearchLinearAlgorithm(Program, P, M, tmpchar, randomloops);
     }
 
         // Print the chosen algorithm
     input2Temps(out, outdim, inchar, tmpchar);
-    printwithOutput(out, outchar, Program) << std::flush;
+    printwithOutput(out, outchar, Program, P) << std::flush;
 
 #ifdef INPLACE_CHECKER
     std::clog << std::string(40,'#') << std::endl;

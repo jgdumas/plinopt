@@ -92,13 +92,17 @@ template<typename _Mat, typename _Vector>
 _Mat& setRow(_Mat& A, size_t i, const _Vector& v);
 
 	// Negate row i of A
-template<typename _Mat, typename _Field>
-_Mat& negRow(_Mat& A, size_t i, const _Field& F);
+template<typename _Mat>
+_Mat& negRow(_Mat& A, size_t i);
+
+	// Multiply row i of (sparse) A
+template<typename _Mat>
+inline _Mat& mulRow(_Mat& A, size_t i, const typename _Mat::Element& e);
 
     // M[i] <- M[i] + c * s
-template<typename _Mat, typename Field>
+template<typename _Mat>
 inline void opRow(_Mat& M, const size_t i, const typename _Mat::Row& s,
-                  const typename Field::Element& c, const Field& F);
+                  const typename _Mat::Element& c);
 
 	// permute rows
 template<typename _Mat1, typename _Mat2>

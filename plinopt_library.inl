@@ -59,17 +59,30 @@ inline DenseMatrix& setRow(DenseMatrix& A, size_t i, const _Vector& v) {
 
 
 	// Negate row i of (sparse) A
-template<typename _Mat, typename _Field>
-inline _Mat& negRow(_Mat& A, size_t i, const _Field& F) {
+template<typename _Mat>
+inline _Mat& negRow(_Mat& A, size_t i) {
+    using Field = typename _Mat::Field;
+    const Field& F(A.field());
     for(auto& iter: A[i]) F.negin(iter.second);
+    return A;
+}
+
+	// Multiply row i of (sparse) A
+template<typename _Mat>
+inline _Mat& mulRow(_Mat& A, size_t i, const typename _Mat::Element& e) {
+    using Field = typename _Mat::Field;
+    const Field& F(A.field());
+    for(auto& iter: A[i]) F.mulin(iter.second, e);
     return A;
 }
 
 
 // M[i] <- M[i] + c * s
-template<typename _Mat, typename Field>
+template<typename _Mat>
 inline void opRow(_Mat& M, const size_t i, const typename _Mat::Row& s,
-                  const typename Field::Element& c, const Field& F) {
+                  const typename _Mat::Element& c) {
+    using Field = typename _Mat::Field;
+    const Field& F(M.field());
     for(auto e: s) {
         const size_t j(e.first);
         typename Field::Element t; F.init(t);

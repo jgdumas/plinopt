@@ -894,7 +894,7 @@ _Mat& matrixBuilder(_Mat& A, const VProgram_t& P, const char outchar /* ='o'*/) 
         }
         const size_t i(variables[output]);
         for(auto word=line.begin()+2; word !=line.end(); ++word) {
-// std::clog << "## word: " << *word << std::endl;
+// std::clog << "## word: " << *word << " (output:" << output << ')' << std::endl;
             typename Field::Element coeff; F.init(coeff); F.assign(coeff, F.one);
             if (*word == ";") break;
             if (*word == "-") {
@@ -903,7 +903,24 @@ _Mat& matrixBuilder(_Mat& A, const VProgram_t& P, const char outchar /* ='o'*/) 
                 ++word;
             }
             if (*word == output) {
-                if (F.isMOne(coeff)) negRow(M, i, F);
+                ++word;
+                typename Field::Element tmp; F.init(tmp);
+                if (*word == "*") {
+                    ++word;
+                    std::stringstream ssin; ssin << word->c_str();
+                    F.read(ssin, tmp);
+                    F.mulin(coeff,tmp);
+                } else if (*word == "/") {
+                    ++word;
+                    std::stringstream ssin; ssin << word->c_str();
+                    F.read(ssin, tmp);
+                    F.divin(coeff, tmp);
+                } else {
+                    --word;
+                }
+                if (F.isMOne(coeff)) negRow(M, i);
+                else if (! F.isOne(coeff)) mulRow(M, i, coeff);
+// std::clog << "## mul by " << coeff << std::endl;
                 continue;
             }
             if (std::find_if(word->begin(),word->end(), [](const char&c) { return std::isalpha(c); } ) == word->end()) {
@@ -961,7 +978,7 @@ _Mat& matrixBuilder(_Mat& A, const VProgram_t& P, const char outchar /* ='o'*/) 
                 }
 
 // M.write(std::clog << "# BEF opR M:", FileFormat::Pretty) << std::endl;
-                opRow(M, i, M[j], coeff, F);
+                opRow(M, i, M[j], coeff);
 // M.write(F.write(std::clog << "# AFT ", coeff) << " opR M:", FileFormat::Pretty) << std::endl;
             }
         }

@@ -22,7 +22,8 @@ struct Atom;
 typedef std::vector<Atom> AProgram_t;
 
 std::ostream& operator<< (std::ostream&, const AProgram_t&);
-std::ostream& printwithOutput (std::ostream&, const char, const AProgram_t&);
+std::ostream& printwithOutput(std::ostream& out, const char c, const AProgram_t& atomP,
+                              const LinBox::Permutation<QRat>& P);
 
 Tricounter complexity(const AProgram_t& p);
 
@@ -34,9 +35,8 @@ Tricounter LinearAlgorithm(AProgram_t& Program, const Matrix& A,
 
 // ===============================================================
 // Searching the space of in-place linear programs
-Tricounter SearchLinearAlgorithm(AProgram_t& Program, const Matrix& A,
-                                 const char a, size_t randomloops,
-                                 const bool transposed=false);
+Tricounter SearchLinearAlgorithm(AProgram_t& Program, LinBox::Permutation<QRat>& P, const Matrix& A,
+                                 const char a, size_t randomloops, const bool transposed=false);
 
 // ===============================================================
 // In-place optimized program realizing a trilinear function

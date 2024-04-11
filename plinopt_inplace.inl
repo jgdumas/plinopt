@@ -102,12 +102,12 @@ std::ostream& operator<< (std::ostream& out, const AProgram_t& p) {
     return out;
 }
 
-std::ostream& printwithOutput(std::ostream& out, const char c,
-                              const AProgram_t& p) {
+std::ostream& printwithOutput(std::ostream& out, const char c, const AProgram_t& atomP,
+                              const LinBox::Permutation<QRat>& P) {
     size_t numop(0);
-    for(const auto& iter: p) {
+    for(const auto& iter: atomP) {
         if (iter._ope == ' ') {
-            out << 'o' << numop++ << ":=";
+            out << 'o' << P[numop++] << ":=";
         }
         out << iter << std::endl;
     }
@@ -334,8 +334,8 @@ Tricounter LinearAlgorithm(AProgram_t& Program, const Matrix& A,
 
 // ===============================================================
 // Searching the space of in-place linear programs
-Tricounter SearchLinearAlgorithm(AProgram_t& Program, const Matrix& A,
-                                 const char variable, size_t randomloops,
+Tricounter SearchLinearAlgorithm(AProgram_t& Program, LinBox::Permutation<QRat>& P,
+                                 const Matrix& A, const char variable, size_t randomloops,
                                  const bool transposed) {
     const QRat& QQ = A.field();
 
@@ -344,52 +344,60 @@ Tricounter SearchLinearAlgorithm(AProgram_t& Program, const Matrix& A,
 
     Tricounter nbops{ LinearAlgorithm(Program, A, variable, transposed, true) };
 
-
     std::string res(sout.str());
 #ifdef VERBATIM_PARSING
     std::clog << "# Oriented number of operations for " << variable
               << ": " << nbops << std::endl;
 #endif
 
-#pragma omp parallel for shared(A,Program,nbops)
+#pragma omp parallel for shared(A,Program,P,nbops)
     for(size_t i=0; i<randomloops; ++i) {
 
             // =============================================
             // random permutation of the rows
-        LinBox::Permutation<QRat> P(QQ,A.rowdim());
+        LinBox::Permutation<QRat> lP(QQ,A.rowdim());
         Givaro::GivRandom generator;
-        P.random(generator.seed());
+        lP.random(generator.seed());
 
             // =============================================
             // Apply permutation to A
         Matrix pA(QQ,A.rowdim(), A.coldim());
-        permuteRows(pA,P,A,QQ);
+        permuteRows(pA,lP,A,QQ);
 
         AProgram_t lProgram;
         Tricounter lops { LinearAlgorithm(lProgram, pA, variable, transposed) };
 
-        if ( (std::get<0>(lops)<std::get<0>(nbops)) ||
-             ( (std::get<0>(lops)==std::get<0>(nbops))
-               && (std::get<1>(lops)<std::get<1>(nbops)) ) ) {
-            nbops = lops;
-            Program = lProgram;
+#pragma omp critical
+        {
+            if ( (std::get<0>(lops)<std::get<0>(nbops)) ||
+                 ( (std::get<0>(lops)==std::get<0>(nbops))
+                   && (std::get<1>(lops)<std::get<1>(nbops)) ) ) {
+                nbops = lops;
+                Program = lProgram;
+                P.getStorage() = std::move(lP.getStorage());
 #ifdef VERBATIM_PARSING
-            std::clog << "# Found algorithm[" << i << "] for " << variable
-                      << ", operations: " << lops << std::endl;
+                std::clog << "# Found algorithm[" << i << "] for " << variable
+                          << ", operations: " << lops << std::endl;
 #endif
+            }
         }
+
 
         lops = LinearAlgorithm(lProgram, pA, variable, transposed, true);
 
-        if ( (std::get<0>(lops)<std::get<0>(nbops)) ||
-             ( (std::get<0>(lops)==std::get<0>(nbops))
-               && (std::get<1>(lops)<std::get<1>(nbops)) ) ) {
-            nbops = lops;
-            Program = lProgram;
+#pragma omp critical
+        {
+            if ( (std::get<0>(lops)<std::get<0>(nbops)) ||
+                 ( (std::get<0>(lops)==std::get<0>(nbops))
+                   && (std::get<1>(lops)<std::get<1>(nbops)) ) ) {
+                nbops = lops;
+                Program = lProgram;
+                P.getStorage() = std::move(lP.getStorage());
 #ifdef VERBATIM_PARSING
-            std::clog << "# Found oriented[" << i << "] for " << variable
-                      << ", operations: " << lops << std::endl;
+                std::clog << "# Found oriented[" << i << "] for " << variable
+                          << ", operations: " << lops << std::endl;
 #endif
+            }
         }
     }
 
@@ -813,9 +821,9 @@ Tricounter SearchTriLinearAlgorithm(std::ostream& out,
             // random coherent negation of the rows
         for(size_t i=0; i<pA.rowdim(); ++i) {
             const bool negA( generator.brand() ), negB( generator.brand() );
-            if (negA) negRow(pA, i, QQ);
-            if (negB) negRow(pB, i, QQ);
-            if (negA != negB) negRow(pT, i, QQ);
+            if (negA) negRow(pA, i);
+            if (negB) negRow(pB, i);
+            if (negA != negB) negRow(pT, i);
         }
 
         std::ostringstream lout, sout;
