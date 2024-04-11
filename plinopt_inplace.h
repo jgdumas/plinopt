@@ -17,21 +17,24 @@
 #define _PLINOPT_LIBRARY_INPLACE_H_
 
 // ===============================================================
-// Program is a vector of atomic operations (ADD or SCA)
+// Inplace Program is a vector of atomic operations (ADD or SCA)
 struct Atom;
-typedef std::vector<Atom> Program_t;
-std::ostream& operator<< (std::ostream& out, const Program_t& p);
-Tricounter complexity(const Program_t& p);
+typedef std::vector<Atom> AProgram_t;
+
+std::ostream& operator<< (std::ostream&, const AProgram_t&);
+std::ostream& printwithOutput (std::ostream&, const char, const AProgram_t&);
+
+Tricounter complexity(const AProgram_t& p);
 
 // ===============================================================
 // In-place program realizing a linear function
-Tricounter LinearAlgorithm(Program_t& Program, const Matrix& A,
+Tricounter LinearAlgorithm(AProgram_t& Program, const Matrix& A,
                            const char a, const bool transposed=false,
                            const bool oriented=false);
 
 // ===============================================================
 // Searching the space of in-place linear programs
-Tricounter SearchLinearAlgorithm(Program_t& Program, const Matrix& A,
+Tricounter SearchLinearAlgorithm(AProgram_t& Program, const Matrix& A,
                                  const char a, size_t randomloops,
                                  const bool transposed=false);
 

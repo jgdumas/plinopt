@@ -32,31 +32,35 @@ void usage(int argc, char ** argv) {
 std::ostream& FindProgram(std::ostream& out, std::istream& input,
                           const size_t randomloops, const bool transposed) {
     QRat QQ; QMstream qs(QQ, input); Matrix M(qs);
+    const char inchar(transposed?'t':'i'), tmpchar('z'), outchar('o');
+    const size_t outdim(transposed?M.rowdim():M.coldim());
 
 #ifdef VERBATIM_PARSING
     M.write(std::clog << "M:=Matrix(",FileFormat::Maple) << ");" << std::endl;
-    std::clog << std::string(30,'#') << std::endl;
 #endif
-#ifdef INPLACE_CHECKER
-    InitializeVariable('m',M.coldim(), 'L');
-    std::clog << std::string(30,'#') << std::endl;
-#endif
+    std::clog << std::string(40,'#') << std::endl;
 
-    Tricounter opcount; Program_t Program;
+    Tricounter opcount; AProgram_t Program;
 
     if (transposed) {
         Matrix T(QQ, M.coldim(), M.rowdim()); Transpose(T, M);
-        opcount = SearchLinearAlgorithm(Program, T, 't', randomloops);
+        opcount = SearchLinearAlgorithm(Program, T, tmpchar, randomloops);
     } else {
-        opcount = SearchLinearAlgorithm(Program, M, 'm', randomloops);
+        opcount = SearchLinearAlgorithm(Program, M, tmpchar, randomloops);
     }
 
         // Print the chosen algorithm
-    out << Program << std::flush;
+    input2Temps(out, outdim, inchar, tmpchar);
+    printwithOutput(out, outchar, Program) << std::flush;
 
 #ifdef INPLACE_CHECKER
-    std::clog << std::string(30,'#') << std::endl;
-    CollectVariable('m',M.coldim(), 'L');
+    std::clog << std::string(40,'#') << std::endl;
+    std::clog << '<';
+    for(size_t i=0; i< outdim; ++i) {
+        if (i != 0) std::clog << '|';
+        std::clog << tmpchar << i << '-' << inchar << i;
+    }
+    std::clog << '>' << ';' << std::endl;
 #endif
         // =================================
         // Resulting program operation count

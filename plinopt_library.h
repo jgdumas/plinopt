@@ -167,8 +167,24 @@ int Fsign(const Givaro::Modular<Element>& F, const Element& e) {
 }
 
 // ============================================
+// Sets new temporaries with the input values
+void input2Temps(std::ostream& sout, const size_t N,
+                 const char inv, const char tev);
+template<typename _Mat>
+void input2Temps(std::ostream& sout, const size_t N,
+                 const char inv, const char tev, const _Mat& trsp);
 
 
+// prints c[i] * e, or c[i] / b for rational e=1/b
+// updates nbmul if e not in {-1,1}
+template<typename Ring>
+std::ostream& printmulorjustdiv(std::ostream& out,
+                                const char c, const size_t i,
+                                const typename Ring::Element& e,
+                                size_t& nbmul, const Ring& F);
+
+
+// ============================================
 // Vector of factorial up to n
 std::vector<long> factorial(const size_t n) {
     std::vector<long> a(n); a[0]=1;

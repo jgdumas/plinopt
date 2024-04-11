@@ -187,3 +187,65 @@ std::vector<size_t> kthpermutation(const size_t k, const size_t n,
     l.push_back(Q.front());
     return l;
 }
+
+
+
+
+
+// Sets new temporaries with the input values
+void input2Temps(std::ostream& sout, const size_t N,
+                 const char inv, const char tev) {
+    // Inputs to temporaries
+    for(size_t i=0; i<N; ++i) {
+        sout << tev << i << ":="
+                  << inv << i << ';' << std::endl;
+    }
+}
+// Sets new temporaries with the input values
+template<typename _Mat>
+void input2Temps(std::ostream& sout, const size_t N,
+                 const char inv, const char tev,
+                 const _Mat& trsp) {
+    // Inputs to temporaries
+    for(size_t i=0; i<N; ++i) {
+        if (trsp[i].size()) {
+            sout << tev << i << ":="
+                      << inv << i << ';' << std::endl;
+        } // otherwise variable is not used
+    }
+}
+
+
+
+
+template<typename Ring>
+std::ostream& printmulorjustdiv(std::ostream& out,
+                                const char c, const size_t i,
+                                const typename Ring::Element& e,
+                                size_t& nbmul, const Ring& F) {
+    out << c << i;
+    if (notAbsOne(F,e)) {
+        ++nbmul;
+        out << '*' << e;
+    }
+    return out;
+}
+
+template<>
+std::ostream& printmulorjustdiv(std::ostream& out,
+                                const char c, const size_t i,
+                                const Givaro::Rational& r,
+                                size_t& nbmul, const QRat& QQ) {
+    out << c << i;
+    if (!QQ.isOne(r)) {
+        ++nbmul;
+        if (Givaro::isOne(r.nume()))
+            out << '/' << r.deno();
+        else
+            out << '*' << r;
+    }
+    return out;
+}
+
+
+

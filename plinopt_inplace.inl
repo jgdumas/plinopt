@@ -27,23 +27,36 @@ struct Atom {
         if (bsca && isOne(p._val)) return out;
 
 
-        if (p._ope == ' ') return out << "# row computed in "
-                                      << p._var << p._src << VALPAR(p._val);
+//         if (p._ope == ' ') return out << "# row computed in "
+//                                       << p._var << p._src << VALPAR(p._val);
+
+        if (p._ope == ' ') {
+#ifdef VERBATIM_PARSING
+            std::clog << "# row computed in "
+                      << p._var << p._src << VALPAR(p._val) << std::endl;
+#endif
+            return out << p._var << p._src << ';';
+        }
 
 
-        out << p._var << p._src << ":="
-            << p._var << p._src << ' ';
+        out << p._var << p._src << ":=";
+
+        const auto uval(sign(p._val)<0?-p._val:p._val);
 
         if (bsca) {
-            out << p._ope << ' ' << VALPAR(p._val);
+            out << p._var << p._src;
+            out << p._ope << VALPAR(p._val);
         } else {
-            const auto uval(sign(p._val)<0?-p._val:p._val);
             const auto uope(sign(p._val)<0?SWAPOP(p._ope):p._ope);
-            out << uope << ' ';
-            if (! isOne(uval)) {
-                out << VALPAR(uval) << '*';
-            }
-            out << p._var << p._des;
+            out << p._var << p._src << uope;
+
+            QRat QQ; size_t nbmul(0);
+            printmulorjustdiv(out, p._var, p._des, uval, nbmul, QQ);
+
+//             out << p._var << p._des;
+//             if (! isOne(uval)) {
+//                 out << '*' << uval;
+//             }
         }
         return out << ';';
     }
@@ -70,7 +83,7 @@ struct Atom {
 
 auto isScaOne {[](const Atom& p){ return (isSca(p._ope) && isOne(p._val));} };
 
-Tricounter complexity(const Program_t& p) {
+Tricounter complexity(const AProgram_t& p) {
     Tricounter nops;
     for(const auto& iter: p) {
         if (isAdd(iter._ope)) ++std::get<0>(nops);
@@ -79,8 +92,19 @@ Tricounter complexity(const Program_t& p) {
     }
     return nops;
 }
-std::ostream& operator<< (std::ostream& out, const Program_t& p) {
+
+std::ostream& operator<< (std::ostream& out, const AProgram_t& p) {
+    for(const auto& iter: p) if (iter._ope != ' ') out << iter << std::endl;
+    return out;
+}
+
+std::ostream& printwithOutput(std::ostream& out, const char c,
+                              const AProgram_t& p) {
+    size_t numop(0);
     for(const auto& iter: p) {
+        if (iter._ope == ' ') {
+            out << 'o' << numop++ << ":=";
+        }
         out << iter << std::endl;
     }
     return out;
@@ -151,7 +175,7 @@ Matrix::Row::const_iterator nextindex(const size_t preci, const Matrix::Row& L,
 
 // ===============================================================
 // Removes the first atom followed by its inverse
-bool simplify(Program_t& Program, const bool transposed) {
+bool simplify(AProgram_t& Program, const bool transposed) {
     size_t cnt(0);
     for(auto iter = Program.begin(); iter != Program.end(); ++iter) {
         ++ cnt; size_t nnt(0);
@@ -216,7 +240,7 @@ bool simplify(Program_t& Program, const bool transposed) {
 
 // ===============================================================
 // In-place program realizing a linear function
-Tricounter LinearAlgorithm(Program_t& Program, const Matrix& A,
+Tricounter LinearAlgorithm(AProgram_t& Program, const Matrix& A,
                            const char variable,
                            const bool transposed, const bool oriented) {
 
@@ -306,7 +330,7 @@ Tricounter LinearAlgorithm(Program_t& Program, const Matrix& A,
 
 // ===============================================================
 // Searching the space of in-place linear programs
-Tricounter SearchLinearAlgorithm(Program_t& Program, const Matrix& A,
+Tricounter SearchLinearAlgorithm(AProgram_t& Program, const Matrix& A,
                                  const char variable, size_t randomloops,
                                  const bool transposed) {
     const QRat& QQ = A.field();
@@ -337,7 +361,7 @@ Tricounter SearchLinearAlgorithm(Program_t& Program, const Matrix& A,
         Matrix pA(QQ,A.rowdim(), A.coldim());
         permuteRows(pA,P,A,QQ);
 
-        Program_t lProgram;
+        AProgram_t lProgram;
         Tricounter lops { LinearAlgorithm(lProgram, pA, variable, transposed) };
 
         if ( (std::get<0>(lops)<std::get<0>(nbops)) ||
@@ -371,6 +395,24 @@ Tricounter SearchLinearAlgorithm(Program_t& Program, const Matrix& A,
 
 
 
+// ============================================================
+// Creating a vectror of lines from a text file program
+AProgram_t& programParser(AProgram_t& atomicProgram, std::stringstream& ssin) {
+
+        // ============================================================
+        // ====================
+        // Working line by line
+    std::string line;
+    while(std::getline(ssin, line)) {
+            // ========================================================
+            // Finding the LHS
+        const std::size_t postassign(line.find(":=",0));
+        if (postassign != std::string::npos) {
+        }
+    }
+    return atomicProgram;
+
+}
 
 
 // ===============================================================
@@ -665,7 +707,7 @@ Tricounter TriLinearProgram(std::ostream& out, const Matrix& A, const Matrix& B,
                            const Matrix& T, const bool oriented) {
     const QRat& QQ(T.field());
 
-    Program_t aprog, bprog, cprog;
+    AProgram_t aprog, bprog, cprog;
 
 
     Tricounter aops { LinearAlgorithm(aprog, A, 'a', false, oriented) };
