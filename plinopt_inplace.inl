@@ -41,16 +41,20 @@ struct Atom {
 
         out << p._var << p._src << ":=";
 
+        QRat QQ; size_t nbmul(0);
+
         const auto uval(sign(p._val)<0?-p._val:p._val);
 
         if (bsca) {
-            out << p._var << p._src;
-            out << p._ope << VALPAR(p._val);
+            if (sign(p._val)<0) out << '-';
+            printSCA(out, p._var, p._src, p._ope, uval, nbmul, QQ);
+
+//             out << p._var << p._src;
+//             out << p._ope << VALPAR(p._val);
         } else {
             const auto uope(sign(p._val)<0?SWAPOP(p._ope):p._ope);
             out << p._var << p._src << uope;
 
-            QRat QQ; size_t nbmul(0);
             printmulorjustdiv(out, p._var, p._des, uval, nbmul, QQ);
 
 //             out << p._var << p._des;

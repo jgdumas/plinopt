@@ -249,3 +249,15 @@ std::ostream& printmulorjustdiv(std::ostream& out,
 
 
 
+
+std::ostream& printSCA(std::ostream& out,
+                       const char c, const size_t i, const char p,
+                       const Givaro::Rational& r,
+                       size_t& nbmul, const QRat& QQ) {
+    if (p == '*')
+        return printmulorjustdiv(out, c, i, r, nbmul, QQ);
+    else {
+        Givaro::Rational u; QQ.inv(u,r);
+        return printmulorjustdiv(out, c, i, u, nbmul, QQ);
+    }
+}
