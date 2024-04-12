@@ -475,7 +475,7 @@ int Tellegen(std::istream& input,
 
 
 // ============================================================
-// Creating a vectror of lines from a text file program
+// Creating a vector of lines from a text file program
 VProgram_t& programParser(VProgram_t& ProgramVector, std::stringstream& ssin) {
 
         // ============================================================
@@ -706,7 +706,7 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
         // [2] Direct substitution of simple affectations "x := a ;"
         //     --> variable x is replaced by variable a thereafter
     for(auto line(P.begin()); line != P.end(); ++line) {
-        if ((line->size() == 4) && (line->front()[0] != outchar) ) {
+        if ((line->size() == 4) && (line->front()[0] != outchar)) {
             std::string& outvar(line->front()), &invar(*(line->begin()+2));
             auto next(line);
             for(++next; next != P.end(); ++next) {
