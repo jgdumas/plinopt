@@ -255,66 +255,69 @@ Tricounter LinearAlgorithm(AProgram_t& Program, const Matrix& A,
 
     for(size_t l=0; l<m; ++l) {
         const auto& CurrentRow(A[l]);
-            // choose var
-        const auto aiter { nextindex(preci, CurrentRow, oriented) };
-        const size_t i(aiter->first);
+        if (CurrentRow.size()>0) {
 
-            // scale choosen var
-        if (transposed) {
-            if ( (!QQ.isOne(aiter->second)) && (!QQ.isMOne(aiter->second))) {
-                Program.emplace_back(variable,i,'/',aiter->second);
-            }
-        } else {
-            Program.emplace_back(variable,i,'*',aiter->second);
-        }
+                // choose var
+            const auto aiter { nextindex(preci, CurrentRow, oriented) };
+            const size_t i(aiter->first);
 
-
-			// Add the rest of the row
-       for(auto iter = CurrentRow.begin(); iter != CurrentRow.end(); ++iter) {
-            if (iter != aiter) {
-                if (transposed) {
-                    Program.emplace_back(variable, iter->first,
-                                         MONEOP('-',aiter->second),
-                                         iter->second, i);
-                } else {
-                    Program.emplace_back(variable, i,
-                                         '+',
-                                         iter->second, iter->first);
+                // scale choosen var
+            if (transposed) {
+                if ((!QQ.isOne(aiter->second)) && (!QQ.isMOne(aiter->second))) {
+                    Program.emplace_back(variable,i,'/',aiter->second);
                 }
-
-            }
-        }
-
-           // placeholder for barrier:
-           //   (AXPY will have to performed at this point)
-       Program.emplace_back(variable,i,' ', aiter->second);
-
-			// Sub the rest of the row
-        for(auto iter = CurrentRow.begin(); iter != CurrentRow.end(); ++iter) {
-            if (iter != aiter) {
-                if (transposed) {
-                    Program.emplace_back(variable, iter->first,
-                                         MONEOP('+',aiter->second),
-                                         iter->second, i);
-                } else {
-                    Program.emplace_back(variable, i,
-                                         '-',
-                                         iter->second, iter->first);
-                }
-            }
-        }
-
-            // Un-scale choosen var
-        if (transposed) {
-            if ( (!QQ.isOne(aiter->second)) && (!QQ.isMOne(aiter->second))) {
+            } else {
                 Program.emplace_back(variable,i,'*',aiter->second);
             }
-        } else {
-            Program.emplace_back(variable,i,'/',aiter->second);
+
+
+                // Add the rest of the row
+            for(auto iter=CurrentRow.begin(); iter != CurrentRow.end(); ++iter){
+                if (iter != aiter) {
+                    if (transposed) {
+                        Program.emplace_back(variable, iter->first,
+                                             MONEOP('-',aiter->second),
+                                             iter->second, i);
+                    } else {
+                        Program.emplace_back(variable, i,
+                                             '+',
+                                             iter->second, iter->first);
+                    }
+
+                }
+            }
+
+                // placeholder for barrier:
+                //   (AXPY will have to performed at this point)
+            Program.emplace_back(variable,i,' ', aiter->second);
+
+                // Sub the rest of the row
+            for(auto iter=CurrentRow.begin(); iter != CurrentRow.end(); ++iter){
+                if (iter != aiter) {
+                    if (transposed) {
+                        Program.emplace_back(variable, iter->first,
+                                             MONEOP('+',aiter->second),
+                                             iter->second, i);
+                    } else {
+                        Program.emplace_back(variable, i,
+                                             '-',
+                                             iter->second, iter->first);
+                    }
+                }
+            }
+
+                // Un-scale choosen var
+            if (transposed) {
+                if ((!QQ.isOne(aiter->second)) && (!QQ.isMOne(aiter->second))) {
+                    Program.emplace_back(variable,i,'*',aiter->second);
+                }
+            } else {
+                Program.emplace_back(variable,i,'/',aiter->second);
+            }
+
+
+            if (CurrentRow.size()>1) preci = i;
         }
-
-
-        if (CurrentRow.size()>1) preci = i;
     }
 
         // Removing noops
@@ -334,9 +337,10 @@ Tricounter LinearAlgorithm(AProgram_t& Program, const Matrix& A,
 
 // ===============================================================
 // Searching the space of in-place linear programs
-Tricounter SearchLinearAlgorithm(AProgram_t& Program, LinBox::Permutation<QRat>& P,
-                                 const Matrix& A, const char variable, size_t randomloops,
-                                 const bool transposed) {
+Tricounter SearchLinearAlgorithm(AProgram_t& Program,
+                                 LinBox::Permutation<QRat>& P,
+                                 const Matrix& A, const char variable,
+                                 size_t randomloops, const bool transposed) {
     const QRat& QQ = A.field();
 
     Givaro::Timer elapsed;
