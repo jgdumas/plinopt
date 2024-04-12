@@ -60,7 +60,7 @@ Pair<size_t> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
 
         // Looking for the most number of ones in either columns of cse
     _Mat lT(FF, lM.coldim(), lM.rowdim()); Transpose(lT, lM);
-    size_t count0, count1;
+    size_t count0(0), count1(0);
     for(const auto& iter: lT[std::get<0>(cse)]) {
         if (isAbsOne(FF,iter.second)) ++count0;
     }
