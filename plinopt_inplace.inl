@@ -23,25 +23,27 @@ struct Atom {
 
     friend std::ostream& operator<<(std::ostream& out, const Atom& p) {
         const bool bsca(isSca(p._ope));
+        QRat QQ;
 
-        if (bsca && isOne(p._val)) return out;
+        if (bsca && QQ.isOne(p._val)) return out;
 
-
-//         if (p._ope == ' ') return out << "# row computed in "
-//                                       << p._var << p._src << VALPAR(p._val);
 
         if (p._ope == ' ') {
 #ifdef VERBATIM_PARSING
             std::clog << "# row computed in "
                       << p._var << p._src << VALPAR(p._val) << std::endl;
 #endif
-            return out << p._var << p._src << ';';
+            if (QQ.isZero(p._val)) {
+                return out << '0' << ';';
+            } else {
+                return out << p._var << p._src << ';';
+            }
         }
 
 
         out << p._var << p._src << ":=";
 
-        QRat QQ; size_t nbmul(0);
+        size_t nbmul(0);
 
         const auto uval(sign(p._val)<0?-p._val:p._val);
 
@@ -104,6 +106,8 @@ std::ostream& operator<< (std::ostream& out, const AProgram_t& p) {
 
 std::ostream& printwithOutput(std::ostream& out, const char c, const AProgram_t& atomP,
                               const LinBox::Permutation<QRat>& P) {
+//     P.write(std::clog << "# Permutation: ") << std::endl;
+
     size_t numop(0);
     for(const auto& iter: atomP) {
         if (iter._ope == ' ') {
@@ -317,6 +321,8 @@ Tricounter LinearAlgorithm(AProgram_t& Program, const Matrix& A,
 
 
             if (CurrentRow.size()>1) preci = i;
+        } else {
+            Program.emplace_back(' ',l,' ',QQ.zero);
         }
     }
 
