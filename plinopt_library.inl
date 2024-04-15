@@ -77,19 +77,21 @@ inline _Mat& mulRow(_Mat& A, size_t i, const typename _Mat::Element& e) {
 }
 
 
-// M[i] <- M[i] + c * s
+	// M[i] <- M[i] + c * s
 template<typename _Mat>
 inline void opRow(_Mat& M, const size_t i, const typename _Mat::Row& s,
                   const typename _Mat::Element& c) {
     using Field = typename _Mat::Field;
     const Field& F(M.field());
+    _Mat B(F,1,M.coldim()); setRow(B,0,M,i); // copy row i of M
     for(auto e: s) {
         const size_t j(e.first);
         typename Field::Element t; F.init(t);
-        F.assign(t,M.getEntry(i,j)); // might be zero (can't use refEntry)
+        F.assign(t,M.getEntry(i,j));    // might be zero (can't use refEntry)
         F.axpyin(t,c,e.second);
-        M.setEntry(i,j,t);
+        B.setEntry(0,j,t);              // might have become zero ...
     }
+    setRow(M,i,B,0);                    // ... gets only the non-zeroes in B
 }
 
 
