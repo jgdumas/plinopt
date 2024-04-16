@@ -36,7 +36,7 @@ int Selector(std::istream& input, const FileFormat& matformat,
     Matrix CoB(QQ,M.coldim(), M.coldim());
     Matrix Res(QQ,M.rowdim(), M.coldim());
     blockSparsifier(elapsed, CoB, Res, M, blocksize,
-                    QQ, matformat, maxnumcoeff, initialElimination);
+                    matformat, maxnumcoeff, initialElimination);
 
         // ============================================================
         // Print resulting matrices

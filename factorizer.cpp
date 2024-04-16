@@ -44,7 +44,6 @@ int Factorizer(const _Mat& M, const FileFormat& matformat,
         return -1;
     }
 
-    FMatrix CoB(F, innerdim, M.coldim());
     FMatrix Res(F, M.rowdim(), innerdim);
 
     if (M.rowdim() == M.coldim()) {
@@ -64,7 +63,11 @@ int Factorizer(const _Mat& M, const FileFormat& matformat,
 
     Givaro::Timer elapsed;
 
-    Pair<size_t> nbops{backSolver(CoB, Res, M)};
+    sparse2sparse(Res, M);
+    FMatrix CoB(F, innerdim, M.coldim());
+    for(size_t i(0); i<CoB.rowdim(); ++i) CoB.setEntry(i, i, F.one);
+    Pair<size_t> nbops{sc,M.coldim()}; // Start with M and Identity
+
 
     elapsed.start();
 #pragma omp parallel for shared(Res,CoB,M,F,nbops,innerdim)

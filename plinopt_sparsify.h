@@ -78,7 +78,7 @@ Givaro::Timer& sparseAlternate(Givaro::Timer& chrono, Matrix& CoB, Matrix& Res,
 // Sparsifying and reducing coefficient diversity of a matrix
 // by sparse QLUP elimination, followed by block sparsification
 int blockSparsifier(Givaro::Timer& elapsed, Matrix& CoB, Matrix& Res,
-                    const Matrix& M, const size_t blocksize, const QRat& QQ,
+                    const Matrix& M, const size_t blocksize,
                     const FileFormat& matformat, const size_t maxnumcoeff);
 
 
@@ -116,7 +116,7 @@ _Mat1& inverseTranspose(_Mat1& TI, const _Mat2& A);
     // Compute R, s.t. A == T . R
 template<typename _Mat1, typename _Mat2>
 DenseMatrix& applyInverse(DenseMatrix& R, const _Mat1& T, const _Mat2& A,
-                          const QRat& QQ, const LinBox::MatrixDomain<QRat>& BMD);
+                          const LinBox::MatrixDomain<QRat>& BMD);
 
 	// Computes the rank of A
 template<typename _Mat>
@@ -149,7 +149,7 @@ Matrix& diagonalMatrix(Matrix& M, const std::vector<Matrix>& V);
 
     // Append columns by blocks of columns
 template<typename _Mat>
-Matrix& augmentedMatrix(Matrix&, const std::vector<_Mat>&, const QRat&);
+Matrix& augmentedMatrix(Matrix&, const std::vector<_Mat>&);
 
     // Find most frequent Rational between begin and end
     // element is suppoded to be the second in a pair

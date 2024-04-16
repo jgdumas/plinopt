@@ -34,9 +34,13 @@ template<typename _Mat1, typename _Mat2>
 inline _Mat1& setRow(_Mat1& A, size_t i, const _Mat2& B, size_t j) {
     using Field = typename _Mat1::Field;
     const Field& F(A.field());
-    A[i].resize(0);
-    for(const auto& iter: B[j]) {
-        if (! F.isZero(iter.second)) A.setEntry(i,iter.first,iter.second);
+    auto& Ai(A[i]); const auto& Bj(B[j]);
+    Ai.resize(Bj.size());
+    auto aiter(A[i].begin());
+    for(auto aiter(A[i].begin()), biter(B[j].begin());
+        biter != B[j].end(); ++biter, ++aiter) {
+        aiter->first = biter->first;
+        aiter->second = biter->second;
     }
     return A;
 }
@@ -46,8 +50,9 @@ template<typename _Mat, typename _Vector>
 inline _Mat& setRow(_Mat& A, size_t i, const _Vector& v) {
     using Field = typename _Mat::Field;
     const Field& F(A.field());
-    A[i].resize(0);
-    for(size_t j=0; j<v.size(); ++j) if (! F.isZero(v[j])) A.setEntry(i,j,v[j]);
+    auto& Ai(A[i]); Ai.resize(0);
+    for(size_t j=0; j<v.size(); ++j)
+        if (! F.isZero(v[j])) Ai.emplace_back(j,v[j]);
     return A;
 }
 
@@ -98,7 +103,7 @@ inline void opRow(_Mat& M, const size_t i, const typename _Mat::Row& s,
 	// copy dense matrix M into sparse matrix A
 template<typename _Mat, typename _DMat>
 inline _Mat& dense2sparse(_Mat& A, const _DMat& M) {
-    A.resize(0,0); A.resize(M.rowdim(), M.coldim());
+    A.resize(M.rowdim(), M.coldim());
     for(size_t i=0; i<A.rowdim(); ++i) {
         setRow(A,i,M[i]);
     }
@@ -108,8 +113,10 @@ inline _Mat& dense2sparse(_Mat& A, const _DMat& M) {
 	// copy sparse matrix B into sparse matrix A
 template<typename _Mat>
 inline _Mat& sparse2sparse(_Mat& A, const _Mat& B) {
-    A.resize(0,0); A.resize(B.rowdim(), B.coldim());
-    std::copy(B.rowBegin(), B.rowEnd(), A.rowBegin());
+    A.resize(B.rowdim(), B.coldim());
+    for(size_t i=0; i<A.rowdim(); ++i) {
+        setRow(A,i,B,i);
+    }
     return A;
 }
 

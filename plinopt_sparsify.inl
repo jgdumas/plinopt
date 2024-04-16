@@ -105,8 +105,8 @@ inline Matrix& diagonalMatrix(Matrix& M, const std::vector<Matrix>& V) {
 
     // Append columns by blocks of columns
 template<typename _Mat>
-inline Matrix& augmentedMatrix(Matrix& M, const std::vector<_Mat>& V,
-                               const QRat& QQ) {
+inline Matrix& augmentedMatrix(Matrix& M, const std::vector<_Mat>& V) {
+    const QRat& QQ(M.field());
     const size_t m(M.rowdim());
     M.resize(m,0);
     for(const auto& mat: V) {
@@ -127,7 +127,7 @@ inline Matrix& augmentedMatrix(Matrix& M, const std::vector<_Mat>& V,
     // Cut matrix by blocks of columns
 inline std::vector<Matrix>& separateColumnBlocks(
     std::vector<Matrix>& V, const Matrix& A, const size_t blocksize) {
-    static QRat QQ;
+    const QRat& QQ(A.field());
     const size_t numlargeblocks(A.coldim()/blocksize);
     const size_t lastblock(A.coldim()-numlargeblocks*blocksize);
     const bool hassmallblock(lastblock>0);
@@ -179,8 +179,8 @@ std::ostream& densityProfile(std::ostream& out, size_t& ss, const _Mat& M) {
 //    If w is better, then replaces the line #num of LCoB
 inline bool testLinComb(Pair<int>& weight, Matrix& LCoB, Matrix& Cand,
                         const size_t num,const QArray& w, const Matrix& TM) {
-    static QRat QQ;
-    static QArray v(TM.coldim()); v.resize(TM.coldim());
+    const QRat& QQ(TM.field());
+    QArray v(TM.coldim()); v.resize(TM.coldim());
 
         // Check independency
     setRow(Cand,num,w);
@@ -217,8 +217,8 @@ inline bool testLinComb(Pair<int>& weight, Matrix& LCoB, Matrix& Cand,
 //   uses a limited number of coefficients for the linear comb.
 //   (that is at most: maxnumcoeff)
 Matrix& Sparsifier(Matrix& TCoB, Matrix& TM, const size_t maxnumcoeff) {
-    static QRat QQ;
-    static LinBox::GaussDomain<QRat> GD(QQ);
+    const QRat& QQ(TM.field());
+    LinBox::GaussDomain<QRat> GD(QQ);
 
     const size_t n(TCoB.rowdim());
     assert(n == TCoB.rowdim());
@@ -339,7 +339,7 @@ Matrix& Sparsifier(Matrix& TCoB, Matrix& TM, const size_t maxnumcoeff) {
         // Apply it:
         //   - to the sparsified matrix
         //   - to previous change of Basis
-    static LinBox::MatrixDomain<QRat> BMD(QQ);
+    LinBox::MatrixDomain<QRat> BMD(QQ);
     DenseMatrix TR(QQ,TM.rowdim(), TM.coldim()),
         TS(QQ, TCoB.rowdim(),TCoB.coldim());
     BMD.mul(TR,LCoB,TM);   // Direct matrix multiplication
@@ -358,7 +358,7 @@ Matrix& Sparsifier(Matrix& TCoB, Matrix& TM, const size_t maxnumcoeff) {
 // Factoring out some coefficients:
 //    from most frequent in a row of TM, towards a column of TCoB
 inline Matrix& FactorDiagonals(Matrix& TCoB, Matrix& TM) {
-    static QRat QQ;
+    const QRat& QQ(TM.field());
     for(size_t i=0; i<TM.rowdim(); ++i) {
         if (TM[i].size()>0) {
             Givaro::Rational r(most_frequent_nonzero(TM[i].begin(),
@@ -379,7 +379,8 @@ inline Matrix& FactorDiagonals(Matrix& TCoB, Matrix& TM) {
     // Compute R, s.t. A == TICoB . R
 template<typename _Mat1, typename _Mat2>
 DenseMatrix& applyInverse(DenseMatrix& R, const _Mat1& TICoB, const _Mat2& A,
-                 const QRat& QQ, const LinBox::MatrixDomain<QRat>& BMD) {
+                          const LinBox::MatrixDomain<QRat>& BMD) {
+    const QRat& QQ(TICoB.field());
     Matrix CoB(QQ,TICoB.rowdim(), TICoB.coldim());
     Matrix TCoB(QQ,CoB.coldim(), CoB.rowdim());
     inverseTranspose(CoB, TICoB); // CoB  == TICoB^{-T}
@@ -404,10 +405,10 @@ size_t SparseFactor(Matrix& TICoB, Matrix& TM,
     densityProfile(std::clog << "# Columns profile: ", s2, TM) << std::endl;
 
 #ifdef DEBUG
-    static QRat QQ;
-    static LinBox::MatrixDomain<QRat> BMD(QQ);
+    const QRat& QQ(TM.field());
+    LinBox::MatrixDomain<QRat> BMD(QQ);
     DenseMatrix TR(QQ,TM.rowdim(),TM.coldim());
-    applyInverse(TR, TICoB, TM, QQ, BMD);	// TM == TICoB . TR
+    applyInverse(TR, TICoB, TM, BMD);	// TM == TICoB . TR
 #endif
 
     size_t numcoeffs(start);
@@ -441,9 +442,9 @@ size_t SparseFactor(Matrix& TICoB, Matrix& TM,
 //    QL <-- Q.L
 // Updates QL and A only if resulting A = UP is sparser
 inline bool sparseLU(Matrix& QL, Matrix& A, const size_t sparsity) {
-    static QRat QQ;
-    static LinBox::GaussDomain<QRat> GD(QQ);
-    static LinBox::MatrixDomain<QRat> BMD(QQ);
+    const QRat& QQ(A.field());
+    LinBox::GaussDomain<QRat> GD(QQ);
+    LinBox::MatrixDomain<QRat> BMD(QQ);
 
     const size_t m(A.rowdim()), n(A.coldim());
 #ifdef DEBUG
@@ -488,21 +489,21 @@ inline bool sparseLU(Matrix& QL, Matrix& A, const size_t sparsity) {
 //    TC <--  (QL)^{-1} . TC
 // Updates TC and A only if resulting A is sparser
 inline bool sparseILU(Matrix& TC, Matrix& A, const size_t sparsity) {
-    static QRat QQ;
-    static LinBox::GaussDomain<QRat> GD(QQ);
-    static LinBox::MatrixDomain<QRat> BMD(QQ);
+    const QRat& QQ(A.field());
+    LinBox::GaussDomain<QRat> GD(QQ);
+    LinBox::MatrixDomain<QRat> BMD(QQ);
 
     const size_t m(A.rowdim());
 #ifdef DEBUG
     DenseMatrix TR(QQ,m,A.coldim());
-    applyInverse(TR, TC, A, QQ, BMD);	// TR s.t., A == TC . TR
+    applyInverse(TR, TC, A, BMD);	// TR s.t., A == TC . TR
 #endif
 
     Matrix QL(QQ,m,m); for(size_t i=0; i<m; ++i) QL.setEntry(i,i,QQ.one);
     bool sparser( sparseLU(QL, A, sparsity) );
     if (sparser) {
         DenseMatrix K(QQ,m,m);
-        applyInverse(K, QL, TC, QQ, BMD);
+        applyInverse(K, QL, TC, BMD);
         dense2sparse(TC, K);
     }
 
@@ -524,7 +525,7 @@ Givaro::Timer& sparseAlternate(Givaro::Timer& chrono, Matrix& CoB, Matrix& Res,
                                const Matrix& M, const size_t maxnumcoeff) {
     chrono.start();
 
-    static QRat QQ;
+    const QRat& QQ(M.field());
     const size_t m(M.rowdim()), n(M.coldim());
     Matrix TM(QQ,n,m); Transpose(TM, M);
 
@@ -571,7 +572,7 @@ Givaro::Timer& sparseAlternate(Givaro::Timer& chrono, Matrix& CoB, Matrix& Res,
 // Sparsifying and reducing coefficient diversity of a matrix
 // by sparse QLUP elimination, followed by block sparsification
 int blockSparsifier(Givaro::Timer& elapsed, Matrix& CoB, Matrix& Res,
-                    const Matrix& M, const size_t blocksize, const QRat& QQ,
+                    const Matrix& M, const size_t blocksize,
                     const FileFormat& matformat, const size_t maxnumcoeff,
                     const bool initialElimination) {
 
@@ -581,7 +582,7 @@ int blockSparsifier(Givaro::Timer& elapsed, Matrix& CoB, Matrix& Res,
         sparseAlternate(elapsed, CoB, Res, M, maxnumcoeff);
     } else {
         Givaro::Timer chrono; chrono.start();
-
+        const QRat& QQ(M.field());
         const size_t m(M.rowdim()), n(M.coldim());
         Matrix U(QQ,n,m), L(QQ,n,n);
         bool reduced(initialElimination);
@@ -622,7 +623,7 @@ int blockSparsifier(Givaro::Timer& elapsed, Matrix& CoB, Matrix& Res,
         }
 
             // Build resulting matrices
-        augmentedMatrix(Res, vR, QQ);
+        augmentedMatrix(Res, vR);
 
         if (reduced) {
             LinBox::MatrixDomain<QRat> BMD(QQ);
@@ -636,7 +637,7 @@ int blockSparsifier(Givaro::Timer& elapsed, Matrix& CoB, Matrix& Res,
                 BMD.mul(vB.back(),vL[i],TvC);
             }
             Matrix TCoB(QQ,CoB.coldim(), CoB.rowdim());
-            augmentedMatrix(TCoB, vB,QQ);
+            augmentedMatrix(TCoB, vB);
             Transpose(CoB, TCoB);
         } else {
             diagonalMatrix(CoB, vC);
