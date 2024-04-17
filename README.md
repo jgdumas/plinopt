@@ -20,7 +20,7 @@
            `sudo apt install git make g++ pkg-config liblinbox-dev`
            (sometimes also `sudo apt install libntl-dev libiml-dev libflint-dev`).
 - Then just run `make`, in order to produce the following executable programs
-
+- `make check`, will run correctness programs on the examples files in the `data` directory
 
 
 **From matrices to programs**:
