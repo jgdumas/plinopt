@@ -48,7 +48,8 @@
 |  |  |
 | :--------- | :------ |
 |`matrix-transpose`| transposes a matrix from an SMS file |
-|`sms2pretty`| pretty prints a matrix from an SMS file |
+|`sms2pretty`| pretty prints a matrix from a file |
+|`PMchecker`| asserts correctness of program, with respect to a matrix |
 |`MMchecker`| asserts correctness of trilinear program for matrix-multiplication |
 |  |  |
 
@@ -95,3 +96,4 @@
 - `./inplacer data/Lw.sms`: in-place matrix-vector accumulating multiplication
 - `./trilplacer data/Lw.sms data/Rw.sms data/Pw.sms`: in-place version of Strassen-Winograd's fast 2x2 accumulating multiplication
 - `./trilplacer data/Lk.sms data/Rk.sms data/Pk.sms -e`: in-place version of Karatsuba's fast accumulating polynomial multiplication
+- `./optimizer -q 17 data/Lo.sms | compacter -s | PMchecker -q 17 -M data/Lo.sms`: creates a program for `Lo.sms` modulo 17, compacts it with less variables, then checks consistency
