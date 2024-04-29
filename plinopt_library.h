@@ -55,6 +55,15 @@ typedef LinBox::SparseMatrix<QRat,
 typedef LinBox::DenseMatrix<QRat> DenseMatrix;
 typedef LinBox::Permutation<QRat> Permutation;
 
+
+
+template<typename _Field>
+using SMatrix=LinBox::SparseMatrix<_Field,
+                                   LinBox::SparseMatrixFormat::SparseSeq >;
+template<typename _Field>
+using DMatrix=LinBox::DenseMatrix<_Field>;
+
+
 typedef std::vector<Givaro::Rational> QArray;
 typedef LinBox::DenseVector<QRat> QVector;
 
@@ -71,25 +80,29 @@ template<typename _Mat1, typename _Mat2>
 inline _Mat1& NegTranspose(_Mat1& T, const _Mat2& A);
 
 	// Copy (and convert) a matrix
-template<typename _Mat1, typename _Mat2, typename _Field>
-_Mat1& matrixCopy(_Mat1&, const _Mat2&, const _Field&);
+template<typename _Mat1, typename _Mat2>
+_Mat1& matrixCopy(_Mat1&, const _Mat2&);
 
 	// Replace row i of A, by row j of B
-template<typename _Mat1, typename _Mat2, typename _Field>
-_Mat1& setRow(_Mat1& A, size_t i, const _Mat2& B, size_t j, const _Field&);
+template<typename _Mat1, typename _Mat2>
+_Mat1& setRow(_Mat1& A, size_t i, const _Mat2& B, size_t j);
 
 	// Replace row i of A, by v
-template<typename _Mat, typename _Vector, typename _Field>
-_Mat& setRow(_Mat& A, size_t i, const _Vector& v, const _Field& QQ);
+template<typename _Mat, typename _Vector>
+_Mat& setRow(_Mat& A, size_t i, const _Vector& v);
 
 	// Negate row i of A
-template<typename _Mat, typename _Field>
-_Mat& negRow(_Mat& A, size_t i, const _Field& F);
+template<typename _Mat>
+_Mat& negRow(_Mat& A, size_t i);
+
+	// Multiply row i of (sparse) A
+template<typename _Mat>
+inline _Mat& mulRow(_Mat& A, size_t i, const typename _Mat::Element& e);
 
     // M[i] <- M[i] + c * s
-template<typename _Mat, typename Field>
+template<typename _Mat>
 inline void opRow(_Mat& M, const size_t i, const typename _Mat::Row& s,
-                  const typename Field::Element& c, const Field& F);
+                  const typename _Mat::Element& c);
 
 	// permute rows
 template<typename _Mat1, typename _Mat2>
@@ -158,8 +171,24 @@ int Fsign(const Givaro::Modular<Element>& F, const Element& e) {
 }
 
 // ============================================
+// Sets new temporaries with the input values
+void input2Temps(std::ostream& sout, const size_t N,
+                 const char inv, const char tev);
+template<typename _Mat>
+void input2Temps(std::ostream& sout, const size_t N,
+                 const char inv, const char tev, const _Mat& trsp);
 
 
+// prints c[i] * e, or c[i] / b for rational e=1/b
+// updates nbmul if e not in {-1,1}
+template<typename Ring>
+std::ostream& printmulorjustdiv(std::ostream& out,
+                                const char c, const size_t i,
+                                const typename Ring::Element& e,
+                                size_t& nbmul, const Ring& F);
+
+
+// ============================================
 // Vector of factorial up to n
 std::vector<long> factorial(const size_t n) {
     std::vector<long> a(n); a[0]=1;

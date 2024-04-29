@@ -40,45 +40,13 @@ inline size_t score(const std::vector<std::vector<triple>>& AllPairs,
                     const triple& cse) {
     size_t score(0);
     for(size_t k=0; k<Density.size(); ++k) {
-        if (std::find(AllPairs[k].begin(), AllPairs[k].end(), cse) != AllPairs[k].end()) {
+        if (std::find(AllPairs[k].begin(), AllPairs[k].end(), cse)
+            != AllPairs[k].end()) {
             score += Density[k]*Density[k];
         }
     }
     return score;
 }
-
-
-
-template<typename Ring>
-std::ostream& printmulorjustdiv(std::ostream& out,
-                                const char c, const size_t i,
-                                const typename Ring::Element& e,
-                                size_t& nbmul, const Ring& F) {
-    out << c << i;
-    if (notAbsOne(F,e)) {
-        ++nbmul;
-        out << '*' << e;
-    }
-    return out;
-}
-
-template<>
-std::ostream& printmulorjustdiv(std::ostream& out,
-                                const char c, const size_t i,
-                                const Givaro::Rational& r,
-                                size_t& nbmul, const QRat& QQ) {
-    out << c << i;
-    if (!QQ.isOne(r)) {
-        ++nbmul;
-        if (Givaro::isOne(r.nume()))
-            out << '/' << r.deno();
-        else
-            out << '*' << r;
-    }
-    return out;
-}
-
-
 
 
 
@@ -187,7 +155,6 @@ Pair<size_t> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
 template<typename triple,typename _Mat>
 bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
             size_t& nbmul, const char tev, const char rav) {
-    size_t m(M.coldim());
     const auto& FF(M.field());
 
     std::vector<std::vector<triple>> AllPairs;
@@ -464,30 +431,6 @@ bool Triangle(std::ostream& sout, _Mat& M, _Mat& T,
     return found;
 }
 
-
-
-// Sets new temporaries with the input values
-void input2Temps(std::ostream& sout, const size_t N,
-                 const char inv, const char tev) {
-    // Inputs to temporaries
-    for(size_t i=0; i<N; ++i) {
-        sout << tev << i << ":="
-                  << inv << i << ';' << std::endl;
-    }
-}
-// Sets new temporaries with the input values
-template<typename _Mat>
-void input2Temps(std::ostream& sout, const size_t N,
-                 const char inv, const char tev,
-                 const _Mat& trsp) {
-    // Inputs to temporaries
-    for(size_t i=0; i<N; ++i) {
-        if (trsp[i].size()) {
-            sout << tev << i << ":="
-                      << inv << i << ';' << std::endl;
-        } // otherwise variable is not used
-    }
-}
 
 
 // Direct program generateur from a matrix
@@ -811,7 +754,6 @@ bool RecSub(std::vector<std::string>& out, _Mat& Mat,
             size_t& nbadd, size_t& nbmul, const size_t lvl,
             const char tev, const char rav) {
 
-    size_t m(Mat.coldim());
     const auto& FF(Mat.field());
 
     std::vector<std::vector<triple>> AllPairs;
@@ -853,7 +795,6 @@ bool RecSub(std::vector<std::string>& out, _Mat& Mat,
     _Mat bestM(FF,Mat.rowdim(),Mat.coldim()); sparse2sparse(bestM, Mat);
     std::vector<triple> bestmultiples(multiples);
     std::vector<std::string> bestdout;
-    omp_lock_t writelock; omp_init_lock(&writelock);
 
 #pragma omp parallel for shared(AllPairs,Mat,bestadds,bestmuls,bestM,bestmultiples,bestdout,tev,rav,multiples)
     for(size_t i=0; i<AllPairs.size(); ++i) {
@@ -876,16 +817,17 @@ bool RecSub(std::vector<std::string>& out, _Mat& Mat,
                 std::vector<std::string> sdout(1,ssout.str());
                 RecSub(sdout, lM, lmultiples, ladditions, lmuls, lvl+1, tev, rav);
 
-                omp_set_lock(&writelock);
-                if ( (ladditions < bestadds) ||
-                     ( (ladditions == bestadds) && (lmuls < bestmuls) ) ) {
-                    bestadds = ladditions;
-                    bestmuls = lmuls;
-                    sparse2sparse(bestM, lM);
-                    bestmultiples = lmultiples;
-                    bestdout = sdout;
+#pragma omp critical
+                {
+                    if ( (ladditions < bestadds) ||
+                         ( (ladditions == bestadds) && (lmuls < bestmuls) ) ) {
+                        bestadds = ladditions;
+                        bestmuls = lmuls;
+                        sparse2sparse(bestM, lM);
+                        bestmultiples = lmultiples;
+                        bestdout = sdout;
+                    }
                 }
-                omp_unset_lock(&writelock);
             }
         }
     }
@@ -923,7 +865,6 @@ Pair<size_t> RecOptimizer(std::ostream& sout, _Mat& M,
         // Factoring sums
     std::vector<std::string> dout;
     std::vector<triple> multiples;
-    size_t lmul(0);
     RecSub(dout, M, multiples, nbadd, nbmul, 0, tev, rav);
 
     size_t alreadymuls(nbmul);

@@ -20,7 +20,7 @@
            `sudo apt install git make g++ pkg-config liblinbox-dev`
            (sometimes also `sudo apt install libntl-dev libiml-dev libflint-dev`).
 - Then just run `make`, in order to produce the following executable programs
-
+- `make check`, will run correctness programs on the examples files in the `data` directory
 
 
 **From matrices to programs**:
@@ -29,7 +29,8 @@
 |`optimizer`| produces a small program computing a linear transformation|
 |`sparsifier`| factors an MxN matrix into a sparser one, times an NxN matrix |
 |`factorizer`| factors an MxN matrix into a sparser MxK, times an KxN matrix |
-|`inplacer`| produces an in-place program from a bilinear transformation|
+|`inplacer`| produces an in-place program from a linear transformation|
+|`trilplacer`| produces an in-place program from a trilinear transformation|
 |  |  |
 
 
@@ -37,8 +38,8 @@
 **Optimizing programs**:
 |  |  |
 | :--------- | :------ |
-|`transpozer`| transposes a program, via Tellegen's transposition principle|
 |`compacter`| rewrites a simple program using less variables |
+|`transpozer`| transposes a program, via Tellegen's transposition principle|
 |  |  |
 
 
@@ -47,8 +48,9 @@
 |  |  |
 | :--------- | :------ |
 |`matrix-transpose`| transposes a matrix from an SMS file |
-|`sms2pretty`| pretty prints a matrix from an SMS file |
-|`MMchecker`| asserts correctness of bilinear program for matrix-multiplication |
+|`sms2pretty`| pretty prints a matrix from a file |
+|`PMchecker`| asserts correctness of program, with respect to a matrix |
+|`MMchecker`| asserts correctness of trilinear program for matrix-multiplication |
 |  |  |
 
 
@@ -91,5 +93,7 @@
 - `./matrix-transpose data/Pi.sms | ./optimizer -K | ./transpozer`: a program computing that matrix-vector product
 - `./sparsifier -c 4 data/Lr.sms`: a factorization of that matrix into a sparser one (also with many 1s) by an alternate change of basis(CoB) 4x4 matrix
 - `./factorizer -k 6 data/Lr.sms`: a factorization of that matrix into a 7x6 sparser one by a 6x4 matrix
-- `./inplacer data/Lw.sms data/Rw.sms data/Pw.sms`: in-place version of Strassen-Winograd's fast 2x2 accumulating multiplication
-- `./inplacer data/Lk.sms data/Rk.sms data/Pk.sms e`: in-place version of Karatsuba's fast accumulating polynomial multiplication
+- `./inplacer data/Lw.sms`: in-place matrix-vector accumulating multiplication
+- `./trilplacer data/Lw.sms data/Rw.sms data/Pw.sms`: in-place version of Strassen-Winograd's fast 2x2 accumulating multiplication
+- `./trilplacer data/Lk.sms data/Rk.sms data/Pk.sms -e`: in-place version of Karatsuba's fast accumulating polynomial multiplication
+- `./optimizer -q 17 data/Lo.sms | compacter -s | PMchecker -q 17 -M data/Lo.sms`: creates a program for `Lo.sms` modulo 17, compacts it with less variables, then checks consistency

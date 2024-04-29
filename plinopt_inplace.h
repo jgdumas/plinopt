@@ -17,16 +17,37 @@
 #define _PLINOPT_LIBRARY_INPLACE_H_
 
 // ===============================================================
-// In-place program realizing a bilinear function
-Tricounter BiLinearAlgorithm(std::ostream& out,
-                             const Matrix& A, const Matrix& B,
-                             const Matrix& T, const bool oriented=false);
+// Inplace Program is a vector of atomic operations (ADD or SCA)
+struct Atom;
+typedef std::vector<Atom> AProgram_t;
+
+std::ostream& operator<< (std::ostream&, const AProgram_t&);
+std::ostream& printwithOutput(std::ostream& out, const char c, const AProgram_t& atomP,
+                              const LinBox::Permutation<QRat>& P);
+
+Tricounter complexity(const AProgram_t& p);
 
 // ===============================================================
-// Searching the space of in-place bilinear programs
-Tricounter SearchBiLinearAlgorithm(std::ostream& out,
-                                   const Matrix& A, const Matrix& B,
-                                   const Matrix& T, size_t randomloops);
+// In-place program realizing a linear function
+Tricounter LinearAlgorithm(AProgram_t& Program, const Matrix& A,
+                           const char a, const bool transposed=false,
+                           const bool oriented=false);
+
+// ===============================================================
+// Searching the space of in-place linear programs
+Tricounter SearchLinearAlgorithm(AProgram_t& Program, LinBox::Permutation<QRat>& P, const Matrix& A,
+                                 const char a, size_t randomloops, const bool transposed=false);
+
+// ===============================================================
+// In-place optimized program realizing a trilinear function
+Tricounter TriLinearProgram(std::ostream& out, const Matrix& A, const Matrix& B,
+                            const Matrix& T, const bool oriented=false);
+
+// ===============================================================
+// Searching the space of in-place trilinear programs
+Tricounter SearchTriLinearAlgorithm(std::ostream& out,
+                                    const Matrix& A, const Matrix& B,
+                                    const Matrix& T, size_t randomloops);
 
 // ===============================================================
 // Double expansion of an HM representation
@@ -47,6 +68,11 @@ Matrix::Row::const_iterator nextindex(const size_t preci,
                                       const Matrix::Row& L,
                                       const bool oriented);
 
+
+// ===============================================================
+
+auto isAdd { [](const char c) { return ( (c=='+') || (c=='-') ); } };
+auto isSca { [](const char c) { return ( (c=='*') || (c=='/') ); } };
 
 // ===============================================================
 // Definition of ADD, SCA, MUL atomic operations
@@ -75,7 +101,6 @@ Matrix::Row::const_iterator nextindex(const size_t preci,
 #define MUL(out,c,k,op,a,i,b,j,n) ++std::get<2>(n); out << c << k << ":=" << c << k << OPSYNT(op) << a << i << " * " << b << j << ';' << " ### AXPY ###" << std::endl;
 #endif
 
-
 // ===============================================================
 // Tools
 
@@ -85,73 +110,6 @@ std::string rmnl(const std::string& str) {
     s.erase(std::remove(s.begin(), s.end(), '\n'), s.cend());
     return s;
 }
-
-
-// ===============================================================
-// Enables checking a matrix multiplication with Maple
-#ifdef INPLACE_CHECKER
-
-    // Setup auxilliary variables
-void InitializeVariables(const char L, const size_t m,
-                         const char H, const size_t n,
-                         const char F, const size_t s) {
-    for(size_t h=0; h<m; ++h)
-        std::clog << L << h << ":=L[" << (h+1) << "];";
-    std::clog << std::endl;
-    for(size_t h=0; h<n; ++h)
-        std::clog << H << h << ":=H[" << (h+1) << "];";
-    std::clog << std::endl;
-    for(size_t h=0; h<s; ++h)
-        std::clog << F << h << ":=F[" << (h+1) << "];";
-    std::clog << std::endl;
-    std::clog << std::string(30,'#') << std::endl;
-}
-
-    // Collect result of program
-void CollectVariables(const char L, const size_t m,
-                      const char H, const size_t n,
-                      const char F, const size_t s) {
-    std::clog << std::string(30,'#') << std::endl;
-    for(size_t h=0; h<s; ++h)
-        std::clog << "R[" << (h+1) << "]:=simplify(" << F << h << ",symbolic);";
-    std::clog << std::endl;
-    for(size_t h=0; h<n; ++h)
-        std::clog << H << h << "-H[" << (h+1) << "],";
-    std::clog << "0;" << std::endl;
-    for(size_t h=0; h<m; ++h)
-        std::clog << L << h << "-L[" << (h+1) << "],";
-    std::clog << "0;" << std::endl;
-    std::clog << std::string(30,'#') << std::endl;
-}
-
-
-    // Compare program with a matrix multiplication
-void CheckMatrixMultiplication(const Matrix& A, const Matrix& B,
-                               const Matrix& C) {
-    Tricounter mkn(LRP2MM(A,B,C));
-    const size_t& n(std::get<0>(mkn)), t(std::get<1>(mkn)), m(std::get<2>(mkn));
-    std::clog <<"# code-checking for "
-              << m << 'x' << t << 'x' << n
-              << " Matrix-Multiplication" << std::endl;
-    std::clog << '<';
-    for(size_t i=0; i<m; ++i) {
-        if (i!=0) std::clog << ',' << std::endl;
-        std::clog << '<';
-        for(size_t j=0; j<n; ++j) {
-            if (j!=0) std::clog << '|';
-            for(size_t k=0; k<t; ++k) {
-                if (k!=0) std::clog << '+';
-                std::clog << "L[" << (i*t+k+1) << "]*H[" << (k*n+j+1) << ']';
-            }
-            std::clog << " + F[" << (i*n+j+1) << "] - R[" << (i*n+j+1) << ']';
-        }
-        std::clog << '>';
-    }
-    std::clog << ">;" << std::endl;
-}
-
-#endif
-// ===============================================================
 
 
 #include "plinopt_inplace.inl"

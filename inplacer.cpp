@@ -4,17 +4,8 @@
 // ==========================================================================
 
 /****************************************************************
- * Returns an in-place program
- *          computing the bilinear function in HM representation
- *
+ * Returns an in-place program computing a linear function
  * Usage: L.sms R.sms P.sms [expansion]
- *          L.sms/R.sms/P.sms the 3 HM matrices
- *          expansion: if present intermediate results grouped by 2
- *
- * For an HM representation of a matrix product,
- *     the vectorization is supposed row-major:
- *        [ a11 a12 ]
- *        [ a21 a22 ] is vectorized as [a11 a12 a21 a22]
  *
  * Reference:
  *      [ In-place accumulation of fast multiplication formulae
@@ -28,49 +19,78 @@
  *		- ends with: `0 0 0`
  ****************************************************************/
 
-// ============================================================
-// Define to switch between explicit/in-place operator notation
-//#define __INPLOP__
-// ============================================================
-
-// ============================================================
-// Define to print comments during parsing
-//#define VERBATIM_PARSING
-// ============================================================
-
-// ============================================================
-// Define to print verification codes
-//#define INPLACE_CHECKER
-// ============================================================
-
 #include "plinopt_inplace.h"
 
 
 void usage(int argc, char ** argv) {
-    std::clog << "Usage: " << argv[0] << " L.sms R.sms P.sms [-e] [-O #]\n";
-
-    std::clog << "  -e: double expands the intermediate result\n"
+    std::clog << "Usage: " << argv[0] << " L.sms [-O #]\n"
               << "  -O #: randomized search with that many loops\n";
     exit(-1);
 }
 
 
+std::ostream& FindProgram(std::ostream& out, std::istream& input,
+                          const size_t randomloops, const bool transposed) {
+    QRat QQ; QMstream qs(QQ, input); Matrix M(qs);
+    const char inchar(transposed?'t':'i'), tmpchar('z'), outchar('o');
+    const size_t outdim(transposed?M.rowdim():M.coldim());
+    const size_t innerdim(transposed?M.coldim():M.rowdim());
+
+#ifdef VERBATIM_PARSING
+    M.write(std::clog << "M:=Matrix(",FileFormat::Maple) << ");" << std::endl;
+#endif
+    std::clog << std::string(40,'#') << std::endl;
+
+    Tricounter opcount; AProgram_t Program;
+    LinBox::Permutation<QRat> P(QQ, innerdim);
+
+    if (transposed) {
+        Matrix T(QQ, M.coldim(), M.rowdim()); Transpose(T, M);
+        opcount = SearchLinearAlgorithm(Program, P, T, tmpchar, randomloops);
+    } else {
+        opcount = SearchLinearAlgorithm(Program, P, M, tmpchar, randomloops);
+    }
+
+        // Print the chosen algorithm
+    input2Temps(out, outdim, inchar, tmpchar);
+    printwithOutput(out, outchar, Program, P) << std::flush;
+
+#ifdef INPLACE_CHECKER
+    std::clog << std::string(40,'#') << std::endl;
+    std::clog << '<';
+    for(size_t i=0; i< outdim; ++i) {
+        if (i != 0) std::clog << '|';
+        std::clog << tmpchar << i << '-' << inchar << i;
+    }
+    std::clog << '>' << ';' << std::endl;
+#endif
+        // =================================
+        // Resulting program operation count
+    std::clog << std::string(40,'#') << std::endl;
+    std::clog << "# \033[1;32m" << std::get<0>(opcount) << "\tADD\033[0m\n";
+    std::clog << "# \033[1;32m" << std::get<1>(opcount) << "\tSCA\033[0m\n";
+    std::clog << "# \033[1;32m" << std::get<2>(opcount) << "\tROWS\033[0m\n";
+    std::clog << std::string(40,'#') << std::endl;
+
+    return out;
+}
+
+
+
 // ===============================================================
-// argv[1-3]: L.sms R.sms P.sms
-//   -e: double expand the intermediate result
+// argv[1]: L.sms
 //   -O # randomized search of that many loops
 //        looks for reduced number of additions, then multiplications
 int main(int argc, char ** argv) {
 
     size_t randomloops(DORANDOMSEARCH?DEFAULT_RANDOM_LOOPS:1);
-    bool doexpand(false);
+    std::vector<std::string> filenames;
+    bool transposed(false);
 
-    if (argc<4) usage(argc,argv);
-
-    for (int i = 4; i<argc; ++i) {
+    for (int i = 1; i<argc; ++i) {
         std::string args(argv[i]);
-        if (args == "-h") usage(argc,argv);
-        else if (args == "-e") { doexpand = true; }
+        if (args == "-h") { usage(argc,argv); }
+        else if (args == "-t") { transposed=true; }
         else if (args == "-O") {
             randomloops = atoi(argv[++i]);
             if ( (randomloops>1) && (!DORANDOMSEARCH) ) {
@@ -78,62 +98,18 @@ int main(int argc, char ** argv) {
                 std::cerr << "#  \033[1;36mWARNING: RANDOM_TIES not defined,"
                           << " random loops disabled\033[0m." << std::endl;
             }
-        }
+        } else { filenames.push_back(args); }
     }
         // =================================
         // Reading matrices
-	std::ifstream left (argv[1]), right (argv[2]), product(argv[3]);
-
-    QRat QQ;
-    QMstream ls(QQ, left), rs(QQ, right), ps(QQ, product);
-    Matrix A(ls), B(rs), C(ps);
-
-    Matrix T(QQ); Transpose(T, C);
-
-
-#ifdef VERBATIM_PARSING
-    A.write(std::clog << "A:=Matrix(",FileFormat::Maple) << ");" << std::endl;
-    B.write(std::clog << "B:=Matrix(",FileFormat::Maple) << ");" << std::endl;
-    C.write(std::clog << "C:=Matrix(",FileFormat::Maple) << ");" << std::endl;
-    T.write(std::clog << "T:=Matrix(",FileFormat::Maple) << ");" << std::endl;
-    std::clog << std::string(30,'#') << std::endl;
-#endif
-
-
-    Tricounter opcount; // 0:ADD, 1:SCA, 2:MUL
-
-    if (doexpand) {
-            // =================================
-            // Duplicate intermediate products
-            // to group them 2 by 2
-        Matrix AA(QQ), BB(QQ), TT(QQ);
-        DoubleExpand(AA,BB,TT, A,B,T);
-        opcount = BiLinearAlgorithm(std::cout, AA, BB, TT);
+    if (filenames.size() > 0) {
+        for(size_t i(0); i<filenames.size(); ++i) {
+            std::ifstream input (filenames[i]);
+            FindProgram(std::cout, input, randomloops, transposed) << std::flush;
+        }
     } else {
-            // =================================
-            // Direct computation
-#ifdef INPLACE_CHECKER
-        InitializeVariables('a',A.coldim(), 'b', B.coldim(), 'c', T.coldim());
-#endif
-
-        opcount = SearchBiLinearAlgorithm(std::cout, A, B, T, randomloops);
-
-
-#ifdef INPLACE_CHECKER
-        CollectVariables('a',A.coldim(), 'b', B.coldim(), 'c', T.coldim());
-        CheckMatrixMultiplication(A,B,C);
-#endif
-
+        FindProgram(std::cout, std::cin, randomloops, transposed) << std::flush;
     }
-
-        // =================================
-        // Resulting program operation count
-
-    std::clog << std::string(40,'#') << std::endl;
-    std::clog << "# \033[1;32m" << std::get<0>(opcount) << "\tADD" << "\033[0m" << std::endl;
-    std::clog << "# \033[1;32m" << std::get<1>(opcount)  << "\tSCA" << "\033[0m" << std::endl;
-    std::clog << "# \033[1;32m" << std::get<2>(opcount)  << "\tAXPY" << "\033[0m" << std::endl;
-    std::clog << std::string(40,'#') << std::endl;
 
     return 0;
 }

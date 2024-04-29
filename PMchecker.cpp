@@ -70,7 +70,7 @@ int PMcheck(const std::string& prgname, const std::string& matname,
         M.resize(m,n); A.resize(m,n);
         FMatrix B(M,F);
         LinBox::DenseMatrix<Field> dB(F,m,n),dA(F,m,n),R(F,m,n);
-        sparse2dense(dA,A); sparse2dense(dB,B);
+        any2dense(dA,A); any2dense(dB,B);
         LinBox::MatrixDomain<Field> BMD(F);
         BMD.sub(R,dB,dA);
 

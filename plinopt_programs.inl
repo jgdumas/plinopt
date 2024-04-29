@@ -475,7 +475,7 @@ int Tellegen(std::istream& input,
 
 
 // ============================================================
-// Creating a vectror of lines from a text file program
+// Creating a vector of lines from a text file program
 VProgram_t& programParser(VProgram_t& ProgramVector, std::stringstream& ssin) {
 
         // ============================================================
@@ -706,7 +706,7 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
         // [2] Direct substitution of simple affectations "x := a ;"
         //     --> variable x is replaced by variable a thereafter
     for(auto line(P.begin()); line != P.end(); ++line) {
-        if ((line->size() == 4) && (line->front()[0] != outchar) ) {
+        if ((line->size() == 4) && (line->front()[0] != outchar)) {
             std::string& outvar(line->front()), &invar(*(line->begin()+2));
             auto next(line);
             for(++next; next != P.end(); ++next) {
@@ -894,7 +894,7 @@ _Mat& matrixBuilder(_Mat& A, const VProgram_t& P, const char outchar /* ='o'*/) 
         }
         const size_t i(variables[output]);
         for(auto word=line.begin()+2; word !=line.end(); ++word) {
-// std::clog << "## word: " << *word << std::endl;
+// std::clog << "## word: " << *word << " (output:" << output << ')' << std::endl;
             typename Field::Element coeff; F.init(coeff); F.assign(coeff, F.one);
             if (*word == ";") break;
             if (*word == "-") {
@@ -903,7 +903,24 @@ _Mat& matrixBuilder(_Mat& A, const VProgram_t& P, const char outchar /* ='o'*/) 
                 ++word;
             }
             if (*word == output) {
-                if (F.isMOne(coeff)) negRow(M, i, F);
+                ++word;
+                typename Field::Element tmp; F.init(tmp);
+                if (*word == "*") {
+                    ++word;
+                    std::stringstream ssin; ssin << word->c_str();
+                    F.read(ssin, tmp);
+                    F.mulin(coeff,tmp);
+                } else if (*word == "/") {
+                    ++word;
+                    std::stringstream ssin; ssin << word->c_str();
+                    F.read(ssin, tmp);
+                    F.divin(coeff, tmp);
+                } else {
+                    --word;
+                }
+                if (F.isMOne(coeff)) negRow(M, i);
+                else if (! F.isOne(coeff)) mulRow(M, i, coeff);
+// std::clog << "## mul by " << coeff << std::endl;
                 continue;
             }
             if (std::find_if(word->begin(),word->end(), [](const char&c) { return std::isalpha(c); } ) == word->end()) {
@@ -961,7 +978,7 @@ _Mat& matrixBuilder(_Mat& A, const VProgram_t& P, const char outchar /* ='o'*/) 
                 }
 
 // M.write(std::clog << "# BEF opR M:", FileFormat::Pretty) << std::endl;
-                opRow(M, i, M[j], coeff, F);
+                opRow(M, i, M[j], coeff);
 // M.write(F.write(std::clog << "# AFT ", coeff) << " opR M:", FileFormat::Pretty) << std::endl;
             }
         }
@@ -981,7 +998,7 @@ _Mat& matrixBuilder(_Mat& A, const VProgram_t& P, const char outchar /* ='o'*/) 
         if(variable[0] == outchar) {
             const size_t i(std::stoi(variable.substr(1,std::string::npos)));
             if (i >= A.rowdim()) A.resize(i+1,n);
-            setRow(A,i,M,index,F);
+            setRow(A,i,M,index);
         }
     }
 
@@ -990,7 +1007,7 @@ _Mat& matrixBuilder(_Mat& A, const VProgram_t& P, const char outchar /* ='o'*/) 
     for(const auto& [input, index] : inputs) {
         const size_t j(std::stoi(input.substr(1,std::string::npos)));
         if (j >= B.rowdim()) B.resize(j+1,T.coldim());
-        setRow(B,j,T,index,F);
+        setRow(B,j,T,index);
     }
 
     Transpose(A,B);

@@ -98,13 +98,6 @@ bool Triangle(std::ostream& sout, _Mat& M, _Mat& T,
               std::vector<triple>& multiples, size_t& nbadd, size_t& nbmul,
               const char tev, const char rav, const size_t j);
 
-// Sets new temporaries with the input values
-void input2Temps(std::ostream& sout, const size_t N,
-                 const char inv, const char tev);
-template<typename _Mat>
-void input2Temps(std::ostream& sout, const size_t N,
-                 const char inv, const char tev, const _Mat& trsp);
-
 
 // Global random optimization function (pairs and factors)
 template<typename _Mat>
@@ -127,15 +120,6 @@ template<typename _Mat>
 Pair<size_t> nullspacedecomp(std::ostream& sout, _Mat& x, _Mat& A,
                              std::vector<size_t>& l,
                              const bool mostCSE=false);
-
-
-// prints c[i] * e, or c[i] / b for rational e=1/b
-// updates nbmul if e not in {-1,1}
-template<typename Ring>
-std::ostream& printmulorjustdiv(std::ostream& out,
-                                const char c, const size_t i,
-                                const typename Ring::Element& e,
-                                size_t& nbmul, const Ring& F);
 
 
 #include "plinopt_optimize.inl"
