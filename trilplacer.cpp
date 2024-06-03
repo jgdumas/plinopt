@@ -108,6 +108,9 @@ int main(int argc, char ** argv) {
             // to group them 2 by 2
         Matrix AA(QQ), BB(QQ), TT(QQ);
         DoubleExpand(AA,BB,TT, A,B,T);
+
+            // When expanded: must preserve products 2 by 2
+            // TODO: a SearchTriLinearAlgorithm preserving 2 by 2 products ...
         opcount = TriLinearAlgorithm(std::cout, AA, BB, TT);
     } else {
             // =================================

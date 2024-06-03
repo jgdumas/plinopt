@@ -1,4 +1,4 @@
-# Karatsuba's product HM matrix
+# Karatsuba's (a0+a1)(b0+b1) product HM matrix
 3 3 M
 1 1 1
 2 1 -1
