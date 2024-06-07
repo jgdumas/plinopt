@@ -110,8 +110,13 @@ int main(int argc, char ** argv) {
         DoubleExpand(AA,BB,TT, A,B,T);
 
             // When expanded: must preserve products 2 by 2
+        opcount = TriLinearAlgorithm(std::clog, AA, BB, TT);
+        std::clog << std::string(30,'#') << std::endl;
+
             // TODO: a SearchTriLinearAlgorithm preserving 2 by 2 products ...
-        opcount = TriLinearAlgorithm(std::cout, AA, BB, TT);
+        TriLinearProgram(std::cout, A, B, TT, true, true);
+
+
     } else {
             // =================================
             // Direct computation

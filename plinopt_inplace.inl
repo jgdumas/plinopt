@@ -338,6 +338,106 @@ Tricounter LinearAlgorithm(AProgram_t& Program, const Matrix& A,
 
 
 
+Tricounter TransposedDoubleAlgorithm(AProgram_t& Program, const Matrix& T,
+                                     const char variable) {
+
+// T.write(std::clog << "TDA:\n",FileFormat::Pretty) << std::endl;
+    const QRat& QQ = T.field();
+    Tricounter opcount;			// 0:ADD, 1:SCA, 2:MUL
+    const size_t m(T.rowdim());		// should be even
+    LinBox::Permutation<QRat> P(QQ,m);
+    for(size_t l=0; l<m; ++l) {
+        const auto& UpperRow(T[l]);
+        const auto& LowerRow(T[++l]);
+        if (UpperRow.size()>0) {
+
+                // choose matrix [[a c][0 a]]
+            const auto aiter { UpperRow.begin() };
+            const auto i { aiter->first };
+            const auto cindex(i+1);
+
+            QRat::Element c(QQ.zero), z(QQ.zero), y; QQ.init(y);
+            const QRat::Element& a(aiter->second);
+            QQ.inv(y,a);
+            if ((UpperRow.size()>1) && ((aiter+1)->first == cindex)){
+                c = (aiter+1)->second;
+                QQ.mul(z,y,c);
+                QQ.mulin(z,y);
+                QQ.negin(z);   // z = - a^{-1} c a^{-1}
+            }
+
+// std::clog << "<<" << a << '|' << c << ">,<0|" << a << ">>"
+//           << '.'
+//           << "<<" << y << '|' << z << ">,<0|" << a << ">>"
+//           << " = 1;" << std::endl;
+
+                // scale choosen var
+            if (!QQ.isOne(y))
+                Program.emplace_back(variable, cindex, '*', y);
+            if (!QQ.isZero(z))
+                Program.emplace_back(variable, cindex, '+', z, i);
+            if (!QQ.isOne(y))
+                Program.emplace_back(variable, i, '*', y);
+
+                // Add the rest of the row
+            for(auto iter=UpperRow.begin(); iter != UpperRow.end(); ++iter){
+                if (iter != aiter) {
+                    if (iter->first != cindex) {
+                        Program.emplace_back(variable, iter->first, '-',
+                                             iter->second, i);
+                    }
+                    Program.emplace_back(variable, iter->first+1, '-',
+                                         iter->second, cindex);
+                }
+            }
+
+                // placeholder for barrier:
+                //   (AXPY will have to performed at this point)
+            Program.emplace_back(variable,i,' ', aiter->second);
+            Program.emplace_back(variable,cindex,' ', aiter->second);
+
+                // Sub the rest of the row
+            for(auto iter=UpperRow.begin(); iter != UpperRow.end(); ++iter){
+                if (iter != aiter) {
+                    if (iter->first != cindex) {
+                        Program.emplace_back(variable, iter->first, '+',
+                                             iter->second, i);
+                    }
+                    Program.emplace_back(variable, iter->first+1, '+',
+                                         iter->second, cindex);
+                }
+            }
+
+                // Un-scale choosen var
+            if (!QQ.isOne(a))
+                Program.emplace_back(variable, cindex, '*', a);
+            if (!QQ.isZero(c))
+                Program.emplace_back(variable, cindex, '+', c, i);
+            if (!QQ.isOne(a))
+                Program.emplace_back(variable, i, '*', a);
+
+// printwithOutput(std::clog << "Program:\n", 'T', Program, P) << std::endl;
+
+        } else {
+            Program.emplace_back(' ',l,' ',QQ.zero);
+        }
+    }
+
+        // Removing noops
+    Program.erase(std::remove_if(Program.begin(), Program.end(), isScaOne),
+                  Program.end());
+
+        // Removes atoms followed by their inverses, one at a time
+    bool simp; do {
+        simp = simplify(Program, true);
+    } while(simp);
+
+    return complexity(Program);
+}
+// ===============================================================
+
+
+
 // ===============================================================
 // Searching the space of in-place linear programs
 Tricounter SearchLinearAlgorithm(AProgram_t& Program,
@@ -723,7 +823,8 @@ Tricounter& operator+=(Tricounter& l, const Tricounter& r) {
 // ===============================================================
 // In-place program realizing a trilinear function
 Tricounter TriLinearProgram(std::ostream& out, const Matrix& A, const Matrix& B,
-                           const Matrix& T, const bool oriented) {
+                            const Matrix& T, const bool oriented,
+                            const bool expanded) {
     const QRat& QQ(T.field());
 
     AProgram_t aprog, bprog, cprog;
@@ -735,7 +836,12 @@ Tricounter TriLinearProgram(std::ostream& out, const Matrix& A, const Matrix& B,
     Tricounter bops { LinearAlgorithm(bprog, B, 'b', false, oriented) };
     out << "# Found " << bops << " for b" << std::endl;
 
-    Tricounter cops { LinearAlgorithm(cprog, T, 'c', true, oriented) };
+    Tricounter cops;
+    if (expanded) {
+        cops = TransposedDoubleAlgorithm(cprog, T, 'c');
+    } else {
+        cops = LinearAlgorithm(cprog, T, 'c', true, oriented);
+    }
     out << "# Found " << cops << " for c" << std::endl;
 
     Tricounter pty;
@@ -758,9 +864,14 @@ Tricounter TriLinearProgram(std::ostream& out, const Matrix& A, const Matrix& B,
             // Print (recursive) AXPY
         if ( (aiter != aprog.end()) &&  (bjter != bprog.end()) &&  (ckter != cprog.end()) ) {
 
-            MUL(out, ckter->_var, ckter->_src, MONEOP('+',ckter->_val),
-                aiter->_var, aiter->_src, bjter->_var, bjter->_src, pty);
-
+            if (expanded) {
+                MULTD(out, ckter->_var, ckter->_src, (ckter+1)->_src, '+',
+                      aiter->_var, aiter->_src, bjter->_var, bjter->_src, pty);
+                ++ckter;
+            } else {
+                MUL(out, ckter->_var, ckter->_src, MONEOP('+',ckter->_val),
+                    aiter->_var, aiter->_src, bjter->_var, bjter->_src, pty);
+            }
             ++aiter; ++bjter; ++ckter;
         }
     }

@@ -41,7 +41,8 @@ Tricounter SearchLinearAlgorithm(AProgram_t& Program, LinBox::Permutation<QRat>&
 // ===============================================================
 // In-place optimized program realizing a trilinear function
 Tricounter TriLinearProgram(std::ostream& out, const Matrix& A, const Matrix& B,
-                            const Matrix& T, const bool oriented=false);
+                            const Matrix& T, const bool oriented=false,
+                            const bool expanded=false);
 
 // ===============================================================
 // Searching the space of in-place trilinear programs
@@ -99,6 +100,7 @@ auto isSca { [](const char c) { return ( (c=='*') || (c=='/') ); } };
 #define SCA(out,c,i,op,val,n) if (! QQ.isOne(val)) { out << c << i << ":=" << c << i << OPSYNT(op) << VALPAR(val) << ';' << std::endl; ++std::get<1>(n); }
 #define ADD(out,c,i,op,val,h,n) out << c << i << ":=" << c << i; UNITSOP(out,op,val,n); out << c << h << ';' << std::endl;
 #define MUL(out,c,k,op,a,i,b,j,n) ++std::get<2>(n); out << c << k << ":=" << c << k << OPSYNT(op) << a << i << " * " << b << j << ';' << " ### AXPY ###" << std::endl;
+#define MULTD(out,c,k,l,op,a,i,b,j,n) ++std::get<2>(n); out << c << k << ":=" << c << k << OPSYNT(op) << '(' << a << i << " * " << b << j << ")[0];" << " ### AXPY low  ###" << std::endl; out << c << l << ":=" << c << l << OPSYNT(op) << '(' << a << i << " * " << b << j << ")[1];" << " ### AXPY high ###" << std::endl;
 #endif
 
 // ===============================================================
