@@ -111,7 +111,7 @@ std::ostream& printwithOutput(std::ostream& out, const char c, const AProgram_t&
     size_t numop(0);
     for(const auto& iter: atomP) {
         if (iter._ope == ' ') {
-            out << 'o' << P[numop++] << ":=";
+            out << c << P[numop++] << ":=";
         }
         out << iter << std::endl;
     }
@@ -256,7 +256,6 @@ Tricounter LinearAlgorithm(AProgram_t& Program, const Matrix& A,
     Tricounter opcount; // 0:ADD, 1:SCA, 2:MUL
     const size_t m(A.rowdim());
     size_t preci(A.coldim());
-
     for(size_t l=0; l<m; ++l) {
         const auto& CurrentRow(A[l]);
         if (CurrentRow.size()>0) {
@@ -266,14 +265,13 @@ Tricounter LinearAlgorithm(AProgram_t& Program, const Matrix& A,
             const size_t i(aiter->first);
 
                 // scale choosen var
-            if (transposed) {
-                if ((!QQ.isOne(aiter->second)) && (!QQ.isMOne(aiter->second))) {
+            if (!QQ.isOne(aiter->second)) {
+                if (transposed && (!QQ.isMOne(aiter->second))) {
                     Program.emplace_back(variable,i,'/',aiter->second);
+                } else {
+                   Program.emplace_back(variable,i,'*',aiter->second);
                 }
-            } else {
-                Program.emplace_back(variable,i,'*',aiter->second);
             }
-
 
                 // Add the rest of the row
             for(auto iter=CurrentRow.begin(); iter != CurrentRow.end(); ++iter){
@@ -311,14 +309,13 @@ Tricounter LinearAlgorithm(AProgram_t& Program, const Matrix& A,
             }
 
                 // Un-scale choosen var
-            if (transposed) {
-                if ((!QQ.isOne(aiter->second)) && (!QQ.isMOne(aiter->second))) {
+            if (!QQ.isOne(aiter->second)) {
+                if (transposed && (!QQ.isMOne(aiter->second))) {
                     Program.emplace_back(variable,i,'*',aiter->second);
+                } else {
+                    Program.emplace_back(variable,i,'/',aiter->second);
                 }
-            } else {
-                Program.emplace_back(variable,i,'/',aiter->second);
             }
-
 
             if (CurrentRow.size()>1) preci = i;
         } else {
