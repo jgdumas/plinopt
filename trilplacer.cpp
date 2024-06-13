@@ -114,11 +114,11 @@ int main(int argc, char ** argv) {
         DoubleExpand(AA,BB,TT, A,B,T);
 
             // When expanded: must preserve products 2 by 2
-        opcount = TriLinearAlgorithm(std::clog, AA, BB, TT);
+        TriLinearAlgorithm(std::clog, AA, BB, TT);
         std::clog << std::string(30,'#') << std::endl;
 
             // TODO: a SearchTriLinearAlgorithm preserving 2 by 2 products ...
-        TriLinearProgram(std::cout, A, B, TT, true, true);
+        opcount = TriLinearProgram(std::cout, A, B, TT, true, true);
 
 
     } else {
@@ -142,7 +142,11 @@ int main(int argc, char ** argv) {
     std::clog << std::string(40,'#') << std::endl;
     std::clog << "# \033[1;32m" << std::get<0>(opcount) << "\tADD\033[0m\n";
     std::clog << "# \033[1;32m" << std::get<1>(opcount) << "\tSCA\033[0m\n";
-    std::clog << "# \033[1;32m" << std::get<2>(opcount) << "\tAXPY\033[0m\n";
+    std::clog << "# \033[1;32m" << std::get<2>(opcount);
+    if (doexpand)
+        std::clog << "\tAXPY (double size)\033[0m\n";
+    else
+        std::clog << "\tAXPY\033[0m\n";
     std::clog << std::string(40,'#') << std::endl;
 
     return 0;

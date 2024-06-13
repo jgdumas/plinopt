@@ -889,8 +889,9 @@ Tricounter TriLinearProgram(std::ostream& out, const Matrix& A, const Matrix& B,
     }
 
         // Number of operations in the program
-    Tricounter nops; nops += aops; nops += bops; nops += cops;
 
+    if (expanded) { std::get<2>(cops) >>= 1;  } // MUL2D is counted twice
+    Tricounter nops; nops += aops; nops += bops; nops += cops;
     std::get<2>(nops) /= 3; // MUL is counted in each of the three programs
 
     return nops;
