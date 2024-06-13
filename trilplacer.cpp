@@ -113,13 +113,23 @@ int main(int argc, char ** argv) {
         Matrix AA(QQ), BB(QQ), TT(QQ);
         DoubleExpand(AA,BB,TT, A,B,T);
 
-            // When expanded: must preserve products 2 by 2
-        TriLinearAlgorithm(std::clog, AA, BB, TT);
-        std::clog << std::string(30,'#') << std::endl;
+#ifdef VERBATIM_PARSING
+    A.write(std::clog << "A:\n",FileFormat::Pretty) << std::endl;
+    B.write(std::clog << "B:\n",FileFormat::Pretty) << std::endl;
+    TT.write(std::clog << "TT:\n",FileFormat::Pretty) << std::endl;
+    std::clog << std::string(30,'#') << std::endl;
+#endif
 
+#ifdef INPLACE_CHECKER
+        InitializeVariables('a',AA.coldim(), 'b', BB.coldim(), 'c', TT.coldim());
+#endif
             // TODO: a SearchTriLinearAlgorithm preserving 2 by 2 products ...
-        opcount = TriLinearProgram(std::cout, A, B, TT, true, true);
+        opcount = SearchTriLinearAlgorithm(std::cout, A, B, TT, randomloops, true);
 
+#ifdef INPLACE_CHECKER
+        Matrix CC(QQ); Transpose(CC, TT);
+        CheckTriLinearProgram('a', AA, 'b', BB, 'c', CC);
+#endif
 
     } else {
             // =================================
