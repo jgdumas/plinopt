@@ -35,12 +35,10 @@ inline _Mat1& setRow(_Mat1& A, size_t i, const _Mat2& B, size_t j) {
     using Field = typename _Mat1::Field;
     const Field& F(A.field());
     auto& Ai(A[i]); const auto& Bj(B[j]);
-    Ai.resize(Bj.size());
-    auto aiter(A[i].begin());
-    for(auto aiter(A[i].begin()), biter(B[j].begin());
-        biter != B[j].end(); ++biter, ++aiter) {
-        aiter->first = biter->first;
-        aiter->second = biter->second;
+    Ai.resize(0); Ai.reserve(Bj.size());
+    for(const auto biter: Bj) {
+        if (! F.isZero(biter.second))
+            Ai.emplace_back(biter.first,biter.second);
     }
     return A;
 }

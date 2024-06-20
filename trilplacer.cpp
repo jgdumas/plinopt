@@ -67,7 +67,9 @@ int main(int argc, char ** argv) {
 
     if (argc<4) usage(argv);
 
-    for (int i = 4; i<argc; ++i) {
+    std::string files[3]; size_t numfil(0);
+
+    for (int i = 1; i<argc; ++i) {
         std::string args(argv[i]);
         if (args == "-h") usage(argv);
         else if (args == "-e") { doexpand = true; }
@@ -78,11 +80,13 @@ int main(int argc, char ** argv) {
                 std::cerr << "#  \033[1;36mWARNING: RANDOM_TIES not defined,"
                           << " random loops disabled\033[0m." << std::endl;
             }
+        } else {
+            files[numfil] = std::move(args); ++numfil;
         }
     }
         // =================================
         // Reading matrices
-	std::ifstream left (argv[1]), right (argv[2]), product(argv[3]);
+	std::ifstream left (files[0]), right (files[1]), product(files[2]);
 
     QRat QQ;
     QMstream ls(QQ, left), rs(QQ, right), ps(QQ, product);
@@ -109,9 +113,24 @@ int main(int argc, char ** argv) {
         Matrix AA(QQ), BB(QQ), TT(QQ);
         DoubleExpand(AA,BB,TT, A,B,T);
 
-            // When expanded: must preserve products 2 by 2
+#ifdef VERBATIM_PARSING
+    A.write(std::clog << "A:\n",FileFormat::Pretty) << std::endl;
+    B.write(std::clog << "B:\n",FileFormat::Pretty) << std::endl;
+    TT.write(std::clog << "TT:\n",FileFormat::Pretty) << std::endl;
+    std::clog << std::string(30,'#') << std::endl;
+#endif
+
+#ifdef INPLACE_CHECKER
+        InitializeVariables('a',AA.coldim(), 'b', BB.coldim(), 'c', TT.coldim());
+#endif
             // TODO: a SearchTriLinearAlgorithm preserving 2 by 2 products ...
-        opcount = TriLinearAlgorithm(std::cout, AA, BB, TT);
+        opcount = SearchTriLinearAlgorithm(std::cout, A, B, TT, randomloops, true);
+
+#ifdef INPLACE_CHECKER
+        Matrix CC(QQ); Transpose(CC, TT);
+        CheckTriLinearProgram('a', AA, 'b', BB, 'c', CC);
+#endif
+
     } else {
             // =================================
             // Direct computation
@@ -133,7 +152,11 @@ int main(int argc, char ** argv) {
     std::clog << std::string(40,'#') << std::endl;
     std::clog << "# \033[1;32m" << std::get<0>(opcount) << "\tADD\033[0m\n";
     std::clog << "# \033[1;32m" << std::get<1>(opcount) << "\tSCA\033[0m\n";
-    std::clog << "# \033[1;32m" << std::get<2>(opcount) << "\tAXPY\033[0m\n";
+    std::clog << "# \033[1;32m" << std::get<2>(opcount);
+    if (doexpand)
+        std::clog << "\tAXPY (double size)\033[0m\n";
+    else
+        std::clog << "\tAXPY\033[0m\n";
     std::clog << std::string(40,'#') << std::endl;
 
     return 0;

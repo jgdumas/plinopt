@@ -22,7 +22,8 @@ struct Atom;
 typedef std::vector<Atom> AProgram_t;
 
 std::ostream& operator<< (std::ostream&, const AProgram_t&);
-std::ostream& printwithOutput(std::ostream& out, const char c, const AProgram_t& atomP,
+std::ostream& printwithOutput(std::ostream& out, const char c,
+                              const AProgram_t& atomP,
                               const LinBox::Permutation<QRat>& P);
 
 Tricounter complexity(const AProgram_t& p);
@@ -41,13 +42,15 @@ Tricounter SearchLinearAlgorithm(AProgram_t& Program, LinBox::Permutation<QRat>&
 // ===============================================================
 // In-place optimized program realizing a trilinear function
 Tricounter TriLinearProgram(std::ostream& out, const Matrix& A, const Matrix& B,
-                            const Matrix& T, const bool oriented=false);
+                            const Matrix& T, const bool oriented=false,
+                            const bool expanded=false);
 
 // ===============================================================
 // Searching the space of in-place trilinear programs
 Tricounter SearchTriLinearAlgorithm(std::ostream& out,
                                     const Matrix& A, const Matrix& B,
-                                    const Matrix& T, size_t randomloops);
+                                    const Matrix& T, size_t randomloops,
+                                    const bool expanded=false);
 
 // ===============================================================
 // Double expansion of an HM representation
@@ -99,6 +102,7 @@ auto isSca { [](const char c) { return ( (c=='*') || (c=='/') ); } };
 #define SCA(out,c,i,op,val,n) if (! QQ.isOne(val)) { out << c << i << ":=" << c << i << OPSYNT(op) << VALPAR(val) << ';' << std::endl; ++std::get<1>(n); }
 #define ADD(out,c,i,op,val,h,n) out << c << i << ":=" << c << i; UNITSOP(out,op,val,n); out << c << h << ';' << std::endl;
 #define MUL(out,c,k,op,a,i,b,j,n) ++std::get<2>(n); out << c << k << ":=" << c << k << OPSYNT(op) << a << i << " * " << b << j << ';' << " ### AXPY ###" << std::endl;
+#define MULTD(out,c,k,l,op,a,i,b,j,n) ++std::get<2>(n); out << c << k << ":=" << c << k << OPSYNT(op) << '(' << a << i << " * " << b << j << ")*low;" << " ### AXPY low  ###" << std::endl; out << c << l << ":=" << c << l << OPSYNT(op) << '(' << a << i << " * " << b << j << ")*hig;" << " ### AXPY high ###" << std::endl;
 #endif
 
 // ===============================================================
