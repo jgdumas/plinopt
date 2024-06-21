@@ -18,21 +18,21 @@ apt install git make g++ pkg-config
 apt install libgmp-dev liblinbox-dev libntl-dev
 cd; git clone https://github.com/jgdumas/plinopt.git
 cd plinopt; make
-./inplacer data/Lw.sms
-./inplacer -t data/Pw.sms
-./trilplacer data/Lw.sms data/Rw.sms data/Pw.sms
-./trilplacer data/Lk.sms data/Rk.sms data/Pk.sms -e
-./sms2pretty data/Ls.sms data/Rs.sms data/Ps.sms
-./matrix-transpose data/Pw.sms
-./MMchecker data/Lw.sms data/Rw.sms data/Pw.sms
-./MMchecker data/Lo.sms data/Ro.sms data/Po.sms 32 3 1013
-./compacter data/test.prg
-./optimizer data/cyclic.sms
-./optimizer data/Rr.sms -q 3
-./transpozer data/test.prg
-./optimizer data/Pi.sms
-./optimizer data/Li.sms |./compacter -s
-./matrix-transpose data/Pi.sms | ./optimizer -K | ./transpozer | ./compacter -s
-./sparsifier -c 4 data/Lr.sms
-./factorizer -k 6 data/Lr.sms
+./bin/inplacer data/Lw.sms
+./bin/inplacer -t data/Pw.sms
+./bin/trilplacer data/Lw.sms data/Rw.sms data/Pw.sms
+./bin/trilplacer data/Lk.sms data/Rk.sms data/Pk.sms -e
+./bin/sms2pretty data/Ls.sms data/Rs.sms data/Ps.sms
+./bin/matrix-transpose data/Pw.sms
+./bin/MMchecker data/Lw.sms data/Rw.sms data/Pw.sms
+./bin/MMchecker data/Lo.sms data/Ro.sms data/Po.sms 32 3 1013
+./bin/compacter data/test.prg
+./bin/optimizer data/cyclic.sms
+./bin/optimizer data/Rr.sms -q 3
+./bin/transpozer data/test.prg
+./bin/optimizer data/Pi.sms
+./bin/optimizer data/Li.sms |./bin/compacter -s
+./bin/matrix-transpose data/Pi.sms | ./bin/optimizer -K | ./bin/transpozer | ./bin/compacter -s
+./bin/sparsifier -c 4 data/Lr.sms
+./bin/factorizer -k 6 data/Lr.sms
 make check

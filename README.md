@@ -80,20 +80,20 @@
 
 
 **Examples**:
-- `./sms2pretty data/Lw.sms data/Rw.sms data/Pw.sms`: pretty print HM representation of Strassen-Winograd's fast 2x2 multiplication algorithm
-- `./matrix-transpose data/Pw.sms`: the transposed matrix
-- `./MMchecker data/Lw.sms data/Rw.sms data/Pw.sms`: probabilistically checking Strassen-Winograd's matrix-multiplication algorithm
-- `./MMchecker data/Lo.sms data/Ro.sms data/Po.sms 32 3 1013`: probabilistically checking matrix-multiplication algorithm using 32 bits random elements and 1013 as a placeholder for sqrt(3)
-- `./optimizer data/cyclic.sms`: a program computing that matrix-vector product
-- `./optimizer data/Rr.sms -q 3`: a program computing that matrix-vector product modulo 3
-- `./transpozer data/test.prg`: a program computing the transposed program
-- `./compacter data/test.prg`: a more compact program
-- `./optimizer -D data/Pi.sms`: a program computing that matrix-vector product
-- `./optimizer data/Li.sms |./compacter -s`: a compact program computing that matrix-vector product
-- `./matrix-transpose data/Pi.sms | ./optimizer -K | ./transpozer`: a program computing that matrix-vector product
-- `./sparsifier -c 4 data/Lr.sms`: a factorization of that matrix into a sparser one (also with many 1s) by an alternate change of basis (CoB) 4x4 matrix
-- `./factorizer -k 6 data/Lr.sms`: a factorization of that matrix into a 7x6 sparser one by a 6x4 matrix
-- `./inplacer data/Lw.sms`: in-place matrix-vector accumulating multiplication
-- `./trilplacer data/Lw.sms data/Rw.sms data/Pw.sms`: in-place version of Strassen-Winograd's fast 2x2 accumulating multiplication
-- `./trilplacer data/Lk.sms data/Rk.sms data/Pk.sms -e`: in-place version of Karatsuba's fast accumulating polynomial multiplication
-- `./optimizer -q 17 data/Lo.sms | compacter -s | PMchecker -q 17 -M data/Lo.sms`: creates a program for `Lo.sms` modulo 17, compacts it with less variables, then checks consistency
+- `./bin/sms2pretty data/Lw.sms data/Rw.sms data/Pw.sms`: pretty print HM representation of Strassen-Winograd's fast 2x2 multiplication algorithm
+- `./bin/matrix-transpose data/Pw.sms`: the transposed matrix
+- `./bin/MMchecker data/Lw.sms data/Rw.sms data/Pw.sms`: probabilistically checking Strassen-Winograd's matrix-multiplication algorithm
+- `./bin/MMchecker data/Lo.sms data/Ro.sms data/Po.sms 32 3 1013`: probabilistically checking matrix-multiplication algorithm using 32 bits random elements and 1013 as a placeholder for sqrt(3)
+- `./bin/optimizer data/cyclic.sms`: a program computing that matrix-vector product
+- `./bin/optimizer data/Rr.sms -q 3`: a program computing that matrix-vector product modulo 3
+- `./bin/transpozer data/test.prg`: a program computing the transposed program
+- `./bin/compacter data/test.prg`: a more compact program
+- `./bin/optimizer -D data/Pi.sms`: a program computing that matrix-vector product
+- `./bin/optimizer data/Li.sms | ./bin/compacter -s`: a compact program computing that matrix-vector product
+- `./bin/matrix-transpose data/Pi.sms | ./bin/optimizer -K | ./bin/transpozer`: a program computing that matrix-vector product
+- `./bin/sparsifier -c 4 data/Lr.sms`: a factorization of that matrix into a sparser one (also with many 1s) by an alternate change of basis (CoB) 4x4 matrix
+- `./bin/factorizer -k 6 data/Lr.sms`: a factorization of that matrix into a 7x6 sparser one by a 6x4 matrix
+- `./bin/inplacer data/Lw.sms`: in-place matrix-vector accumulating multiplication
+- `./bin/trilplacer data/Lw.sms data/Rw.sms data/Pw.sms`: in-place version of Strassen-Winograd's fast 2x2 accumulating multiplication
+- `./bin/trilplacer data/Lk.sms data/Rk.sms data/Pk.sms -e`: in-place version of Karatsuba's fast accumulating polynomial multiplication
+- `./bin/optimizer -q 17 data/Lo.sms | ./bin/compacter -s | ./bin/PMchecker -q 17 -M data/Lo.sms`: creates a program for `Lo.sms` modulo 17, compacts it with less variables, then checks consistency
