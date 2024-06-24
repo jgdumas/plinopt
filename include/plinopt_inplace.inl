@@ -87,7 +87,11 @@ struct Atom {
     }
 };
 
-auto isScaOne {[](const Atom& p){ return (isSca(p._ope) && isOne(p._val));} };
+
+// Lambda Testing whether atom is '*' or '/' with a 1
+auto isScaOne {[](const Atom& p){ return (isSca(p._ope)
+                                          && Givaro::isOne(p._val));} };
+
 
 Tricounter complexity(const AProgram_t& p) {
     Tricounter nops;
@@ -243,6 +247,61 @@ bool simplify(AProgram_t& Program, const bool transposed) {
 
 
 
+// ===============================================================
+// Push independent variables towards the end
+// --> semantically equivalent if: AXPY is not encountered
+// --> otherwise until next modification of same variable
+// --> makes same variables closer, thus helps simplification
+void pushvariables(AProgram_t& Program, size_t numout) {
+//     LinBox::Permutation<QRat> Q(QQ,T.rowdim());
+// printwithOutput(std::clog << "PushVars\n", 'z', Program, Q) << std::endl;
+
+        // For each variable
+    for(size_t i=0; i<numout; ++i) {
+
+        bool found(false); size_t findex(0), fdes(0);
+
+        for(size_t j=0; j < Program.size(); ++j) {
+            if (found) {
+                    // Look for the same variabe again in this subregion
+                if (Program[j]._src == i) {
+                    if (Program[j]._ope == ' ') {
+                            // AXPY modifies the variable, do not rotate it
+                        found = false;
+                    } else {
+                            // previous findex must have been after an AXPY
+                            // Now is before another AXPY, can rotate here
+                        if (j-findex > 1) {
+                            std::rotate(Program.begin()+findex,
+                                        Program.begin()+findex+1,
+                                        Program.begin()+j);
+
+// std::clog << "### ROT " << variable << i << ':' << findex << " --> " << j << std::endl;
+// printwithOutput(std::clog, 't', Program, Q) << std::endl;
+                        }
+                        found = false;
+                    }
+                }
+            } else {
+                    // Try the next subregion of the Program
+                if ( (Program[j]._ope != ' ')
+                     && (Program[j]._des == i) ) { found = true; findex = j; }
+            }
+        }
+
+            // Can be moved at the end
+        if (found && (Program.size()-findex>1)) {
+            std::rotate(Program.begin()+findex,
+                        Program.begin()+findex+1,
+                        Program.end());
+// std::clog << "### ROT " << variable << i << ':' << findex << " --> END" << std::endl;
+// printwithOutput(std::clog, 'q', Program, Q) << std::endl;
+        }
+    }
+
+}
+// ===============================================================
+
 
 
 // ===============================================================
@@ -326,8 +385,10 @@ Tricounter LinearAlgorithm(AProgram_t& Program, const Matrix& A,
     Program.erase(std::remove_if(Program.begin(), Program.end(), isScaOne),
                   Program.end());
 
-        // Removes atoms followed by their inverses, one at a time
     bool simp; do {
+        // Moving variables towards themselves whenever possible
+        if (transposed) pushvariables(Program, A.coldim());
+        // Removes atoms followed by their inverses, one at a time
         simp = simplify(Program, transposed);
     } while(simp);
 
@@ -344,7 +405,6 @@ Tricounter TransposedDoubleAlgorithm(AProgram_t& Program, const Matrix& T,
     const QRat& QQ = T.field();
     Tricounter opcount;			// 0:ADD, 1:SCA, 2:MUL
     const size_t m(T.rowdim());		// should be even
-    LinBox::Permutation<QRat> P(QQ,m);
     for(size_t l=0; l<m; ++l) {
         const auto& UpperRow(T[l]);
         const auto& LowerRow(T[++l]);
@@ -427,8 +487,10 @@ Tricounter TransposedDoubleAlgorithm(AProgram_t& Program, const Matrix& T,
     Program.erase(std::remove_if(Program.begin(), Program.end(), isScaOne),
                   Program.end());
 
-        // Removes atoms followed by their inverses, one at a time
     bool simp; do {
+        // Moving variables towards themselves whenever possible
+        pushvariables(Program, T.coldim());
+        // Removes atoms followed by their inverses, one at a time
         simp = simplify(Program, true);
     } while(simp);
 
