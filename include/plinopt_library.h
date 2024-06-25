@@ -190,8 +190,8 @@ std::ostream& printmulorjustdiv(std::ostream& out,
 
 // ============================================
 // Vector of factorial up to n
-std::vector<long> factorial(const size_t n) {
-    std::vector<long> a(n); a[0]=1;
+std::vector<size_t> factorial(const size_t n) {
+    std::vector<size_t> a(n); a[0]=1u;
     for(size_t j=1; j<n; ++j) { a[j] = a[j-1]*(j+1); } return a;
 }
 

@@ -26,7 +26,7 @@ _Mat& PMbuilder(_Mat& A, std::istream& input) {
 
         // Line by line parsing
     VProgram_t ProgramVector; programParser(ProgramVector, ssin);
-    const size_t PVs { progSize(ProgramVector) };
+//     const size_t PVs { progSize(ProgramVector) };
     std::clog << std::string(40,'#') << std::endl;
 
     parenthesisExpand(ProgramVector);

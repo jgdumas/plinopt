@@ -162,7 +162,7 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
         chrono.clear(); chrono.start();
 
         const size_t m(M.rowdim());
-        std::vector<long> Fm { factorial(m) };
+        std::vector<size_t> Fm { factorial(m) };
         std::ostringstream kout;
 
         auto knbops(nbops);

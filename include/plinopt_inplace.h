@@ -83,6 +83,7 @@ auto isSca { [](const char c) { return ( (c=='*') || (c=='/') ); } };
 
 #define VALPAR(v) '(' << v << ')'
 #define SWAPOP(op) (op=='+'?'-':'+')
+#define INVOP(op) (op=='*'?'/':'*')
 #define MONEOP(op,val) (QQ.isMOne(val)?SWAPOP(op):op)
 
 // n is triple of operation count, 0:ADD, 1:SCA, 2:MUL

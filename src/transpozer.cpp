@@ -14,7 +14,7 @@
  *    [+] output variables start with 'o' --> transformed into 'i'
  *    [+] lines are of the forms:
  *       xi := sum (yi op(li)), with sum: + or -, and: op * or / or empty
- *           xi, yi are supposed to be without any of "+-:=/*;"
+ *           xi, yi are supposed to be without any of "+,-,:=,/,*,;"
  *           liin particular rational numbers a/b should be precomputed,
  *           e.g., into a constant 'cxx:=a/b;' when used in computation.
  *           e.g. replace: "x0:=x1*3/4;" by "c0:=3/4;x0:=x1*c0;"

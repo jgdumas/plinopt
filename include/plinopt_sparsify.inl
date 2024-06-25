@@ -179,7 +179,6 @@ std::ostream& densityProfile(std::ostream& out, size_t& ss, const _Mat& M) {
 //    If w is better, then replaces the line #num of LCoB
 inline bool testLinComb(Pair<int>& weight, Matrix& LCoB, Matrix& Cand,
                         const size_t num,const QArray& w, const Matrix& TM) {
-    const QRat& QQ(TM.field());
     QArray v(TM.coldim()); v.resize(TM.coldim());
 
         // Check independency
