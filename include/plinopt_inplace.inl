@@ -78,33 +78,20 @@ struct Atom {
         return out << ';';
     }
 
+        // Operation is on the same variable(s)
     bool sameops(const Atom& p) const {
         return (this->_var == p._var)
             && (this->_src == p._src)
             && (this->_des == p._des);
     }
 
-    bool isnop() const {
+        // Operation is a no-op
+    bool isnoop() const {
         return (isAdd(this->_ope) && isZero(this->_val))
             || (isSca(this->_ope) && isOne(this->_val));
     }
 
-    bool isinv(const Atom& p) const {
-        if (this->sameops(p)) {
-            if (isAdd(this->_ope) && isAdd(p._ope)) {
-                if (this->_ope==p._ope) {
-                    return isZero(this->_val+p._val);
-                } else {
-                    return isZero(this->_val-p._val);
-                }
-            } else if (isSca(this->_ope) && isSca(p._ope)) {
-                return isOne(this->_val / p._val);
-            }
-        }
-            // at least one of the two operations is not arithmetic
-        return false;
-    }
-
+        // Combine both operations, if compatible
     bool cumulate(const Atom& p) {
         if (this->sameops(p)) {
             if (isAdd(this->_ope) && isAdd(p._ope)) {
@@ -280,7 +267,7 @@ bool simplify(AProgram_t& Program, const bool transposed) {
                     std::clog << "## --> replaced by: " << c << std::endl;
 #endif
                     Program.erase(next);
-                    if (c.isnop()) { // operations are inverse of one another
+                    if (c.isnoop()) { // operations are inverse of one another
                         Program.erase(iter);
                     } else {
                         *iter = c;
