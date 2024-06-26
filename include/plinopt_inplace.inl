@@ -18,7 +18,7 @@ struct Atom {
     Givaro::Rational _val;
     long _des;
 
-    Atom(char v, size_t s, char o, const Givaro::Rational& r, size_t d=-1)
+    Atom(char v, size_t s, char o, const Givaro::Rational& r, long d=-1)
             : _var(v),_src(s),_ope(o),_val(r),_des(d) {}
 
     Atom(const Atom& c)
@@ -294,12 +294,12 @@ bool simplify(AProgram_t& Program, const bool transposed) {
                 // STOP if: previous rhs is now modified
                 // except: barrier will modify output, but not inputs
             if (transposed)
-                needbreak |= (iter->_des == next->_src);
+                needbreak |= (iter->_des == (long)(next->_src));
             else
-                needbreak |= ((iter->_des == next->_src) && (next->_ope != ' '));
+                needbreak |= ((iter->_des == (long)(next->_src)) && (next->_ope != ' '));
 
                 // STOP if: previous lhs is now used
-            needbreak |= (iter->_src == next->_des);
+            needbreak |= ((long)(iter->_src) == next->_des);
 
             if (needbreak) break;
         }
@@ -325,7 +325,8 @@ void pushvariables(AProgram_t& Program, size_t numout) {
 
         for(auto iter = Program.begin(); iter != Program.end(); ++iter) {
             if (found) {
-                if (iter->_des == i) { // variable used, cannot push more
+                    // variable used, cannot push more
+                if (iter->_des == (long)(i)) {
                     found = false;
                 }
                     // Look for the same variabe again in this subregion
@@ -335,10 +336,11 @@ void pushvariables(AProgram_t& Program, size_t numout) {
                             // Now is before another AXPY, can rotate here
                         auto nindex(findex); ++nindex;
                         if (nindex != iter) {
-                            std::rotate(findex, nindex, iter);
+// dprint(std::clog << "######## BEF ROT\n", Program) << std::endl;
 // dprint(std::clog << "### ROT " << findex->_var << i << ':', *findex)
 //                  << " --> " << *nindex << std::endl;
-// dprint(std::clog, Program) << std::endl;
+                            std::rotate(findex, nindex, iter);
+// dprint(std::clog << "######## AFT ROT\n", Program) << std::endl;
                         }
                     }
                     found = false;
@@ -346,7 +348,7 @@ void pushvariables(AProgram_t& Program, size_t numout) {
             } else {
                     // Try the next subregion of the Program
                 if ( (iter->_ope != ' ')
-                     && (iter->_des == i) ) { found = true; findex = iter; }
+                     && (iter->_des == (long)(i)) ) { found = true; findex = iter; }
             }
         }
 
@@ -388,10 +390,12 @@ Tricounter LinearAlgorithm(AProgram_t& Program, const Matrix& A,
 
                 // scale choosen var
             if (!QQ.isOne(aiter->second)) {
-                if (transposed && (!QQ.isMOne(aiter->second))) {
-                    Program.emplace_back(variable,i,'/',aiter->second);
+                if (transposed) {
+                    if (!QQ.isMOne(aiter->second)) {
+                        Program.emplace_back(variable,i,'/',aiter->second);
+                    }
                 } else {
-                   Program.emplace_back(variable,i,'*',aiter->second);
+                    Program.emplace_back(variable,i,'*',aiter->second);
                 }
             }
 
@@ -432,8 +436,10 @@ Tricounter LinearAlgorithm(AProgram_t& Program, const Matrix& A,
 
                 // Un-scale choosen var
             if (!QQ.isOne(aiter->second)) {
-                if (transposed && (!QQ.isMOne(aiter->second))) {
-                    Program.emplace_back(variable,i,'*',aiter->second);
+                if (transposed) {
+                    if (!QQ.isMOne(aiter->second)) {
+                        Program.emplace_back(variable,i,'*',aiter->second);
+                    }
                 } else {
                     Program.emplace_back(variable,i,'/',aiter->second);
                 }
