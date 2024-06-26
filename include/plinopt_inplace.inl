@@ -33,11 +33,13 @@ struct Atom {
         return *this;
     }
 
+        // Raw print
     friend std::ostream& dprint(std::ostream& out, const Atom& p) {
         return out << p._var << p._src << ' ' << p._ope << ' '
                    << p._val << ' ' << p._var << p._des;
     }
 
+        // print as a program (removes noops and barriers)
     friend std::ostream& operator<<(std::ostream& out, const Atom& p) {
         const bool bsca(isSca(p._ope));
         QRat QQ;
@@ -67,19 +69,11 @@ struct Atom {
         if (bsca) {
             if (sign(p._val)<0) out << '-';
             printSCA(out, p._var, p._src, p._ope, uval, nbmul, QQ);
-
-//             out << p._var << p._src;
-//             out << p._ope << VALPAR(p._val);
         } else {
             const auto uope(sign(p._val)<0?SWAPOP(p._ope):p._ope);
             out << p._var << p._src << uope;
 
             printmulorjustdiv(out, p._var, p._des, uval, nbmul, QQ);
-
-//             out << p._var << p._des;
-//             if (! isOne(uval)) {
-//                 out << '*' << uval;
-//             }
         }
         return out << ';';
     }
@@ -161,11 +155,13 @@ Tricounter complexity(const Ring& R, const AProgram_t& p) {
     return nops;
 }
 
+// Printing a runable program
 std::ostream& operator<< (std::ostream& out, const AProgram_t& p) {
     for(const auto& iter: p) if (iter._ope != ' ') out << iter << std::endl;
     return out;
 }
 
+// Raw print program (including barrier)
 std::ostream& dprint (std::ostream& out, const AProgram_t& p) {
     for(const auto& iter: p)
         if (iter._ope != ' ')
@@ -175,9 +171,10 @@ std::ostream& dprint (std::ostream& out, const AProgram_t& p) {
     return out;
 }
 
-std::ostream& printwithOutput(std::ostream& out, const char c,
-                              const AProgram_t& atomP,
-                              const LinBox::Permutation<QRat>& P) {
+// Raw print program (with explicitly permuted output)
+std::ostream& Pprint(std::ostream& out, const char c,
+                     const AProgram_t& atomP,
+                     const LinBox::Permutation<QRat>& P) {
 //     P.write(std::clog << "# Permutation: ") << std::endl;
     size_t numop(0);
     for(const auto& iter: atomP) {
@@ -265,36 +262,6 @@ bool simplify(AProgram_t& Program, const bool transposed) {
         auto next(iter);
         for(++next; next != Program.end(); ++next) {
             ++ nnt;
-//             if (next->isinv(*iter)) {
-// #ifdef
-//                 std::clog << "# Removing[" << cnt << "] " << *iter
-//                           << " with[" << nnt << "] " << *next << std::endl;
-
-//                 for(auto rit=iter; rit != next; ++rit) {
-//                     std::clog << "# %% " << *rit << std::endl;
-//                 }
-//                 std::clog << "# %% " << *next << std::endl;
-// #endif
-
-//                 Program.erase(next);
-//                 Program.erase(iter);
-
-//                 return true;
-
-//             }
-
-            if (next->isinv(*iter)) {
-#ifdef VERBATIM_PARSING
-                std::clog << "# Removing[" << cnt << "] " << *iter
-                          << " with[" << cnt+nnt << "] " << *next << std::endl;
-
-                for(auto rit=iter; rit != next; ++rit) {
-                    std::clog << "## %r% " << *rit << std::endl;
-                }
-                std::clog << "## %r% " << *next << std::endl;
-#endif
-            }
-
             if (next->sameops(*iter)) { // same variables
 #ifdef VERBATIM_PARSING
                 std::clog << "# Found[" << cnt << "] " << *iter
@@ -322,31 +289,32 @@ bool simplify(AProgram_t& Program, const bool transposed) {
                 }
             }
 
-dprint(std::clog << "## simplog: " <<  *iter << '(', *iter) << ')';
-dprint(std::clog << " | " << *next  << '(', *next) << ')' << std::endl;
-				// Stop optimizing, if iter is reused from now, in certain cases
-            if (transposed) {
-                if ( (iter->_src == next->_src)
-                     ||
-                     (iter->_des == next->_src)
-                     ||
-                     (iter->_src == next->_des)
-                     ) {
-                    break;
-                }
-            } else {
-                if ( ( (iter->_src == next->_src)
-                       &&
-                       ( (next->_ope == ' ') || isSca(next->_ope) )
-                       )
-                     ||
-                     ( (iter->_des == next->_src) && (next->_ope != ' ') )
-                     ||
-                     (iter->_src == next->_des)
-                     ) {
-                    break;
-                }
-            }
+                // Whether or not to Stop optimizing
+                // --> if iter is reused from now, in certain cases
+            bool needbreak(false);
+
+                // STOP if: same source but different usage
+            needbreak |=
+                (iter->_src == next->_src)
+                &&
+                ( (next->_ope == ' ')
+                  ||
+                  (isAdd(iter->_ope) && isSca(next->_ope))
+                  ||
+                  (isSca(iter->_ope) && isAdd(next->_ope))
+                  );
+
+                // STOP if: previous rhs is now modified
+                // except: barrier will modify output, but not inputs
+            if (transposed)
+                needbreak |= (iter->_des == next->_src);
+            else
+                needbreak |= ((iter->_des == next->_src) && (next->_ope != ' '));
+
+                // STOP if: previous lhs is now used
+            needbreak |= (iter->_src == next->_des);
+
+            if (needbreak) break;
         }
     }
     return false;
@@ -362,9 +330,6 @@ dprint(std::clog << " | " << *next  << '(', *next) << ')' << std::endl;
 // --> otherwise until next modification of same variable
 // --> makes same variables closer, thus helps simplification
 void pushvariables(AProgram_t& Program, size_t numout) {
-//     LinBox::Permutation<QRat> Q(QQ,T.rowdim());
-// printwithOutput(std::clog << "PushVars\n", 'z', Program, Q) << std::endl;
-
         // For each variable
     for(size_t i=0; i<numout; ++i) {
 
@@ -378,21 +343,18 @@ void pushvariables(AProgram_t& Program, size_t numout) {
                 }
                     // Look for the same variabe again in this subregion
                 if (iter->_src == i) {
-                    if (iter->_ope == ' ') {
-                            // AXPY modifies the variable, do not rotate it
-                        found = false;
-                    } else {
+                    if (iter->_ope != ' ') {
                             // previous findex must have been after an AXPY
                             // Now is before another AXPY, can rotate here
                         auto nindex(findex); ++nindex;
                         if (nindex != iter) {
                             std::rotate(findex, nindex, iter);
-
-// std::clog << "### ROT " << variable << i << ':' << findex << " --> " << j << std::endl;
-// printwithOutput(std::clog, 't', Program, Q) << std::endl;
+// dprint(std::clog << "### ROT " << findex->_var << i << ':', *findex)
+//                  << " --> " << *nindex << std::endl;
+// dprint(std::clog, Program) << std::endl;
                         }
-                        found = false;
                     }
+                    found = false;
                 }
             } else {
                     // Try the next subregion of the Program
@@ -404,10 +366,13 @@ void pushvariables(AProgram_t& Program, size_t numout) {
             // Can be moved at the end
         if (found) {
             auto nindex(findex); ++nindex;
-            if (nindex != Program.end())
+            if (nindex != Program.end()) {
+// dprint(std::clog << "######## BEF ROT\n", Program) << std::endl;
+// dprint(std::clog << "### ROT " << findex->_var << i << ':', *findex)
+//                  << " --> END" << std::endl;
                 std::rotate(findex, nindex, Program.end());
-// std::clog << "### ROT " << variable << i << ':' << findex << " --> END" << std::endl;
-// printwithOutput(std::clog, 'q', Program, Q) << std::endl;
+// dprint(std::clog << "######## AFT ROT\n", Program) << std::endl;
+            }
         }
     }
 
@@ -549,11 +514,6 @@ Tricounter TransposedDoubleAlgorithm(AProgram_t& Program, const Matrix& T,
                 QQ.negin(z);   // z = - a^{-1} c a^{-1}
             }
 
-// std::clog << "<<" << a << '|' << c << ">,<0|" << a << ">>"
-//           << '.'
-//           << "<<" << y << '|' << z << ">,<0|" << y << ">>"
-//           << " = 1;" << std::endl;
-
                 // scale choosen var
             if (notAbsOne(QQ,y))
                 Program.emplace_back(variable, cindex, '*', y);
@@ -599,20 +559,15 @@ Tricounter TransposedDoubleAlgorithm(AProgram_t& Program, const Matrix& T,
             if (notAbsOne(QQ,a))
                 Program.emplace_back(variable, i, '*', a);
 
-// printwithOutput(std::clog << "Program:\n", 'T', Program, P) << std::endl;
-
         } else {
             Program.emplace_back(' ',l,' ',QQ.zero);
         }
     }
+// dprint(std::clog << "Program:\n", Program) << std::endl;
 
         // Removing noops
     Program.erase(std::remove_if(Program.begin(), Program.end(), isScaOne),
                   Program.end());
-
-//     std::clog << std::string(20,'#') << std::endl;
-//     std::clog << std::string(10,'#') << " BEF TRSP DBLS" << std::endl;
-//     dprint(std::clog, Program) << std::endl;
 
     bool simp; do {
         // Moving variables towards themselves whenever possible
@@ -620,11 +575,6 @@ Tricounter TransposedDoubleAlgorithm(AProgram_t& Program, const Matrix& T,
         // Removes atoms followed by their inverses, one at a time
         simp = simplify(Program, true);
     } while(simp);
-
-//     std::clog << std::string(20,'#') << std::endl;
-//     std::clog << std::string(10,'#') << " AFT TRSP DBLS" << std::endl;
-//     dprint(std::clog, Program) << std::endl;
-//     std::clog << std::string(20,'#') << std::endl;
 
     return complexity(QQ,Program);
 }
