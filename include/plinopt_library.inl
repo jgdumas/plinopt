@@ -36,7 +36,7 @@ inline _Mat1& setRow(_Mat1& A, size_t i, const _Mat2& B, size_t j) {
     const Field& F(A.field());
     auto& Ai(A[i]); const auto& Bj(B[j]);
     Ai.resize(0); Ai.reserve(Bj.size());
-    for(const auto biter: Bj) {
+    for(const auto& biter: Bj) {
         if (! F.isZero(biter.second))
             Ai.emplace_back(biter.first,biter.second);
     }
@@ -192,7 +192,7 @@ inline Matrix& permuteRows(Matrix& R, const Permutation& P,
 // Returns the kth-permutation of 0..(n-1) via the factoradic
 // Fn is the factorial vector up to n-1 -- from 'factorial(m)'
 std::vector<size_t> kthpermutation(const size_t k, const size_t n,
-                                   const std::vector<long>& Fn ) {
+                                   const std::vector<size_t>& Fn ) {
     std::vector<size_t> l;
     std::vector<size_t> Q(n);
     std::iota(Q.begin(), Q.end(), 0); // 0,1,2,3,4

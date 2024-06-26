@@ -53,7 +53,7 @@ std::ostream& FindProgram(std::ostream& out, std::istream& input,
 
         // Print the chosen algorithm
     input2Temps(out, outdim, inchar, tmpchar);
-    printwithOutput(out, outchar, Program, P) << std::flush;
+    Pprint(out, outchar, Program, P) << std::flush;
 
 #ifdef INPLACE_CHECKER
     std::clog << std::string(40,'#') << std::endl;

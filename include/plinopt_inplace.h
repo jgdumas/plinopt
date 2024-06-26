@@ -21,10 +21,13 @@
 struct Atom;
 typedef std::vector<Atom> AProgram_t;
 
+// Printing a runable program
 std::ostream& operator<< (std::ostream&, const AProgram_t&);
-std::ostream& printwithOutput(std::ostream& out, const char c,
-                              const AProgram_t& atomP,
-                              const LinBox::Permutation<QRat>& P);
+// Print a runable program with explicitly permuted output
+std::ostream& Pprint(std::ostream& out, const char c, const AProgram_t& atomP,
+                     const LinBox::Permutation<QRat>& P);
+// Raw print program (including barrier)
+std::ostream& dprint (std::ostream& out, const AProgram_t& p);
 
 Tricounter complexity(const AProgram_t& p);
 
@@ -83,6 +86,7 @@ auto isSca { [](const char c) { return ( (c=='*') || (c=='/') ); } };
 
 #define VALPAR(v) '(' << v << ')'
 #define SWAPOP(op) (op=='+'?'-':'+')
+#define INVOP(op) (op=='*'?'/':'*')
 #define MONEOP(op,val) (QQ.isMOne(val)?SWAPOP(op):op)
 
 // n is triple of operation count, 0:ADD, 1:SCA, 2:MUL

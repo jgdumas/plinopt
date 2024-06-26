@@ -16,11 +16,30 @@ struct Atom {
     size_t _src;
     char _ope;
     Givaro::Rational _val;
-    size_t _des;
+    long _des;
 
-    Atom(char v, size_t s, char o, const Givaro::Rational& r, size_t d=0)
+    Atom(char v, size_t s, char o, const Givaro::Rational& r, size_t d=-1)
             : _var(v),_src(s),_ope(o),_val(r),_des(d) {}
 
+    Atom(const Atom& c)
+            : _var(c._var),_src(c._src),_ope(c._ope),_val(c._val),_des(c._des){}
+
+    Atom& operator= (const Atom& c) {
+        this->_var = c._var;
+        this->_src = c._src;
+        this->_ope = c._ope;
+        this->_val = c._val;
+        this->_des = c._des;
+        return *this;
+    }
+
+        // Raw print
+    friend std::ostream& dprint(std::ostream& out, const Atom& p) {
+        return out << p._var << p._src << ' ' << p._ope << ' '
+                   << p._val << ' ' << p._var << p._des;
+    }
+
+        // print as a program (removes noops and barriers)
     friend std::ostream& operator<<(std::ostream& out, const Atom& p) {
         const bool bsca(isSca(p._ope));
         QRat QQ;
@@ -29,7 +48,7 @@ struct Atom {
 
 
         if (p._ope == ' ') {
-#ifdef VERBATIM_PARSING
+#ifdef DEBUG
             std::clog << "# row computed in "
                       << p._var << p._src << VALPAR(p._val) << std::endl;
 #endif
@@ -50,63 +69,99 @@ struct Atom {
         if (bsca) {
             if (sign(p._val)<0) out << '-';
             printSCA(out, p._var, p._src, p._ope, uval, nbmul, QQ);
-
-//             out << p._var << p._src;
-//             out << p._ope << VALPAR(p._val);
         } else {
             const auto uope(sign(p._val)<0?SWAPOP(p._ope):p._ope);
             out << p._var << p._src << uope;
 
             printmulorjustdiv(out, p._var, p._des, uval, nbmul, QQ);
-
-//             out << p._var << p._des;
-//             if (! isOne(uval)) {
-//                 out << '*' << uval;
-//             }
         }
         return out << ';';
     }
 
-    bool isinv(const Atom& p) const {
-        bool binv(true);
-        binv &= (this->_var == p._var);
-        binv &= (this->_src == p._src);
-        if (isAdd(this->_ope) && isAdd(p._ope)) {
-            if (this->_ope==p._ope) {
-                binv &= isZero(this->_val+p._val);
-            } else {
-                binv &= isZero(this->_val-p._val);
-            }
-        } else if (isSca(this->_ope) && isSca(p._ope)) {
-            binv &= isOne(this->_val / p._val);
-        } else {
-            // at least one of the two operations is not arithmetic
-            return false;
-        }
-        return binv &= (this->_des == p._des);
+        // Operation is on the same variable(s)
+    bool sameops(const Atom& p) const {
+        return (this->_var == p._var)
+            && (this->_src == p._src)
+            && (this->_des == p._des);
     }
+
+        // Operation is a no-op
+    bool isnoop() const {
+        return (isAdd(this->_ope) && isZero(this->_val))
+            || (isSca(this->_ope) && isOne(this->_val));
+    }
+
+        // Combine both operations, if compatible
+    bool cumulate(const Atom& p) {
+        if (this->sameops(p)) {
+            if (isAdd(this->_ope) && isAdd(p._ope)) {
+                if (this->_ope==p._ope)
+                    this->_val += p._val;
+                else
+                    this->_val -= p._val;
+                if (sign(this->_val) < 0) {
+                    this->_ope = SWAPOP(this->_ope);
+                    QRat QQ; QQ.negin(this->_val);
+                }
+                return true;
+            } else if (isSca(this->_ope) && isSca(p._ope)) {
+                if (this->_ope==p._ope)
+                    this->_val *= p._val;
+                else
+                    this->_val /= p._val;
+                QRat QQ;
+                if (abs(this->_val) < QQ.one) {
+                    this->_ope = INVOP(this->_ope);
+                    QQ.invin(this->_val);
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+
 };
 
-auto isScaOne {[](const Atom& p){ return (isSca(p._ope) && isOne(p._val));} };
 
-Tricounter complexity(const AProgram_t& p) {
+// Lambda Testing whether atom is '*' or '/' with a 1
+auto isScaOne {[](const Atom& p){ return (isSca(p._ope)
+                                          && Givaro::isOne(p._val));} };
+
+
+template<typename Ring>
+Tricounter complexity(const Ring& R, const AProgram_t& p) {
     Tricounter nops;
     for(const auto& iter: p) {
-        if (isAdd(iter._ope)) ++std::get<0>(nops);
+        if (isAdd(iter._ope)) {
+            ++std::get<0>(nops);
+            if (notAbsOne(R,iter._val)) ++std::get<1>(nops);
+        }
         if (isSca(iter._ope)) ++std::get<1>(nops);
         if (iter._ope == ' ') ++std::get<2>(nops);
     }
     return nops;
 }
 
+// Printing a runable program
 std::ostream& operator<< (std::ostream& out, const AProgram_t& p) {
     for(const auto& iter: p) if (iter._ope != ' ') out << iter << std::endl;
     return out;
 }
 
-std::ostream& printwithOutput(std::ostream& out, const char c,
-                              const AProgram_t& atomP,
-                              const LinBox::Permutation<QRat>& P) {
+// Raw print program (including barrier)
+std::ostream& dprint (std::ostream& out, const AProgram_t& p) {
+    for(const auto& iter: p)
+        if (iter._ope != ' ')
+            out << iter << std::endl;
+        else
+            out << "# barrier # " << iter << std::endl;
+    return out;
+}
+
+// Raw print program (with explicitly permuted output)
+std::ostream& Pprint(std::ostream& out, const char c,
+                     const AProgram_t& atomP,
+                     const LinBox::Permutation<QRat>& P) {
 //     P.write(std::clog << "# Permutation: ") << std::endl;
     size_t numop(0);
     for(const auto& iter: atomP) {
@@ -194,46 +249,59 @@ bool simplify(AProgram_t& Program, const bool transposed) {
         auto next(iter);
         for(++next; next != Program.end(); ++next) {
             ++ nnt;
-            if (next->isinv(*iter)) {
+            if (next->sameops(*iter)) { // same variables
 #ifdef VERBATIM_PARSING
-                std::clog << "# Removing[" << cnt << "] " << *iter
-                          << " with[" << nnt << "] " << *next << std::endl;
-
+                std::clog << "# Found[" << cnt << "] " << *iter
+                          << " with[" << cnt+nnt << "] " << *next << std::endl;
                 for(auto rit=iter; rit != next; ++rit) {
-                    std::clog << "# %% " << *rit << std::endl;
+                    dprint(std::clog << "## %f% ", *rit) << std::endl;
                 }
-                std::clog << "# %% " << *next << std::endl;
+                dprint( std::clog << "## %f% ", *next) << std::endl;
 #endif
 
-                Program.erase(next);
-                Program.erase(iter);
+                Atom c(*iter);
+                bool bpos = c.cumulate(*next);
 
-                return true;
-
-            }
-
-				// Stop optimizing, if iter is reused from now, in certain cases
-            if (transposed) {
-                if ( ( (iter->_des == next->_des)
-                       &&
-                       ( (next->_ope == ' ') || isSca(next->_ope) ) )
-                     ||
-                     (iter->_des == next->_src)
-                     ) {
-                    break;
-                }
-            } else {
-                if ( ( (iter->_src == next->_src)
-                       &&
-                       ( (next->_ope == ' ') || isSca(next->_ope) ) )
-                     ||
-                     ( (iter->_des == next->_src) && (next->_ope != ' ') )
-                     ||
-                     (iter->_src == next->_des)
-                     ) {
-                    break;
+                if (bpos) { // same variables and compatible operations
+#ifdef VERBATIM_PARSING
+                    std::clog << "## --> replaced by: " << c << std::endl;
+#endif
+                    Program.erase(next);
+                    if (c.isnoop()) { // operations are inverse of one another
+                        Program.erase(iter);
+                    } else {
+                        *iter = c;
+                    }
+                    return true;
                 }
             }
+
+                // Whether or not to Stop optimizing
+                // --> if iter is reused from now, in certain cases
+            bool needbreak(false);
+
+                // STOP if: same source but different usage
+            needbreak |=
+                (iter->_src == next->_src)
+                &&
+                ( (next->_ope == ' ')
+                  ||
+                  (isAdd(iter->_ope) && isSca(next->_ope))
+                  ||
+                  (isSca(iter->_ope) && isAdd(next->_ope))
+                  );
+
+                // STOP if: previous rhs is now modified
+                // except: barrier will modify output, but not inputs
+            if (transposed)
+                needbreak |= (iter->_des == next->_src);
+            else
+                needbreak |= ((iter->_des == next->_src) && (next->_ope != ' '));
+
+                // STOP if: previous lhs is now used
+            needbreak |= (iter->_src == next->_des);
+
+            if (needbreak) break;
         }
     }
     return false;
@@ -242,6 +310,61 @@ bool simplify(AProgram_t& Program, const bool transposed) {
 // ===============================================================
 
 
+
+// ===============================================================
+// Push independent variables towards the end
+// --> semantically equivalent if: AXPY is not encountered
+// --> otherwise until next modification of same variable
+// --> makes same variables closer, thus helps simplification
+void pushvariables(AProgram_t& Program, size_t numout) {
+        // For each variable
+    for(size_t i=0; i<numout; ++i) {
+
+        bool found(false);
+        auto findex(Program.begin());
+
+        for(auto iter = Program.begin(); iter != Program.end(); ++iter) {
+            if (found) {
+                if (iter->_des == i) { // variable used, cannot push more
+                    found = false;
+                }
+                    // Look for the same variabe again in this subregion
+                if (iter->_src == i) {
+                    if (iter->_ope != ' ') {
+                            // previous findex must have been after an AXPY
+                            // Now is before another AXPY, can rotate here
+                        auto nindex(findex); ++nindex;
+                        if (nindex != iter) {
+                            std::rotate(findex, nindex, iter);
+// dprint(std::clog << "### ROT " << findex->_var << i << ':', *findex)
+//                  << " --> " << *nindex << std::endl;
+// dprint(std::clog, Program) << std::endl;
+                        }
+                    }
+                    found = false;
+                }
+            } else {
+                    // Try the next subregion of the Program
+                if ( (iter->_ope != ' ')
+                     && (iter->_des == i) ) { found = true; findex = iter; }
+            }
+        }
+
+            // Can be moved at the end
+        if (found) {
+            auto nindex(findex); ++nindex;
+            if (nindex != Program.end()) {
+// dprint(std::clog << "######## BEF ROT\n", Program) << std::endl;
+// dprint(std::clog << "### ROT " << findex->_var << i << ':', *findex)
+//                  << " --> END" << std::endl;
+                std::rotate(findex, nindex, Program.end());
+// dprint(std::clog << "######## AFT ROT\n", Program) << std::endl;
+            }
+        }
+    }
+
+}
+// ===============================================================
 
 
 
@@ -326,12 +449,25 @@ Tricounter LinearAlgorithm(AProgram_t& Program, const Matrix& A,
     Program.erase(std::remove_if(Program.begin(), Program.end(), isScaOne),
                   Program.end());
 
-        // Removes atoms followed by their inverses, one at a time
+
+
+//     std::clog << std::string(20,'#') << std::endl;
+//     std::clog << std::string(10,'#') << " BEF TRSP SIMP" << std::endl;
+//     dprint(std::clog, Program) << std::endl;
+
     bool simp; do {
+        // Moving variables towards themselves whenever possible
+        if (transposed) pushvariables(Program, A.coldim());
+        // Removes atoms followed by their inverses, one at a time
         simp = simplify(Program, transposed);
     } while(simp);
 
-    return complexity(Program);
+//     std::clog << std::string(20,'#') << std::endl;
+//     std::clog << std::string(10,'#') << " AFT TRSP SIMP" << std::endl;
+//     dprint(std::clog, Program) << std::endl;
+//     std::clog << std::string(20,'#') << std::endl;
+
+    return complexity(QQ,Program);
 }
 // ===============================================================
 
@@ -344,7 +480,6 @@ Tricounter TransposedDoubleAlgorithm(AProgram_t& Program, const Matrix& T,
     const QRat& QQ = T.field();
     Tricounter opcount;			// 0:ADD, 1:SCA, 2:MUL
     const size_t m(T.rowdim());		// should be even
-    LinBox::Permutation<QRat> P(QQ,m);
     for(size_t l=0; l<m; ++l) {
         const auto& UpperRow(T[l]);
         const auto& LowerRow(T[++l]);
@@ -365,11 +500,6 @@ Tricounter TransposedDoubleAlgorithm(AProgram_t& Program, const Matrix& T,
                 QQ.mulin(z,y);
                 QQ.negin(z);   // z = - a^{-1} c a^{-1}
             }
-
-// std::clog << "<<" << a << '|' << c << ">,<0|" << a << ">>"
-//           << '.'
-//           << "<<" << y << '|' << z << ">,<0|" << y << ">>"
-//           << " = 1;" << std::endl;
 
                 // scale choosen var
             if (notAbsOne(QQ,y))
@@ -416,23 +546,24 @@ Tricounter TransposedDoubleAlgorithm(AProgram_t& Program, const Matrix& T,
             if (notAbsOne(QQ,a))
                 Program.emplace_back(variable, i, '*', a);
 
-// printwithOutput(std::clog << "Program:\n", 'T', Program, P) << std::endl;
-
         } else {
             Program.emplace_back(' ',l,' ',QQ.zero);
         }
     }
+// dprint(std::clog << "Program:\n", Program) << std::endl;
 
         // Removing noops
     Program.erase(std::remove_if(Program.begin(), Program.end(), isScaOne),
                   Program.end());
 
-        // Removes atoms followed by their inverses, one at a time
     bool simp; do {
+        // Moving variables towards themselves whenever possible
+        pushvariables(Program, T.coldim());
+        // Removes atoms followed by their inverses, one at a time
         simp = simplify(Program, true);
     } while(simp);
 
-    return complexity(Program);
+    return complexity(QQ,Program);
 }
 // ===============================================================
 
@@ -670,6 +801,9 @@ Tricounter SearchTriLinearAlgorithm(std::ostream& out,
     std::string res(sout.str());
     std::clog << "# Oriented number of operations: " << nbops << std::endl;
 
+//     std::clog << res << std::endl;
+//     std::clog << std::string(40,'#') << std::endl;
+
 #pragma omp parallel for shared(A,B,T,res,nbops)
     for(size_t i=0; i<randomloops; ++i) {
 
@@ -735,6 +869,11 @@ Tricounter SearchTriLinearAlgorithm(std::ostream& out,
                 res = lout.str();
                 std::clog << "# Found algorithm[" << i << "], operations: "
                           << lops << std::endl;
+
+
+//     std::clog << res << std::endl;
+//     std::clog << std::string(40,'#') << std::endl;
+
             }
         }
 
@@ -751,6 +890,11 @@ Tricounter SearchTriLinearAlgorithm(std::ostream& out,
                 res = sout.str();
                 std::clog << "# Found oriented [" << i << "], operations: "
                           << lops << std::endl;
+
+
+//     std::clog << res << std::endl;
+//     std::clog << std::string(40,'#') << std::endl;
+
             }
         }
     }
