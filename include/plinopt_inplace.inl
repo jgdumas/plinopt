@@ -166,6 +166,15 @@ std::ostream& operator<< (std::ostream& out, const AProgram_t& p) {
     return out;
 }
 
+std::ostream& dprint (std::ostream& out, const AProgram_t& p) {
+    for(const auto& iter: p)
+        if (iter._ope != ' ')
+            out << iter << std::endl;
+        else
+            out << "# barrier # " << iter << std::endl;
+    return out;
+}
+
 std::ostream& printwithOutput(std::ostream& out, const char c,
                               const AProgram_t& atomP,
                               const LinBox::Permutation<QRat>& P) {
@@ -257,7 +266,7 @@ bool simplify(AProgram_t& Program, const bool transposed) {
         for(++next; next != Program.end(); ++next) {
             ++ nnt;
 //             if (next->isinv(*iter)) {
-// #ifdef 
+// #ifdef
 //                 std::clog << "# Removing[" << cnt << "] " << *iter
 //                           << " with[" << nnt << "] " << *next << std::endl;
 
@@ -317,18 +326,18 @@ dprint(std::clog << "## simplog: " <<  *iter << '(', *iter) << ')';
 dprint(std::clog << " | " << *next  << '(', *next) << ')' << std::endl;
 				// Stop optimizing, if iter is reused from now, in certain cases
             if (transposed) {
-//                 if ( (iter->_src == next->_src)
-//                      ||
-//                      (iter->_des == next->_src)
-//                      ||
-//                      (iter->_src == next->_des)
-//                      ) {
+                if ( (iter->_src == next->_src)
+                     ||
+                     (iter->_des == next->_src)
+                     ||
+                     (iter->_src == next->_des)
+                     ) {
                     break;
-//                 }
+                }
             } else {
                 if ( ( (iter->_src == next->_src)
                        &&
-                       ( (next->_ope == ' ') || isSca(next->_ope) ) 
+                       ( (next->_ope == ' ') || isSca(next->_ope) )
                        )
                      ||
                      ( (iter->_des == next->_src) && (next->_ope != ' ') )
@@ -364,6 +373,9 @@ void pushvariables(AProgram_t& Program, size_t numout) {
 
         for(auto iter = Program.begin(); iter != Program.end(); ++iter) {
             if (found) {
+                if (iter->_des == i) { // variable used, cannot push more
+                    found = false;
+                }
                     // Look for the same variabe again in this subregion
                 if (iter->_src == i) {
                     if (iter->_ope == ' ') {
@@ -485,12 +497,23 @@ Tricounter LinearAlgorithm(AProgram_t& Program, const Matrix& A,
     Program.erase(std::remove_if(Program.begin(), Program.end(), isScaOne),
                   Program.end());
 
+
+
+//     std::clog << std::string(20,'#') << std::endl;
+//     std::clog << std::string(10,'#') << " BEF TRSP SIMP" << std::endl;
+//     dprint(std::clog, Program) << std::endl;
+
     bool simp; do {
         // Moving variables towards themselves whenever possible
         if (transposed) pushvariables(Program, A.coldim());
         // Removes atoms followed by their inverses, one at a time
         simp = simplify(Program, transposed);
     } while(simp);
+
+//     std::clog << std::string(20,'#') << std::endl;
+//     std::clog << std::string(10,'#') << " AFT TRSP SIMP" << std::endl;
+//     dprint(std::clog, Program) << std::endl;
+//     std::clog << std::string(20,'#') << std::endl;
 
     return complexity(QQ,Program);
 }
@@ -587,12 +610,21 @@ Tricounter TransposedDoubleAlgorithm(AProgram_t& Program, const Matrix& T,
     Program.erase(std::remove_if(Program.begin(), Program.end(), isScaOne),
                   Program.end());
 
+//     std::clog << std::string(20,'#') << std::endl;
+//     std::clog << std::string(10,'#') << " BEF TRSP DBLS" << std::endl;
+//     dprint(std::clog, Program) << std::endl;
+
     bool simp; do {
         // Moving variables towards themselves whenever possible
         pushvariables(Program, T.coldim());
         // Removes atoms followed by their inverses, one at a time
         simp = simplify(Program, true);
     } while(simp);
+
+//     std::clog << std::string(20,'#') << std::endl;
+//     std::clog << std::string(10,'#') << " AFT TRSP DBLS" << std::endl;
+//     dprint(std::clog, Program) << std::endl;
+//     std::clog << std::string(20,'#') << std::endl;
 
     return complexity(QQ,Program);
 }
@@ -832,6 +864,9 @@ Tricounter SearchTriLinearAlgorithm(std::ostream& out,
     std::string res(sout.str());
     std::clog << "# Oriented number of operations: " << nbops << std::endl;
 
+//     std::clog << res << std::endl;
+//     std::clog << std::string(40,'#') << std::endl;
+
 #pragma omp parallel for shared(A,B,T,res,nbops)
     for(size_t i=0; i<randomloops; ++i) {
 
@@ -897,6 +932,11 @@ Tricounter SearchTriLinearAlgorithm(std::ostream& out,
                 res = lout.str();
                 std::clog << "# Found algorithm[" << i << "], operations: "
                           << lops << std::endl;
+
+
+//     std::clog << res << std::endl;
+//     std::clog << std::string(40,'#') << std::endl;
+
             }
         }
 
@@ -913,6 +953,11 @@ Tricounter SearchTriLinearAlgorithm(std::ostream& out,
                 res = sout.str();
                 std::clog << "# Found oriented [" << i << "], operations: "
                           << lops << std::endl;
+
+
+//     std::clog << res << std::endl;
+//     std::clog << std::string(40,'#') << std::endl;
+
             }
         }
     }
