@@ -20,17 +20,18 @@
            `sudo apt install git make g++ pkg-config liblinbox-dev`
            (sometimes also `sudo apt install libntl-dev libiml-dev libflint-dev`).
 - Then just run `make`, in order to produce the following executable programs
+- See also [`bin/auto-docker.run`](https://github.com/jgdumas/plinopt/blob/main/bin/auto-docker.run)
 - `make check`, will run correctness programs on the examples files in the `data` directory
 
 
 **From matrices to programs**:
 |  |  |
 | :--------- | :------ |
-|`optimizer`| produces a small program computing a linear transformation|
-|`sparsifier`| factors an MxN matrix into a sparser one, times an NxN matrix |
-|`factorizer`| factors an MxN matrix into a sparser MxK, times an KxN matrix |
-|`inplacer`| produces an in-place program from a linear transformation|
-|`trilplacer`| produces an in-place program from a trilinear transformation|
+|`bin/optimizer`| produces a small program computing a linear transformation|
+|`bin/sparsifier`| factors an MxN matrix into a sparser one, times an NxN matrix |
+|`bin/factorizer`| factors an MxN matrix into a sparser MxK, times an KxN matrix |
+|`bin/inplacer`| produces an in-place program from a linear transformation|
+|`bin/trilplacer`| produces an in-place program from a trilinear transformation|
 |  |  |
 
 
@@ -38,8 +39,8 @@
 **Optimizing programs**:
 |  |  |
 | :--------- | :------ |
-|`compacter`| rewrites a simple program using less variables |
-|`transpozer`| transposes a program, via Tellegen's transposition principle|
+|`bin/compacter`| rewrites a simple program using less variables |
+|`bin/transpozer`| transposes a program, via Tellegen's transposition principle|
 |  |  |
 
 
@@ -47,10 +48,10 @@
 **Tools**:
 |  |  |
 | :--------- | :------ |
-|`matrix-transpose`| transposes a matrix from an SMS file |
-|`sms2pretty`| pretty prints a matrix from a file |
-|`PMchecker`| asserts correctness of program, with respect to a matrix |
-|`MMchecker`| asserts correctness of trilinear program for matrix-multiplication |
+|`bin/matrix-transpose`| transposes a matrix from an SMS file |
+|`bin/sms2pretty`| pretty prints a matrix from a file |
+|`bin/PMchecker`| asserts correctness of program, with respect to a matrix |
+|`bin/MMchecker`| asserts correctness of trilinear program for matrix-multiplication |
 |  |  |
 
 
