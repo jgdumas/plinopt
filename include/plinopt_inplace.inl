@@ -325,30 +325,32 @@ void pushvariables(AProgram_t& Program, size_t numout) {
 
         for(auto iter = Program.begin(); iter != Program.end(); ++iter) {
             if (found) {
-                    // variable used, cannot push more
-                if (iter->_des == (long)(i)) {
+                    // Cannot push if variable used or destination used
+                if ( (iter->_des == (long)(i)) ||
+                     (findex->_des == (long)(iter->_src)) ) {
                     found = false;
                 }
+
                     // Look for the same variabe again in this subregion
-                if (iter->_src == i) {
-                    if (iter->_ope != ' ') {
-                            // previous findex must have been after an AXPY
-                            // Now is before another AXPY, can rotate here
-                        auto nindex(findex); ++nindex;
-                        if (nindex != iter) {
+                if ( (iter->_ope != ' ') && (iter->_src == i) ) {
+                        // previous findex must have been after an AXPY
+                        // Now is before another AXPY, can rotate here
+                    auto nindex(findex); ++nindex;
+                    if (nindex != iter) {
 // dprint(std::clog << "######## BEF ROT\n", Program) << std::endl;
 // dprint(std::clog << "### ROT " << findex->_var << i << ':', *findex)
 //                  << " --> " << *nindex << std::endl;
-                            std::rotate(findex, nindex, iter);
+                        std::rotate(findex, nindex, iter);
 // dprint(std::clog << "######## AFT ROT\n", Program) << std::endl;
-                        }
                     }
                     found = false;
                 }
             } else {
                     // Try the next subregion of the Program
-                if ( (iter->_ope != ' ')
-                     && (iter->_des == (long)(i)) ) { found = true; findex = iter; }
+                if ( (iter->_ope != ' ') && (iter->_src == i) ) {
+                    found = true;
+                    findex = iter;
+                }
             }
         }
 
