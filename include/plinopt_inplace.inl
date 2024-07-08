@@ -326,7 +326,8 @@ void pushvariables(AProgram_t& Program, size_t numout) {
         for(auto iter = Program.begin(); iter != Program.end(); ++iter) {
             if (found) {
                     // Cannot push if variable used or destination used
-                if ( (iter->_des == (long)(i)) ||
+                if ( ( (iter->_des == (long)(i)) && (iter->_ope == ' ') )
+                     ||
                      (findex->_des == (long)(iter->_src)) ) {
                     found = false;
                 }
@@ -923,7 +924,7 @@ Tricounter SearchTriLinearAlgorithm(std::ostream& out,
     // Setup auxilliary variables
 void InitializeVariable(const char L, const size_t m, const char M)  {
     for(size_t h=0; h<m; ++h)
-        std::clog << L << h << ":=" << M << "[" << (h+1) << "];";
+        std::clog << L << h << ":=" << M << "[" << (h+1) << "]:";
     std::clog << std::endl;
 }
 
@@ -951,7 +952,7 @@ void CollectVariables(const char L, const size_t m,
                       const char F, const size_t s) {
     std::clog << std::string(30,'#') << std::endl;
     for(size_t h=0; h<s; ++h)
-        std::clog << "R[" << (h+1) << "]:=simplify(" << F << h << ",symbolic);";
+        std::clog << "R[" << (h+1) << "]:=simplify(" << F << h << ",symbolic):";
     std::clog << std::endl;
     CollectVariable(H, n, 'H');
     CollectVariable(L, m, 'L');
@@ -998,7 +999,7 @@ std::ostream& ApplyMatrix(std::ostream& out,
             if (!A.field().isOne(iter->second)) out << iter->second << '*';
             out << I << '[' << (iter->first+1) << "])";
         }
-        out << ';';
+        out << ':';
     }
     return out << std::endl;
 }
@@ -1018,7 +1019,7 @@ void CheckTriLinearProgram(const char L, const Matrix& AA,
         for(size_t i(1); i<=AA.rowdim(); ++i) {
             std::clog << "T[" << i << "]:=X[" << i << "]*Y[" << i << ']';
             if (expanded) std::clog << '*' << zone[i & 0x1];
-            std::clog << ";";
+            std::clog << ':';
         }
         std::clog << std::endl;
 
