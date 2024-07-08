@@ -119,6 +119,20 @@ std::string rmnl(const std::string& str) {
     return s;
 }
 
+// ===============================================================
+// Enables checking a matrix multiplication with Maple
+#ifdef INPLACE_CHECKER
+    // Compare program with a matrix multiplication
+void CheckMatrixMultiplication(const Matrix& A, const Matrix& B,
+                               const Matrix& C);
+
+    // Compare program with direct linear applications
+void CheckTriLinearProgram(const char L, const Matrix& AA,
+                           const char H, const Matrix& BB,
+                           const char F, const Matrix& CC,
+                           bool expanded = false);
+#endif
+
 
 #include "plinopt_inplace.inl"
 

@@ -47,9 +47,10 @@
 
 
 void usage(char ** argv) {
-    std::clog << "Usage: " << argv[0] << " L.sms R.sms P.sms [-e] [-O #]\n";
+    std::clog << "Usage: " << argv[0] << " L.sms R.sms P.sms [-e|-m] [-O #]\n";
 
-    std::clog << "  -e: double expands the intermediate result\n"
+    std::clog << "  -m: check for a matrix multiplication\n"
+              << "  -e: double expands the intermediate result\n"
               << "  -O #: randomized search with that many loops\n";
     exit(-1);
 }
@@ -63,7 +64,7 @@ void usage(char ** argv) {
 int main(int argc, char ** argv) {
 
     size_t randomloops(DORANDOMSEARCH?DEFAULT_RANDOM_LOOPS:1);
-    bool doexpand(false);
+    bool doexpand(false), checkmat(false);
 
     if (argc<4) usage(argv);
 
@@ -72,6 +73,7 @@ int main(int argc, char ** argv) {
     for (int i = 1; i<argc; ++i) {
         std::string args(argv[i]);
         if (args == "-h") usage(argv);
+        else if (args == "-m") { checkmat = true; }
         else if (args == "-e") { doexpand = true; }
         else if (args == "-O") {
             randomloops = atoi(argv[++i]);
@@ -128,7 +130,7 @@ int main(int argc, char ** argv) {
 
 #ifdef INPLACE_CHECKER
         Matrix CC(QQ); Transpose(CC, TT);
-        CheckTriLinearProgram('a', AA, 'b', BB, 'c', CC);
+        CheckTriLinearProgram('a', AA, 'b', BB, 'c', CC, true);
 #endif
 
     } else {
@@ -142,7 +144,10 @@ int main(int argc, char ** argv) {
 
 #ifdef INPLACE_CHECKER
         CollectVariables('a',A.coldim(), 'b', B.coldim(), 'c', T.coldim());
-        CheckMatrixMultiplication(A,B,C);
+        if (checkmat)
+            CheckMatrixMultiplication(A,B,C);
+        else
+            CheckTriLinearProgram('a', A, 'b', B, 'c', C, false);
 #endif
 
     }

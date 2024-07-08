@@ -1004,10 +1004,10 @@ std::ostream& ApplyMatrix(std::ostream& out,
 }
 
 
-    // Compare program with a matrix multiplication
+    // Compare program with direct linear applications
 void CheckTriLinearProgram(const char L, const Matrix& AA,
                            const char H, const Matrix& BB,
-                           const char F, const Matrix& CC) {
+                           const char F, const Matrix& CC, bool expanded) {
 
         CollectVariables(L, AA.coldim(), H, BB.coldim(), F, CC.rowdim());
 
@@ -1015,9 +1015,11 @@ void CheckTriLinearProgram(const char L, const Matrix& AA,
         ApplyMatrix(std::clog, 'Y', BB, 'H');
 
         std::string zone[2] { "hig", "low" };
-        for(size_t i(1); i<=AA.rowdim(); ++i)
-            std::clog << "T[" << i << "]:=X[" << i << "]*Y[" << i << "]*"
-                      << zone[i & 0x1] << ";";
+        for(size_t i(1); i<=AA.rowdim(); ++i) {
+            std::clog << "T[" << i << "]:=X[" << i << "]*Y[" << i << ']';
+            if (expanded) std::clog << '*' << zone[i & 0x1];
+            std::clog << ";";
+        }
         std::clog << std::endl;
 
         ApplyMatrix(std::clog, 'Z', CC, 'T');
