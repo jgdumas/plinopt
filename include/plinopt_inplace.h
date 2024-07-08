@@ -77,8 +77,8 @@ Matrix::Row::const_iterator nextindex(const size_t preci,
 
 // ===============================================================
 
-auto isAdd { [](const char c) { return ( (c=='+') || (c=='-') ); } };
-auto isSca { [](const char c) { return ( (c=='*') || (c=='/') ); } };
+auto isAddSub { [](const char c) { return ( (c=='+') || (c=='-') ); } };
+auto isMulDiv { [](const char c) { return ( (c=='*') || (c=='/') ); } };
 
 // ===============================================================
 // Definition of ADD, SCA, MUL atomic operations

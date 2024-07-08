@@ -41,7 +41,7 @@ struct Atom {
 
         // print as a program (removes noops and barriers)
     friend std::ostream& operator<<(std::ostream& out, const Atom& p) {
-        const bool bsca(isSca(p._ope));
+        const bool bsca(isMulDiv(p._ope));
         QRat QQ;
 
         if (bsca && QQ.isOne(p._val)) return out;
@@ -87,14 +87,14 @@ struct Atom {
 
         // Operation is a no-op
     bool isnoop() const {
-        return (isAdd(this->_ope) && isZero(this->_val))
-            || (isSca(this->_ope) && isOne(this->_val));
+        return (isAddSub(this->_ope) && isZero(this->_val))
+            || (isMulDiv(this->_ope) && isOne(this->_val));
     }
 
         // Combine both operations, if compatible
     bool cumulate(const Atom& p) {
         if (this->sameops(p)) {
-            if (isAdd(this->_ope) && isAdd(p._ope)) {
+            if (isAddSub(this->_ope) && isAddSub(p._ope)) {
                 if (this->_ope==p._ope)
                     this->_val += p._val;
                 else
@@ -104,7 +104,7 @@ struct Atom {
                     QRat QQ; QQ.negin(this->_val);
                 }
                 return true;
-            } else if (isSca(this->_ope) && isSca(p._ope)) {
+            } else if (isMulDiv(this->_ope) && isMulDiv(p._ope)) {
                 if (this->_ope==p._ope)
                     this->_val *= p._val;
                 else
@@ -124,7 +124,7 @@ struct Atom {
 
 
 // Lambda Testing whether atom is '*' or '/' with a 1
-auto isScaOne {[](const Atom& p){ return (isSca(p._ope)
+auto isMulDivOne {[](const Atom& p){ return (isMulDiv(p._ope)
                                           && Givaro::isOne(p._val));} };
 
 
@@ -132,11 +132,11 @@ template<typename Ring>
 Tricounter complexity(const Ring& R, const AProgram_t& p) {
     Tricounter nops;
     for(const auto& iter: p) {
-        if (isAdd(iter._ope)) {
+        if (isAddSub(iter._ope)) {
             ++std::get<0>(nops);
             if (notAbsOne(R,iter._val)) ++std::get<1>(nops);
         }
-        if (isSca(iter._ope)) ++std::get<1>(nops);
+        if (isMulDiv(iter._ope)) ++std::get<1>(nops);
         if (iter._ope == ' ') ++std::get<2>(nops);
     }
     return nops;
@@ -154,7 +154,7 @@ std::ostream& dprint (std::ostream& out, const AProgram_t& p) {
         if (iter._ope != ' ')
             out << iter << std::endl;
         else
-            out << "# barrier # " << iter << std::endl;
+            dprint(out << "# barrier # ", iter) << std::endl;
     return out;
 }
 
@@ -286,9 +286,9 @@ bool simplify(AProgram_t& Program, const bool transposed) {
                 &&
                 ( (next->_ope == ' ')
                   ||
-                  (isAdd(iter->_ope) && isSca(next->_ope))
+                  (isAddSub(iter->_ope) && isMulDiv(next->_ope))
                   ||
-                  (isSca(iter->_ope) && isAdd(next->_ope))
+                  (isMulDiv(iter->_ope) && isAddSub(next->_ope))
                   );
 
                 // STOP if: previous rhs is now modified
@@ -319,29 +319,48 @@ bool simplify(AProgram_t& Program, const bool transposed) {
 void pushvariables(AProgram_t& Program, size_t numout) {
         // For each variable
     for(size_t i=0; i<numout; ++i) {
-
         bool found(false);
         auto findex(Program.begin());
 
         for(auto iter = Program.begin(); iter != Program.end(); ++iter) {
-            if (found) {
-                    // Cannot push if variable used or destination used
-                if ( ( (iter->_des == (long)(i)) && (iter->_ope == ' ') )
-                     ||
-                     (findex->_des == (long)(iter->_src)) ) {
-                    found = false;
+            if (found) { // (findex_src == i) and (findex_ope is Add or Mul)
+                bool rotate(false);
+                if (isAddSub(findex->_ope)) {
+                    if (findex->_des == (long)(iter->_src)) {
+                            // f_des is modified, cannot push
+                        found = false; continue;
+                    } else if (iter->_src == i) {
+                        if (findex->_des == iter->_des) {
+                                // i_ope must be '+'
+                            rotate=true;
+                        } else if (isMulDiv(iter->_ope)) {
+                            found = false; continue;
+                        }
+                    }
+                } else {
+                        // findex_ope is MUL
+                    if (iter->_des == i) {
+                            // f_des is modified, cannot push
+                        found = false; continue;
+                    } else {
+                        if (iter->_src == i) {
+                            if (isMulDiv(iter->_ope))
+                                rotate = true;
+                            else {
+                                found = false; continue;
+                            }
+                        }
+                    }
                 }
 
-                    // Look for the same variabe again in this subregion
-                if ( (iter->_ope != ' ') && (iter->_src == i) ) {
-                        // previous findex must have been after an AXPY
-                        // Now is before another AXPY, can rotate here
+                if (rotate) {
                     auto nindex(findex); ++nindex;
-                    if (nindex != iter) {
+                    if (nindex != iter) { // Has to rotate
 // dprint(std::clog << "######## BEF ROT\n", Program) << std::endl;
-// dprint(std::clog << "### ROT " << findex->_var << i << ':', *findex)
-//                  << " --> " << *nindex << std::endl;
-                        std::rotate(findex, nindex, iter);
+// dprint(std::clog << "### ROT " << findex->_var << i << ':', *findex);
+// dprint(std::clog << " | ", *nindex);
+// dprint(std::clog << " --> ", *iter) << std::endl;
+                    std::rotate(findex, nindex, iter);
 // dprint(std::clog << "######## AFT ROT\n", Program) << std::endl;
                     }
                     found = false;
@@ -360,14 +379,14 @@ void pushvariables(AProgram_t& Program, size_t numout) {
             auto nindex(findex); ++nindex;
             if (nindex != Program.end()) {
 // dprint(std::clog << "######## BEF ROT\n", Program) << std::endl;
-// dprint(std::clog << "### ROT " << findex->_var << i << ':', *findex)
+// dprint(std::clog << "### ROT " << findex->_var << i << ':', *findex);
+// dprint(std::clog << " | ", *nindex)
 //                  << " --> END" << std::endl;
                 std::rotate(findex, nindex, Program.end());
 // dprint(std::clog << "######## AFT ROT\n", Program) << std::endl;
             }
         }
     }
-
 }
 // ===============================================================
 
@@ -455,7 +474,7 @@ Tricounter LinearAlgorithm(AProgram_t& Program, const Matrix& A,
     }
 
         // Removing noops
-    Program.erase(std::remove_if(Program.begin(), Program.end(), isScaOne),
+    Program.erase(std::remove_if(Program.begin(), Program.end(), isMulDivOne),
                   Program.end());
 
 
@@ -562,7 +581,7 @@ Tricounter TransposedDoubleAlgorithm(AProgram_t& Program, const Matrix& T,
 // dprint(std::clog << "Program:\n", Program) << std::endl;
 
         // Removing noops
-    Program.erase(std::remove_if(Program.begin(), Program.end(), isScaOne),
+    Program.erase(std::remove_if(Program.begin(), Program.end(), isMulDivOne),
                   Program.end());
 
     bool simp; do {
