@@ -145,7 +145,7 @@ int main(int argc, char ** argv) {
 #ifdef INPLACE_CHECKER
         CollectVariables('a',A.coldim(), 'b', B.coldim(), 'c', T.coldim());
         if (checkmat)
-            CheckMatrixMultiplication(A,B,C);
+            CheckMatrixMultiplication('a', A, 'b', B, 'c', C);
         else
             CheckTriLinearProgram('a', A, 'b', B, 'c', C, false);
 #endif

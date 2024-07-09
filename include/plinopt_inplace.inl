@@ -973,21 +973,22 @@ void CollectVariables(const char L, const size_t m,
     for(size_t h=0; h<s; ++h)
         std::clog << "R[" << (h+1) << "]:=simplify(" << F << h << ",symbolic):";
     std::clog << std::endl;
-    CollectVariable(H, n, 'H');
-    CollectVariable(L, m, 'L');
+    std::clog << L << "Input:="; CollectVariable(L, m, 'L');
+    std::clog << H << "Input:="; CollectVariable(H, n, 'H');
     std::clog << std::string(30,'#') << std::endl;
 }
 
 
     // Compare program with a matrix multiplication
-void CheckMatrixMultiplication(const Matrix& A, const Matrix& B,
-                               const Matrix& C) {
+void CheckMatrixMultiplication(const char L, const Matrix& A,
+                               const char H, const Matrix& B,
+                               const char F, const Matrix& C) {
     Tricounter mkn(LRP2MM(A,B,C));
     const size_t& n(std::get<0>(mkn)), t(std::get<1>(mkn)), m(std::get<2>(mkn));
     std::clog <<"# code-checking for "
               << m << 'x' << t << 'x' << n
               << " Matrix-Multiplication" << std::endl;
-    std::clog << '<';
+    std::clog << F << "Output:=<";
     for(size_t i=0; i<m; ++i) {
         if (i!=0) std::clog << ',' << std::endl;
         std::clog << '<';
@@ -1002,6 +1003,10 @@ void CheckMatrixMultiplication(const Matrix& A, const Matrix& B,
         std::clog << '>';
     }
     std::clog << ">;" << std::endl;
+
+    std::clog << "errors:=map(M->nops(select(x->x<>0,convert(M,list))),["
+              << L << "Input," << H << "Input," << F << "Output]);"
+              << std::endl;
 }
 
 // Produce code for the application of a matrix to a variable
@@ -1029,27 +1034,36 @@ void CheckTriLinearProgram(const char L, const Matrix& AA,
                            const char H, const Matrix& BB,
                            const char F, const Matrix& CC, bool expanded) {
 
-        CollectVariables(L, AA.coldim(), H, BB.coldim(), F, CC.rowdim());
+    std::clog <<"# code-checking for "
+              << AA.coldim() << ':' << BB.coldim() << ' '
+              << CC.rowdim() << 'x' << CC.coldim()
+              << " trilinear operator" << std::endl;
 
-        ApplyMatrix(std::clog, 'X', AA, 'L');
-        ApplyMatrix(std::clog, 'Y', BB, 'H');
+    CollectVariables(L, AA.coldim(), H, BB.coldim(), F, CC.rowdim());
 
-        std::string zone[2] { "hig", "low" };
-        for(size_t i(1); i<=AA.rowdim(); ++i) {
-            std::clog << "T[" << i << "]:=X[" << i << "]*Y[" << i << ']';
-            if (expanded) std::clog << '*' << zone[i & 0x1];
-            std::clog << ':';
-        }
-        std::clog << std::endl;
+    ApplyMatrix(std::clog, 'X', AA, 'L');
+    ApplyMatrix(std::clog, 'Y', BB, 'H');
 
-        ApplyMatrix(std::clog, 'Z', CC, 'T');
+    std::string zone[2] { "hig", "low" };
+    for(size_t i(1); i<=AA.rowdim(); ++i) {
+        std::clog << "T[" << i << "]:=X[" << i << "]*Y[" << i << ']';
+        if (expanded) std::clog << '*' << zone[i & 0x1];
+        std::clog << ':';
+    }
+    std::clog << std::endl;
 
-        std::clog << "map(expand,<";
-        for(size_t i(1); i<=CC.rowdim(); ++i) {
-            if (i>1) std::clog << '|';
-            std::clog << "F[" << i << "]+Z[" << i << "]-R[" << i << ']';
-        }
-        std::clog << ">);" << std::endl;
+    ApplyMatrix(std::clog, 'Z', CC, 'T');
+
+    std::clog << F << "Output:=map(expand,<";
+    for(size_t i(1); i<=CC.rowdim(); ++i) {
+        if (i>1) std::clog << '|';
+        std::clog << "F[" << i << "]+Z[" << i << "]-R[" << i << ']';
+    }
+    std::clog << ">);" << std::endl;
+
+    std::clog << "errors:=map(M->nops(select(x->x<>0,convert(M,list))),["
+              << L << "Input," << H << "Input," << F << "Output]);"
+              << std::endl;
 }
 
 #endif
