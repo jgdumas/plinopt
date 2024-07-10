@@ -4,10 +4,29 @@
 # Authors: J-G. Dumas, B. Grenet, C. Pernet, A. Sedoglavic
 # ==========================================================================
 # Tests: trilinear in-placer
-# Requires: maple from maplesoft
+# Requires: maple from maplesoft to certify results
 # ==========================================================================
 
 MAPLEPROG=maple
+MAPLEHERE=true
+if ! command -v maple &> /dev/null
+then
+    echo "maple could not be found."
+    MAPLEHERE=false
+else
+    if ! echo "1234+5678;" | maple | grep 6912 &> /dev/null
+    then
+	echo "`command -v maple` is here but not running"
+	MAPLEHERE=false
+    else
+	echo "maple is up and running"
+    fi
+fi
+if [ "${MAPLEHERE}" != true ] ; then
+    MAPLEPROG=tee > /dev/null
+fi
+
+
 tmpfile=/tmp/fdt_plinopt.$$
 numopt=100
 
@@ -50,13 +69,15 @@ do
   fi
 done
 
+if [ "${MAPLEHERE}" = true ] ; then
+    let tries=2*${#fics[@]}
+    success=`grep 'errors := \[0, 0, 0\]' ${tmpfile} | wc -l`
 
-let tries=2*${#fics[@]}
-success=`grep 'errors := \[0, 0, 0\]' ${tmpfile} | wc -l`
-
-echo -ne "\033[1;93mSUCCESS: "
-if [ ${success} -ne ${tries} ]; then
-    echo -ne "\033[1;91m"
+    echo -ne "\033[1;93mSUCCESS: "
+    if [ ${success} -ne ${tries} ]; then
+	echo -ne "\033[1;91m"
+    fi
+    echo -e "${success} \033[1;93m/ ${tries}\033[0m"
 fi
-echo -e "${success} \033[1;93m/ ${tries}\033[0m"
+
 \rm -rf ${tmpfile}
