@@ -1,4 +1,12 @@
 #!/bin/bash
+# ==========================================================================
+# PLinOpt: C++ routines handling linear, bilinear & trilinear programs
+# Authors: J-G. Dumas, B. Grenet, C. Pernet, A. Sedoglavic
+# ==========================================================================
+# ==========================================================================
+# Tests: optimizer, compacter, transpozer, factorizer, sparsifier, inplacer
+# ==========================================================================
+
 tmpfile=/tmp/fdt_plinopt.$$
 numopt=10
 modulus=7

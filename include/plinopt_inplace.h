@@ -77,8 +77,8 @@ Matrix::Row::const_iterator nextindex(const size_t preci,
 
 // ===============================================================
 
-auto isAdd { [](const char c) { return ( (c=='+') || (c=='-') ); } };
-auto isSca { [](const char c) { return ( (c=='*') || (c=='/') ); } };
+auto isAddSub { [](const char c) { return ( (c=='+') || (c=='-') ); } };
+auto isMulDiv { [](const char c) { return ( (c=='*') || (c=='/') ); } };
 
 // ===============================================================
 // Definition of ADD, SCA, MUL atomic operations
@@ -118,6 +118,21 @@ std::string rmnl(const std::string& str) {
     s.erase(std::remove(s.begin(), s.end(), '\n'), s.cend());
     return s;
 }
+
+// ===============================================================
+// Enables checking a matrix multiplication with Maple
+#ifdef INPLACE_CHECKER
+    // Compare program with a matrix multiplication
+void CheckMatrixMultiplication(const char L, const Matrix& A,
+                               const char H, const Matrix& B,
+                               const char F, const Matrix& C);
+
+    // Compare program with direct linear applications
+void CheckTriLinearProgram(const char L, const Matrix& AA,
+                           const char H, const Matrix& BB,
+                           const char F, const Matrix& CC,
+                           bool expanded = false);
+#endif
 
 
 #include "plinopt_inplace.inl"

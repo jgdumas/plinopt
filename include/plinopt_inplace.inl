@@ -41,7 +41,7 @@ struct Atom {
 
         // print as a program (removes noops and barriers)
     friend std::ostream& operator<<(std::ostream& out, const Atom& p) {
-        const bool bsca(isSca(p._ope));
+        const bool bsca(isMulDiv(p._ope));
         QRat QQ;
 
         if (bsca && QQ.isOne(p._val)) return out;
@@ -87,14 +87,14 @@ struct Atom {
 
         // Operation is a no-op
     bool isnoop() const {
-        return (isAdd(this->_ope) && isZero(this->_val))
-            || (isSca(this->_ope) && isOne(this->_val));
+        return (isAddSub(this->_ope) && isZero(this->_val))
+            || (isMulDiv(this->_ope) && isOne(this->_val));
     }
 
         // Combine both operations, if compatible
     bool cumulate(const Atom& p) {
         if (this->sameops(p)) {
-            if (isAdd(this->_ope) && isAdd(p._ope)) {
+            if (isAddSub(this->_ope) && isAddSub(p._ope)) {
                 if (this->_ope==p._ope)
                     this->_val += p._val;
                 else
@@ -104,7 +104,7 @@ struct Atom {
                     QRat QQ; QQ.negin(this->_val);
                 }
                 return true;
-            } else if (isSca(this->_ope) && isSca(p._ope)) {
+            } else if (isMulDiv(this->_ope) && isMulDiv(p._ope)) {
                 if (this->_ope==p._ope)
                     this->_val *= p._val;
                 else
@@ -124,7 +124,7 @@ struct Atom {
 
 
 // Lambda Testing whether atom is '*' or '/' with a 1
-auto isScaOne {[](const Atom& p){ return (isSca(p._ope)
+auto isMulDivOne {[](const Atom& p){ return (isMulDiv(p._ope)
                                           && Givaro::isOne(p._val));} };
 
 
@@ -132,11 +132,11 @@ template<typename Ring>
 Tricounter complexity(const Ring& R, const AProgram_t& p) {
     Tricounter nops;
     for(const auto& iter: p) {
-        if (isAdd(iter._ope)) {
+        if (isAddSub(iter._ope)) {
             ++std::get<0>(nops);
             if (notAbsOne(R,iter._val)) ++std::get<1>(nops);
         }
-        if (isSca(iter._ope)) ++std::get<1>(nops);
+        if (isMulDiv(iter._ope)) ++std::get<1>(nops);
         if (iter._ope == ' ') ++std::get<2>(nops);
     }
     return nops;
@@ -154,7 +154,7 @@ std::ostream& dprint (std::ostream& out, const AProgram_t& p) {
         if (iter._ope != ' ')
             out << iter << std::endl;
         else
-            out << "# barrier # " << iter << std::endl;
+            dprint(out << "# barrier # ", iter) << std::endl;
     return out;
 }
 
@@ -286,9 +286,9 @@ bool simplify(AProgram_t& Program, const bool transposed) {
                 &&
                 ( (next->_ope == ' ')
                   ||
-                  (isAdd(iter->_ope) && isSca(next->_ope))
+                  (isAddSub(iter->_ope) && isMulDiv(next->_ope))
                   ||
-                  (isSca(iter->_ope) && isAdd(next->_ope))
+                  (isMulDiv(iter->_ope) && isAddSub(next->_ope))
                   );
 
                 // STOP if: previous rhs is now modified
@@ -319,36 +319,58 @@ bool simplify(AProgram_t& Program, const bool transposed) {
 void pushvariables(AProgram_t& Program, size_t numout) {
         // For each variable
     for(size_t i=0; i<numout; ++i) {
-
         bool found(false);
         auto findex(Program.begin());
 
         for(auto iter = Program.begin(); iter != Program.end(); ++iter) {
-            if (found) {
-                    // variable used, cannot push more
-                if (iter->_des == (long)(i)) {
-                    found = false;
-                }
-                    // Look for the same variabe again in this subregion
-                if (iter->_src == i) {
-                    if (iter->_ope != ' ') {
-                            // previous findex must have been after an AXPY
-                            // Now is before another AXPY, can rotate here
-                        auto nindex(findex); ++nindex;
-                        if (nindex != iter) {
-// dprint(std::clog << "######## BEF ROT\n", Program) << std::endl;
-// dprint(std::clog << "### ROT " << findex->_var << i << ':', *findex)
-//                  << " --> " << *nindex << std::endl;
-                            std::rotate(findex, nindex, iter);
-// dprint(std::clog << "######## AFT ROT\n", Program) << std::endl;
+            if (found) { // (findex_src == i) and (findex_ope is Add or Mul)
+                bool rotate(false);
+                if (isAddSub(findex->_ope)) {
+                    if (findex->_des == (long)(iter->_src)) {
+                            // f_des is modified, cannot push
+                        found = false; continue;
+                    } else if (iter->_src == i) {
+                        if (findex->_des == iter->_des) {
+                                // i_ope must be '+'
+                            rotate=true;
+                        } else if (isMulDiv(iter->_ope)) {
+                            found = false; continue;
                         }
+                    }
+                } else {
+                        // findex_ope is MUL
+                    if (iter->_des == i) {
+                            // f_des is modified, cannot push
+                        found = false; continue;
+                    } else {
+                        if (iter->_src == i) {
+                            if (isMulDiv(iter->_ope))
+                                rotate = true;
+                            else {
+                                found = false; continue;
+                            }
+                        }
+                    }
+                }
+
+                if (rotate) {
+                    auto nindex(findex); ++nindex;
+                    if (nindex != iter) { // Has to rotate
+// dprint(std::clog << "######## BEF ROT\n", Program) << std::endl;
+// dprint(std::clog << "### ROT " << findex->_var << i << ':', *findex);
+// dprint(std::clog << " | ", *nindex);
+// dprint(std::clog << " --> ", *iter) << std::endl;
+                    std::rotate(findex, nindex, iter);
+// dprint(std::clog << "######## AFT ROT\n", Program) << std::endl;
                     }
                     found = false;
                 }
             } else {
                     // Try the next subregion of the Program
-                if ( (iter->_ope != ' ')
-                     && (iter->_des == (long)(i)) ) { found = true; findex = iter; }
+                if ( (iter->_ope != ' ') && (iter->_src == i) ) {
+                    found = true;
+                    findex = iter;
+                }
             }
         }
 
@@ -357,14 +379,14 @@ void pushvariables(AProgram_t& Program, size_t numout) {
             auto nindex(findex); ++nindex;
             if (nindex != Program.end()) {
 // dprint(std::clog << "######## BEF ROT\n", Program) << std::endl;
-// dprint(std::clog << "### ROT " << findex->_var << i << ':', *findex)
+// dprint(std::clog << "### ROT " << findex->_var << i << ':', *findex);
+// dprint(std::clog << " | ", *nindex)
 //                  << " --> END" << std::endl;
                 std::rotate(findex, nindex, Program.end());
 // dprint(std::clog << "######## AFT ROT\n", Program) << std::endl;
             }
         }
     }
-
 }
 // ===============================================================
 
@@ -452,7 +474,7 @@ Tricounter LinearAlgorithm(AProgram_t& Program, const Matrix& A,
     }
 
         // Removing noops
-    Program.erase(std::remove_if(Program.begin(), Program.end(), isScaOne),
+    Program.erase(std::remove_if(Program.begin(), Program.end(), isMulDivOne),
                   Program.end());
 
 
@@ -559,7 +581,7 @@ Tricounter TransposedDoubleAlgorithm(AProgram_t& Program, const Matrix& T,
 // dprint(std::clog << "Program:\n", Program) << std::endl;
 
         // Removing noops
-    Program.erase(std::remove_if(Program.begin(), Program.end(), isScaOne),
+    Program.erase(std::remove_if(Program.begin(), Program.end(), isMulDivOne),
                   Program.end());
 
     bool simp; do {
@@ -921,7 +943,7 @@ Tricounter SearchTriLinearAlgorithm(std::ostream& out,
     // Setup auxilliary variables
 void InitializeVariable(const char L, const size_t m, const char M)  {
     for(size_t h=0; h<m; ++h)
-        std::clog << L << h << ":=" << M << "[" << (h+1) << "];";
+        std::clog << L << h << ":=" << M << "[" << (h+1) << "]:";
     std::clog << std::endl;
 }
 
@@ -949,23 +971,24 @@ void CollectVariables(const char L, const size_t m,
                       const char F, const size_t s) {
     std::clog << std::string(30,'#') << std::endl;
     for(size_t h=0; h<s; ++h)
-        std::clog << "R[" << (h+1) << "]:=simplify(" << F << h << ",symbolic);";
+        std::clog << "R[" << (h+1) << "]:=simplify(" << F << h << ",symbolic):";
     std::clog << std::endl;
-    CollectVariable(H, n, 'H');
-    CollectVariable(L, m, 'L');
+    std::clog << L << "Input:="; CollectVariable(L, m, 'L');
+    std::clog << H << "Input:="; CollectVariable(H, n, 'H');
     std::clog << std::string(30,'#') << std::endl;
 }
 
 
     // Compare program with a matrix multiplication
-void CheckMatrixMultiplication(const Matrix& A, const Matrix& B,
-                               const Matrix& C) {
+void CheckMatrixMultiplication(const char L, const Matrix& A,
+                               const char H, const Matrix& B,
+                               const char F, const Matrix& C) {
     Tricounter mkn(LRP2MM(A,B,C));
     const size_t& n(std::get<0>(mkn)), t(std::get<1>(mkn)), m(std::get<2>(mkn));
     std::clog <<"# code-checking for "
               << m << 'x' << t << 'x' << n
               << " Matrix-Multiplication" << std::endl;
-    std::clog << '<';
+    std::clog << F << "Output:=<";
     for(size_t i=0; i<m; ++i) {
         if (i!=0) std::clog << ',' << std::endl;
         std::clog << '<';
@@ -980,6 +1003,10 @@ void CheckMatrixMultiplication(const Matrix& A, const Matrix& B,
         std::clog << '>';
     }
     std::clog << ">;" << std::endl;
+
+    std::clog << "errors:=map(M->nops(select(x->x<>0,convert(M,list))),["
+              << L << "Input," << H << "Input," << F << "Output]);"
+              << std::endl;
 }
 
 // Produce code for the application of a matrix to a variable
@@ -996,36 +1023,47 @@ std::ostream& ApplyMatrix(std::ostream& out,
             if (!A.field().isOne(iter->second)) out << iter->second << '*';
             out << I << '[' << (iter->first+1) << "])";
         }
-        out << ';';
+        out << ':';
     }
     return out << std::endl;
 }
 
 
-    // Compare program with a matrix multiplication
+    // Compare program with direct linear applications
 void CheckTriLinearProgram(const char L, const Matrix& AA,
                            const char H, const Matrix& BB,
-                           const char F, const Matrix& CC) {
+                           const char F, const Matrix& CC, bool expanded) {
 
-        CollectVariables(L, AA.coldim(), H, BB.coldim(), F, CC.rowdim());
+    std::clog <<"# code-checking for "
+              << AA.coldim() << ':' << BB.coldim() << ' '
+              << CC.rowdim() << 'x' << CC.coldim()
+              << " trilinear operator" << std::endl;
 
-        ApplyMatrix(std::clog, 'X', AA, 'L');
-        ApplyMatrix(std::clog, 'Y', BB, 'H');
+    CollectVariables(L, AA.coldim(), H, BB.coldim(), F, CC.rowdim());
 
-        std::string zone[2] { "hig", "low" };
-        for(size_t i(1); i<=AA.rowdim(); ++i)
-            std::clog << "T[" << i << "]:=X[" << i << "]*Y[" << i << "]*"
-                      << zone[i & 0x1] << ";";
-        std::clog << std::endl;
+    ApplyMatrix(std::clog, 'X', AA, 'L');
+    ApplyMatrix(std::clog, 'Y', BB, 'H');
 
-        ApplyMatrix(std::clog, 'Z', CC, 'T');
+    std::string zone[2] { "hig", "low" };
+    for(size_t i(1); i<=AA.rowdim(); ++i) {
+        std::clog << "T[" << i << "]:=X[" << i << "]*Y[" << i << ']';
+        if (expanded) std::clog << '*' << zone[i & 0x1];
+        std::clog << ':';
+    }
+    std::clog << std::endl;
 
-        std::clog << "map(expand,<";
-        for(size_t i(1); i<=CC.rowdim(); ++i) {
-            if (i>1) std::clog << '|';
-            std::clog << "F[" << i << "]+Z[" << i << "]-R[" << i << ']';
-        }
-        std::clog << ">);" << std::endl;
+    ApplyMatrix(std::clog, 'Z', CC, 'T');
+
+    std::clog << F << "Output:=map(expand,<";
+    for(size_t i(1); i<=CC.rowdim(); ++i) {
+        if (i>1) std::clog << '|';
+        std::clog << "F[" << i << "]+Z[" << i << "]-R[" << i << ']';
+    }
+    std::clog << ">);" << std::endl;
+
+    std::clog << "errors:=map(M->nops(select(x->x<>0,convert(M,list))),["
+              << L << "Input," << H << "Input," << F << "Output]);"
+              << std::endl;
 }
 
 #endif
