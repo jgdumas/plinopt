@@ -93,6 +93,7 @@ int main(int argc, char ** argv) {
     QRat QQ;
     QMstream ls(QQ, left), rs(QQ, right), ps(QQ, product);
     Matrix A(ls), B(rs), C(ps);
+    assert( A.rowdim() == B.rowdim() ); assert( A.rowdim() == C.coldim() );
 
     Matrix T(QQ); Transpose(T, C);
 
