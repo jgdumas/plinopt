@@ -65,11 +65,14 @@ do
     fi
 
     ((${INPLR} -O ${numopt} $fic | ${PMCHK} -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
+
+    ((${MTRSP} $fic | ${INPLR} -t -O ${numopt} | ${PMCHK} -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
+
 fi
 done
 
 
-let tries=7*${#fics[@]}
+let tries=8*${#fics[@]}
 success=`grep SUCCESS ${tmpfile} | wc -l`
 
 echo -ne "\033[1;93mSUCCESS: "

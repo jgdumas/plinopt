@@ -23,7 +23,8 @@
 
 
 void usage(int argc, char ** argv) {
-    std::clog << "Usage: " << argv[0] << " L.sms [-O #]\n"
+    std::clog << "Usage: " << argv[0] << " L.sms [-O #] [-t] \n"
+              << "  -t  : produces an in-place program for the transposed matrix\n"
               << "  -O #: randomized search with that many loops\n";
     exit(-1);
 }
@@ -79,6 +80,7 @@ std::ostream& FindProgram(std::ostream& out, std::istream& input,
 
 // ===============================================================
 // argv[1]: L.sms
+//   -t   produces a program for the transposed matrix
 //   -O # randomized search of that many loops
 //        looks for reduced number of additions, then multiplications
 int main(int argc, char ** argv) {

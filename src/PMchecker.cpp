@@ -4,16 +4,13 @@
 // ==========================================================================
 
 /****************************************************************
- * Transposition of programs via Tellegen's principle
- * Program syntax: see main Tellegen function below
- * References:
- *   [ Tellegen's principle into practice.
- *     ISSAC'03:37-44, A. Bostan, G. Lecerf, É. Schost
- *     https://doi.org/10.1145/860854.860870 ]
- *   [ J-G. Dumas, C. Pernet, A. Sedoglavic; Feb. 2024
- *     Strassen's algorithm is not optimally accurate
- *     (https://hal.science/hal-04441653) ]
- ****************************************************************/
+ * Checking consistency between a program for a linear function
+ *                              and the associated matrix
+ * Reference:
+ *   [ J-G. Dumas, B. Grenet; Jul. 2023
+ *     In-place accumulation of fast multiplication formulae
+ *     (https://hal.science/hal-04167499) ]
+  ****************************************************************/
 
 
 #include "plinopt_programs.h"
@@ -107,8 +104,9 @@ int main(int argc, char** argv) {
         std::string args(argv[i]);
         if (args == "-h") {
             std::clog << "Usage: " << argv[0] << "[-q #] [-M file.sms] [stdin|file.prg] \n"
-                      << "  -M f: Matrix file (compared to program file)\n"
-                      << "  -q #: search modulo (default is Rationals)\n";
+                      << "        produces the matrix associated to the given program\n";
+                      << "  -M f: or compares the program with the given matrix in file f\n"
+                      << "  -q #: modular generation/check (default is Rationals)\n";
             exit(-1);
         }
         else if (args == "-M") { matname = std::string(argv[++i]); }
