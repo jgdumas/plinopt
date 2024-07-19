@@ -104,7 +104,7 @@ int main(int argc, char** argv) {
         std::string args(argv[i]);
         if (args == "-h") {
             std::clog << "Usage: " << argv[0] << "[-q #] [-M file.sms] [stdin|file.prg] \n"
-                      << "        produces the matrix associated to the given program\n";
+                      << "        produces the matrix associated to the given program\n"
                       << "  -M f: or compares the program with the given matrix in file f\n"
                       << "  -q #: modular generation/check (default is Rationals)\n";
             exit(-1);
