@@ -170,6 +170,13 @@ int Fsign(const Givaro::Modular<Element>& F, const Element& e) {
     return (a<e ? -1 : 1);
 }
 
+template<typename _SRow, typename Ring>
+Pair<size_t> rowCost(const _SRow& r, const Ring& F) {
+    Pair<size_t> rc{r.size(),0};
+    for(const auto& i: r) if (notAbsOne(F, i.second)) ++rc.second;
+    return rc;
+}
+
 // ============================================
 // Sets new temporaries with the input values
 void input2Temps(std::ostream& sout, const size_t N,

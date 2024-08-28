@@ -29,17 +29,24 @@ inline _Mat1& NegTranspose(_Mat1& T, const _Mat2& A) {
 }
 
 
+	// Replace row Ai by row Bj
+template<typename _Row, typename _Field>
+inline _Row& setRow(_Row& Ai, const _Row& Bj, const _Field& F) {
+    Ai.resize(0); Ai.reserve(Bj.size());
+    for(const auto& biter: Bj) {
+        if (! F.isZero(biter.second))
+            Ai.emplace_back(biter.first,biter.second);
+    }
+    return Ai;
+}
+
 	// Replace row i of A, by row j of B
 template<typename _Mat1, typename _Mat2>
 inline _Mat1& setRow(_Mat1& A, size_t i, const _Mat2& B, size_t j) {
     using Field = typename _Mat1::Field;
     const Field& F(A.field());
     auto& Ai(A[i]); const auto& Bj(B[j]);
-    Ai.resize(0); Ai.reserve(Bj.size());
-    for(const auto& biter: Bj) {
-        if (! F.isZero(biter.second))
-            Ai.emplace_back(biter.first,biter.second);
-    }
+    setRow(Ai,Bj,F);
     return A;
 }
 
@@ -86,7 +93,7 @@ inline void opRow(_Mat& M, const size_t i, const typename _Mat::Row& s,
                   const typename _Mat::Element& c) {
     using Field = typename _Mat::Field;
     const Field& F(M.field());
-    _Mat B(F,1,M.coldim()); setRow(B,0,M,i); // copy row i of M
+    _Mat B(F,1,M.coldim()); setRow(B[0],M[i],F); // copy row i of M
     for(auto e: s) {
         const size_t j(e.first);
         typename Field::Element t; F.init(t);
@@ -94,7 +101,7 @@ inline void opRow(_Mat& M, const size_t i, const typename _Mat::Row& s,
         F.axpyin(t,c,e.second);
         B.setEntry(0,j,t);              // might have become zero ...
     }
-    setRow(M,i,B,0);                    // ... gets only the non-zeroes in B
+    setRow(M[i],B[0],F);				// ... gets only the non-zeroes in B
 }
 
 

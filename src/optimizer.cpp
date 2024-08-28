@@ -37,6 +37,72 @@
 
 #include <sstream>
 #include "plinopt_optimize.h"
+#include "plinopt_inplace.h"
+
+
+bool cmpGains(std::pair<Pair<int>,bool>& local, Pair<int>& gain,
+              const Pair<int>& p1, const Pair<int>& p2,
+              size_t i, size_t j, bool isadd) {
+    Pair<int> g{p1.first-p2.first,p1.second-p2.second};
+    if ( (g.first>gain.first)
+         ||
+         ( (g.first == gain.first) && (g.second>gain.second) ) ) {
+        gain = g;
+        local.first = {i,j};
+        local.second = isadd;
+        return true;
+    }
+    return false;
+}
+
+
+template<typename _Mat>
+void RowReducer(AProgram_t& Program, _Mat& M) {
+    using Field = typename _Mat::Field;
+    const Field& F(M.field());
+    bool reduced(false);
+    do {
+        reduced = false;
+        Pair<int> gain{2,0};
+        std::pair<Pair<int>,bool> local;
+        _Mat B(F,1,M.coldim());
+
+        for(size_t i=0; i<M.rowdim(); ++i) {
+            const Pair<int> ri{rowCost(M[i],F)};
+            std::clog << ri << ':' ;
+            for(size_t j=i+1; j<M.rowdim(); ++j) {
+                const Pair<int> rj{rowCost(M[j],F)};
+
+                setRow(B[0],M[i],F); opRow(B,0,M[j],F.one);
+                const Pair<int> ra{rowCost(B[0],F)};
+                reduced |= cmpGains(local, gain, ri, ra, i, j, true);
+                reduced |= cmpGains(local, gain, rj, ra, j, i, true);
+                std::clog << '[' << ra;
+
+                setRow(B[0],M[i],F); opRow(B,0,M[j],F.mOne);
+                const Pair<int> rb{rowCost(B[0],F)};
+                reduced |= cmpGains(local, gain, ri, rb, i, j, false);
+                reduced |= cmpGains(local, gain, rj, rb, j, i, false);
+                std::clog << '|' << rb << ']';
+            }
+            std::clog << std::endl;
+        }
+        if (reduced) {
+            const size_t i(local.first.first), j(local.first.second);
+            typename Field::Element e(local.second?F.one:F.mOne );
+            typename Field::Element f(local.second?F.mOne:F.one );
+            const bool o(local.second);
+
+            std::clog << gain << ':' << local << std::endl;
+            opRow(M, i, M[j], e);
+            Program.emplace_back('x', i, '+', f, j);
+            std::clog << "#Found gain " << gain << " in " << local << std::endl;
+            M.write(std::clog,FileFormat::Pretty) << ';' << std::endl;
+            std::clog << Program.back() << std::endl;
+            std::clog << std::string(40,'#') << std::endl;
+        }
+    } while (reduced);
+}
 
 
 // ============================================================
@@ -53,11 +119,6 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
     QMstream ms(QQ,input);
     Matrix M(ms); M.resize(M.rowdim(),M.coldim());
 
-    Givaro::Timer chrono, global;
-    chrono.start();
-
-    Matrix T(QQ,M.coldim(),M.rowdim()); Transpose(T,M);
-
     if (printPretty) {
         M.write(std::clog,FileFormat::Pretty) << ';' << std::endl;
         std::clog << std::string(40,'#') << std::endl;
@@ -67,6 +128,14 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
         M.write(std::clog << "M:=",FileFormat::Maple) << ';' << std::endl;
         std::clog << std::string(40,'#') << std::endl;
     }
+
+    AProgram_t Program;
+    RowReducer(Program, M);
+
+    Givaro::Timer chrono, global;
+    chrono.start();
+
+    Matrix T(QQ,M.coldim(),M.rowdim()); Transpose(T,M);
 
         // ============================================================
         // Compute naive number of operations
