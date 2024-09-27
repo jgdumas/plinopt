@@ -69,7 +69,9 @@ void RowReducer(AProgram_t& Program, _Mat& M) {
 
         for(size_t i=0; i<M.rowdim(); ++i) {
             const Pair<int> ri{rowCost(M[i],F)};
-            std::clog << ri << ':' ;
+#ifdef VERBATIM_PARSING
+            std::clog << "## RR[" << i << "]= " << ri << ':' ;
+#endif
             for(size_t j=i+1; j<M.rowdim(); ++j) {
                 const Pair<int> rj{rowCost(M[j],F)};
 
@@ -77,15 +79,18 @@ void RowReducer(AProgram_t& Program, _Mat& M) {
                 const Pair<int> ra{rowCost(B[0],F)};
                 reduced |= cmpGains(local, gain, ri, ra, i, j, true);
                 reduced |= cmpGains(local, gain, rj, ra, j, i, true);
-                std::clog << '[' << ra;
 
                 setRow(B[0],M[i],F); opRow(B,0,M[j],F.mOne);
                 const Pair<int> rb{rowCost(B[0],F)};
                 reduced |= cmpGains(local, gain, ri, rb, i, j, false);
                 reduced |= cmpGains(local, gain, rj, rb, j, i, false);
-                std::clog << '|' << rb << ']';
+#ifdef VERBATIM_PARSING
+                std::clog << '[' << ra << '|' << rb << ']';
+#endif
             }
+#ifdef VERBATIM_PARSING
             std::clog << std::endl;
+#endif
         }
         if (reduced) {
             const size_t i(local.first.first), j(local.first.second);
@@ -93,15 +98,21 @@ void RowReducer(AProgram_t& Program, _Mat& M) {
             typename Field::Element f(local.second?F.mOne:F.one );
             const bool o(local.second);
 
-            std::clog << gain << ':' << local << std::endl;
             opRow(M, i, M[j], e);
-            Program.emplace_back('x', i, '+', f, j);
-            std::clog << "#Found gain " << gain << " in " << local << std::endl;
-            M.write(std::clog,FileFormat::Pretty) << ';' << std::endl;
-            std::clog << Program.back() << std::endl;
+            Program.emplace_back('o', i, '+', f, j);
+#ifdef VERBATIM_PARSING
+            std::clog << "## Found gain " << gain << " in "
+                      << 'R' << local.first.first << " <- "
+                      << 'R' << local.first.first
+                      << (local.second?'+':'-')
+                      << 'R' << local.first.second << std::endl;
+//             M.write(std::clog,FileFormat::Pretty) << ';' << std::endl;
+            std::clog << "## Push: " << Program.back() << std::endl;
             std::clog << std::string(40,'#') << std::endl;
+#endif
         }
     } while (reduced);
+    std::reverse(Program.begin(), Program.end());
 }
 
 
@@ -117,7 +128,8 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
         // Read Matrix of Linear Transformation
     QRat QQ;
     QMstream ms(QQ,input);
-    Matrix M(ms); M.resize(M.rowdim(),M.coldim());
+    Matrix iM(ms); iM.resize(iM.rowdim(),iM.coldim());
+    Matrix M(QQ,iM.rowdim(),iM.coldim()); matrixCopy(M,iM);
 
     if (printPretty) {
         M.write(std::clog,FileFormat::Pretty) << ';' << std::endl;
@@ -129,14 +141,6 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
         std::clog << std::string(40,'#') << std::endl;
     }
 
-    AProgram_t Program;
-    RowReducer(Program, M);
-
-    Givaro::Timer chrono, global;
-    chrono.start();
-
-    Matrix T(QQ,M.coldim(),M.rowdim()); Transpose(T,M);
-
         // ============================================================
         // Compute naive number of operations
     int addinit(0), mulinit(0);
@@ -146,6 +150,14 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
         if (!isOne(abs(it.value()))) ++mulinit;
 
     std::clog << std::string(40,'#') << std::endl;
+
+    AProgram_t Program;
+    RowReducer(Program, M);
+
+    Givaro::Timer chrono, global;
+    chrono.start();
+
+    Matrix T(QQ,M.coldim(),M.rowdim()); Transpose(T,M);
 
     std::ostringstream ssout;
     Pair<size_t> nbops{addinit,mulinit};
@@ -332,6 +344,10 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
 
     std::cout << ssout.str() << std::flush;
 
+        // Put back optimized rows
+    nbops.first += Program.size();
+    std::cout << Program << std::flush;
+
 
     if ((nbops.first !=0 || nbops.second != 0)) {
         std::clog << std::string(40,'#') << std::endl;
@@ -345,12 +361,12 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
 #ifdef INPLACE_CHECKER
     std::clog << std::string(40,'#') << std::endl;
     std::clog << '<';
-    for(size_t i=0; i< M.rowdim(); ++i) {
+    for(size_t i=0; i< iM.rowdim(); ++i) {
         if (i != 0) std::clog << '|' << std::endl;
         std::clog << '<';
-        for(size_t j=0; j<M.coldim(); ++j) {
+        for(size_t j=0; j<iM.coldim(); ++j) {
             if (j != 0) std::clog << '+';
-            std::clog << 'i' << j << "*(" << M.getEntry(i,j) << ')';
+            std::clog << 'i' << j << "*(" << iM.getEntry(i,j) << ')';
         }
         std::clog << " - o" << i << '>';
     }
