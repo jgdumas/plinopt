@@ -111,7 +111,18 @@ _Mat1& permuteRows(_Mat1& R, const Permutation& P, const _Mat2& A,
 
 	// copy sparse matrix M into dense matrix A
 template<typename _DMat, typename _SMat>
-inline _DMat& sparse2dense(_DMat& A, const _SMat& M);
+inline _DMat& any2dense(_DMat& A, const _SMat& M);
+
+template<typename _SMat>
+inline std::ostream& print(std::ostream& o, const _SMat& M,
+                           const FileFormat _ff=FileFormat::linalg) {
+    DenseMatrix T(M.field());
+    any2dense(T, M);
+    return T.write(o, _ff);
+}
+
+
+
 
 
 // ============================================

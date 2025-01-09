@@ -6,7 +6,7 @@
 OPTFLAGS = -Ofast
 
 # OPTFLAGS += -D INPLACE_CHECKER		# adds Maple checks
-# OPTFLAGS += -D VERBATIM_PARSING		# Verbose output
+# OPTFLAGS += -D VERBATIM_PARSING		# Verbose output
 # OPTFLAGS += -D DEFAULT_RANDOM_LOOPS=30u	# Default # of loops
 # OPTFLAGS += -D COEFFICIENT_SEARCH=20u		# Default # sparsifier coeffs
 

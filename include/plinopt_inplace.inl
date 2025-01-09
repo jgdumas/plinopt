@@ -1034,10 +1034,15 @@ void CheckTriLinearProgram(const char L, const Matrix& AA,
                            const char H, const Matrix& BB,
                            const char F, const Matrix& CC, bool expanded) {
 
+    std::clog << std::string(30,'#') << std::endl;
     std::clog <<"# code-checking for "
               << AA.coldim() << ':' << BB.coldim() << ' '
               << CC.rowdim() << 'x' << CC.coldim()
               << " trilinear operator" << std::endl;
+    print(std::clog<<"# ",AA) << std::endl;
+    print(std::clog<<"# ",BB) << std::endl;
+    print(std::clog<<"# ",CC) << std::endl;
+
 
     CollectVariables(L, AA.coldim(), H, BB.coldim(), F, CC.rowdim());
 
