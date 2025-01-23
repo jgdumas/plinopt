@@ -574,8 +574,16 @@ bool rotateMinus(std::vector<std::string>& line) {
 // Negating line after afect
 std::vector<std::string> negateLine(const std::vector<std::string>& line) {
     size_t depth(0);
-    auto varline(line);
-    for(size_t j=2; j<varline.size(); ++j) {
+    std::vector<std::string> varline(line.size()+1); varline.resize(2);
+    varline[0] = line[0];
+    varline[1] = line[1];
+    size_t j(2);
+    if (line[j] != "-") {
+        varline.push_back("-");
+        ++j;
+    }
+    varline.insert(varline.end(), line.begin()+2, line.end());
+    for(; j<varline.size(); ++j) {
         if (varline[j] == "(") ++depth;
         if (varline[j] == ")") --depth;
         if (depth == 0) {
@@ -593,6 +601,7 @@ std::vector<std::string> negateLine(const std::vector<std::string>& line) {
             }
         }
     }
+    std::clog << "# Negate line: " << line << " ---> " << varline << std::endl;
     return std::move(varline);
 }
 // ============================================================
@@ -650,9 +659,22 @@ std::clog << "# found variable: " << variable << std::endl;
                         for(int k=i-1; k>=0; --k) {
                             if (P[k].front() == variable) {
 std::clog << "# found line[" << k << "]: " << P[k] << std::endl;
+                                auto refline(negateLine(P[k]));
+                                rotateMinus(refline);
+                                P[k] = std::move(refline);
+std::clog << "# repl. line[" << k << "]: " << P[k] << std::endl;
 
+                                for(size_t l=k+1; l<P.size(); ++l) {
+                                    std::vector<std::string> negline;
+                                    bool linmod(negatingVariable(negline, P[l], variable));
+                                    rotateMinus(negline);
+                                    P[l] = std::move(negline);
+std::clog << "# impa. line[" << l << "]: " << P[l] << std::endl;
+                                    if (P[l].front() == variable) break;
+                                }
                             }
                         }
+                        break;
                     }
                 }
             }
@@ -688,29 +710,6 @@ size_t swapMinus(VProgram_t & P, const char outchar) {
             std::map<size_t, std::vector<std::string>> mP;
                 // Negating line
             mP[i] = negateLine(P[i]);
-
-//             size_t depth(0);
-//             auto varline(P[i]);
-//             for(size_t j=2; j<varline.size(); ++j) {
-//                 if (varline[j] == "(") ++depth;
-//                 if (varline[j] == ")") --depth;
-//                 if (depth == 0) {
-//                     if (varline[j] == "-") {
-//                         if (isParAff(varline[j-1])) {
-//                             std::rotate(varline.begin()+j,varline.begin()+j+1,
-//                                         varline.end());
-//                             varline.pop_back();
-//                             --j;
-//                         } else {
-//                             varline[j]= "+";
-//                         }
-//                     } else if (varline[j] == "+") {
-//                             // should not happen after rotateMinus
-//                         varline[j]= "-";
-//                     }
-//                 }
-//             }
-//             mP[i] = varline;
 
                 // Negating variable until reaffect
             const auto& variable(mP[i][0]);
