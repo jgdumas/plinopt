@@ -84,6 +84,8 @@ int PMcheck(const std::string& prgname, const std::string& matname,
             A.write(std::clog<<"# Program:\n", FileFormat::Pretty);
             B.write(std::clog<<"\n# Matrix:\n", FileFormat::Pretty);
             R.write(std::clog<<"\n# diff:\n", FileFormat::Pretty) << std::endl;
+
+            return 1;
         }
     } else
         A.write(std::cout, FileFormat(5)) << std::endl;

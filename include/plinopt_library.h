@@ -140,7 +140,7 @@ std::ostream& operator<<(std::ostream& out, const Tricounter& t) {
 template<typename _Mat>
 Tricounter LRP2MM(const _Mat& L, const _Mat& R, const _Mat& P) {
     const size_t n(std::sqrt(R.coldim()*P.rowdim()/L.coldim()));
-    return Tricounter { n, R.coldim()/n, P.rowdim()/n };
+    return Tricounter { P.rowdim()/n, R.coldim()/n, n };
 }
 
 

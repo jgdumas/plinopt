@@ -68,9 +68,13 @@ int main(int argc, char ** argv) {
     QMstream ls(QQ, left), rs(QQ, right), ss(QQ, product);
     Matrix L(ls), R(rs), P(ss);
 
-	assert(L.rowdim() == R.rowdim());
-	assert(L.rowdim() == P.coldim());
-
+    if ( (L.rowdim() != R.rowdim()) || (L.rowdim() != P.coldim()) ) {
+         std::cerr << "# \033[1;31m****** ERROR, inner dimension mismatch: "
+                   << L.rowdim() << "(.)" << R.rowdim() << '|' << P.coldim()
+                  << " ******\033[0m"
+                  << std::endl;
+         return 2;
+    }
 
 #ifdef VERBATIM_PARSING
     L.write(std::clog << "L:=",FileFormat::Maple) << ';' << std::endl;
@@ -79,13 +83,27 @@ int main(int argc, char ** argv) {
     std::clog << std::string(30,'#') << std::endl;
 #endif
 
+    Tricounter mkn(LRP2MM(L,R,P));
+    const size_t& m(std::get<0>(mkn)), k(std::get<1>(mkn)), n(std::get<2>(mkn));
+
         // =============================================
         // Random inputs
-    Givaro::GivRandom generator;
-    Givaro::Integer::seeding(generator.seed());
-
     QVector va(QQ,L.rowdim()), ua(QQ,L.coldim());
     QVector vb(QQ,R.rowdim()), ub(QQ,R.coldim());
+    QVector wc(QQ,P.rowdim()), vc(QQ,P.coldim());
+
+    if ( (ua.size()!=(m*k)) || (ub.size()!=(k*n)) || (wc.size()!=(m*n)) ) {
+        std::cerr << "# \033[1;31m****** ERROR, outer dimension mismatch: "
+                  << L.coldim() << ':' << m << 'x' << k << ' '
+                  << R.coldim() << ':' << k << 'x' << n << ' '
+                  << P.rowdim() << ':' << m << 'x' << n
+                  << " ******\033[0m"
+                  << std::endl;
+        return 3;
+    }
+
+    Givaro::GivRandom generator;
+    Givaro::Integer::seeding(generator.seed());
     for(auto &iter:ua) QQ.random(generator, iter, bitsize);
     for(auto &iter:ub) QQ.random(generator, iter, bitsize);
 
@@ -94,15 +112,12 @@ int main(int argc, char ** argv) {
     L.apply(va,ua);
     R.apply(vb,ub);
 
-    QVector wc(QQ,P.rowdim()), vc(QQ,P.coldim());
     for(size_t i=0; i<vc.size(); ++i) QQ.mul(vc[i],va[i],vb[i]);
 
     P.apply(wc,vc);
 
         // =============================================
         // Compute the matrix product directly
-    Tricounter mkn(LRP2MM(L,R,P));
-    const size_t& n(std::get<0>(mkn)), k(std::get<1>(mkn)), m(std::get<2>(mkn));
     LinBox::DenseMatrix<QRat> Ma(QQ,m,k), Mb(QQ,k,n), Delta(QQ,m,n);
 
         // row-major vectorization
@@ -157,6 +172,8 @@ int main(int argc, char ** argv) {
         BMD.addin(Delta, Mc);
             // Computed value
         Delta.write(std::clog << "Rc:=", FileFormat::Maple) << ';' << std::endl;
+
+        return 1;
     }
 
     return 0;

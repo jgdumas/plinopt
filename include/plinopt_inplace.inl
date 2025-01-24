@@ -984,7 +984,7 @@ void CheckMatrixMultiplication(const char L, const Matrix& A,
                                const char H, const Matrix& B,
                                const char F, const Matrix& C) {
     Tricounter mkn(LRP2MM(A,B,C));
-    const size_t& n(std::get<0>(mkn)), t(std::get<1>(mkn)), m(std::get<2>(mkn));
+    const size_t& m(std::get<0>(mkn)), t(std::get<1>(mkn)), n(std::get<2>(mkn));
     std::clog <<"# code-checking for "
               << m << 'x' << t << 'x' << n
               << " Matrix-Multiplication" << std::endl;
