@@ -601,7 +601,7 @@ std::vector<std::string> negateLine(const std::vector<std::string>& line) {
             }
         }
     }
-    std::clog << "# Negate line: " << line << " ---> " << varline << std::endl;
+//     std::clog << "# Negate line: " << line << " ---> " << varline << std::endl;
     return std::move(varline);
 }
 // ============================================================
@@ -634,6 +634,7 @@ bool negatingVariable(std::vector<std::string>& line,
             linmod = true;
         }
     }
+// std::clog << "# Negate variable (" << variable << "); " << oldline << " ---> " << line << std::endl;
     return linmod;
 }
 // ============================================================
@@ -648,28 +649,25 @@ size_t endingMinus(VProgram_t & P, const char inchar, const char outchar) {
         if (varline.front()[0] == outchar) {
             rotateMinus(varline);
             if ( varline[2] == "-") {
-                std::clog << "# outputline: ";
-                for(const auto& it: varline) std::clog << it << " || ";
-                std::clog << std::endl;
-
                 for(size_t j=3; j<varline.size(); ++j) {
-                    const auto& variable(varline[j]);
-                    if (isVariable(variable) && (variable[0] != inchar) ) {
-std::clog << "# found variable: " << variable << std::endl;
+                    const auto variable(varline[j]);
+                    if (isVariable(variable) &&
+                        (variable[0] != inchar) && (variable[0] != outchar) ) {
+// std::clog << "# found variable: " << variable << std::endl;
                         for(int k=i-1; k>=0; --k) {
                             if (P[k].front() == variable) {
-std::clog << "# found line[" << k << "]: " << P[k] << std::endl;
+// std::clog << "# found line[" << k << "]: " << P[k] << std::endl;
                                 auto refline(negateLine(P[k]));
                                 rotateMinus(refline);
                                 P[k] = std::move(refline);
-std::clog << "# repl. line[" << k << "]: " << P[k] << std::endl;
+// std::clog << "# repl. line[" << k << "]: " << P[k] << std::endl;
 
                                 for(size_t l=k+1; l<P.size(); ++l) {
                                     std::vector<std::string> negline;
                                     bool linmod(negatingVariable(negline, P[l], variable));
                                     rotateMinus(negline);
                                     P[l] = std::move(negline);
-std::clog << "# impa. line[" << l << "]: " << P[l] << std::endl;
+// std::clog << "# impa. line[" << l << "]: " << P[l] << std::endl;
                                     if (P[l].front() == variable) break;
                                 }
                             }
@@ -763,9 +761,6 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
     char freechar(unusedChar(varsChar));
     char tmpchar(unusedChar(varsChar,freechar));
 
-std::clog << "# Variable Trimer :\n" << P << std::endl;
-std::clog << std::string(60,'#') << std::endl;
-
         // ==================================
         // [1] Use output variables only at the end of the program
         //     --> replace them temporarily with another name (freechar)
@@ -833,22 +828,13 @@ std::clog << std::string(60,'#') << std::endl;
         // [*] Removes all idempotents "x := x ;"
     P.erase(std::remove_if(P.begin(), P.end(), idempots), P.end());
 
-std::clog << "# Idempotents:\n" << P << std::endl;
-std::clog << std::string(60,'#') << std::endl;
-
-
         // ==================================
         // [*] Rotates lines starting with a '-'
     for(auto& line : P) rotateMinus(line);
 
-std::clog << "# Rotate Minus:\n" << P << std::endl;
-std::clog << std::string(60,'#') << std::endl;
-
+        // ==================================
+        // [*] Negate temporary variables so that output do not start with a '-'
     endingMinus(P, inchar, outchar);
-
-std::clog << "# Ending Minus:\n" << P << std::endl;
-std::clog << std::string(60,'#') << std::endl;
-
 
     if (! simplSingle) return 0;
 
@@ -957,17 +943,10 @@ std::clog << std::string(60,'#') << std::endl;
         // [*] Removes empty lines
     P.erase(std::remove_if(P.begin(), P.end(), emptyline), P.end());
 
-std::clog << "# Singly Used:\n" << P << std::endl;
-std::clog << std::string(60,'#') << std::endl;
-
         // ==================================
         // [*] Tries to reduce lines starting with a '-'
         //     by negating some temporary variables
     swapMinus(P, outchar);
-
-std::clog << "# Swap Minus:\n" << P << std::endl;
-std::clog << std::string(60,'#') << std::endl;
-
 
     return tmpnum;
 }
