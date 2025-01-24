@@ -24,6 +24,7 @@
 // ============================================================
 // Main compacting procedure, parsing then rewriting
 std::ostream& Compacter(std::ostream& sout, std::istream& input,
+                        const size_t numloops,
                         const bool simplSingle=true) {
         // Files contains a program with the following SYNTAX
         // [+] input variables start with a character (default is 'i')
@@ -39,13 +40,25 @@ std::ostream& Compacter(std::ostream& sout, std::istream& input,
     std::clog << std::string(40,'#') << std::endl;
 
         // Semantic line removal
-    variablesTrimer(ProgramVector, simplSingle);
-    sout << ProgramVector;
-    const size_t PRs { progSize(ProgramVector) };
-    std::clog << std::string(40,'#') << std::endl;
+    size_t prevPRs(0), currPRs(PVs);
 
-        // Comparing number of elements in the programs
-    std::clog << "# \033[1;32m" << PRs << "\telements\tinstead of "
+    int iter(numloops); // decreasing 0 will nver be == 0
+    do {
+        prevPRs = currPRs;
+        variablesTrimer(ProgramVector, simplSingle);
+        currPRs = progSize(ProgramVector);
+        std::clog << "# \033[1;32m" << currPRs << "\telements\tinstead of "
+                  << prevPRs << "\033[0m" << std::endl;
+#ifdef VERBATIM_PARSING
+        std::clog << ProgramVector;
+        std::clog << std::string(40,'#') << std::endl;
+#endif
+    } while ( (currPRs < prevPRs) && (--iter != 0) ) ;
+
+    sout << ProgramVector;
+
+       // Comparing number of elements in the programs
+    std::clog << "# \033[1;32m" << currPRs << "\telements\tinstead of "
               << PVs << "\033[0m" << std::endl;
     std::clog << std::string(40,'#') << std::endl;
 
@@ -60,24 +73,29 @@ std::ostream& Compacter(std::ostream& sout, std::istream& input,
 int main(int argc, char** argv) {
     bool simplSingle(false);
     std::string filename;
+    size_t numloops(0);
 
     for (int i = 1; argc>i; ++i) {
         std::string args(argv[i]);
         if (args == "-h") {
-            std::clog << "Usage: " << argv[0] << "[-s] [stdin|file.prg]\n"
-                      << "  -s: also replace singly used variables\n";
+            std::clog << "Usage: " << argv[0]
+                      << "[-s] [-O #] [stdin|file.prg]\n"
+                      << "  -s: also replace singly used variables\n"
+                      << "  -O #: number of trim loops (default until stable)"
+                      << std::endl;
             exit(-1);
         }
         else if (args == "-s") { simplSingle = true; }
+        else if (args == "-O") { numloops = atoi(argv[++i]); }
         else { filename = args; }
     }
 
     if (filename == "") {
-        Compacter(std::cout, std::cin, simplSingle);
+        Compacter(std::cout, std::cin, numloops, simplSingle);
     } else {
         std::ifstream ifile(filename);
         if ( ifile ) {
-            Compacter(std::cout, ifile, simplSingle);
+            Compacter(std::cout, ifile, numloops, simplSingle);
             ifile.close();
         }
     }
