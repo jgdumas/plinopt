@@ -101,6 +101,9 @@ auto isMulDiv {[](const std::string& s) {
 auto isParAff {[](const std::string& s) {
     return (s=="(") || (s==":=");} };
 
+auto isVariable {[](const std::string& s) {
+    return (s.find_first_of("+-*/;:=()") == std::string::npos);} };
+
 // Echange '+' with '-' and vice-versa
 void swapsign(std::string& s) {
     if (s=="+") { s.replace(0,1,1,'-'); }
@@ -568,6 +571,122 @@ bool rotateMinus(std::vector<std::string>& line) {
 
 
 // ============================================================
+// Negating line after afect
+std::vector<std::string> negateLine(const std::vector<std::string>& line) {
+    size_t depth(0);
+    std::vector<std::string> varline(line.size()+1); varline.resize(2);
+    varline[0] = line[0];
+    varline[1] = line[1];
+    size_t j(2);
+    if (line[j] != "-") {
+        varline.push_back("-");
+        ++j;
+    }
+    varline.insert(varline.end(), line.begin()+2, line.end());
+    for(; j<varline.size(); ++j) {
+        if (varline[j] == "(") ++depth;
+        if (varline[j] == ")") --depth;
+        if (depth == 0) {
+            if (varline[j] == "-") {
+                if (isParAff(varline[j-1])) {
+                    std::rotate(varline.begin()+j,varline.begin()+j+1,
+                                varline.end());
+                    varline.pop_back();
+                    --j;
+                } else {
+                    varline[j]= "+";
+                }
+            } else if (varline[j] == "+") {
+                varline[j]= "-";
+            }
+        }
+    }
+//     std::clog << "# Negate line: " << line << " ---> " << varline << std::endl;
+    return std::move(varline);
+}
+// ============================================================
+
+
+// ============================================================
+// Negating variable in line
+bool negatingVariable(std::vector<std::string>& line,
+                      const std::vector<std::string>& oldline,
+                      const std::string& variable) {
+    bool linmod(false);
+    line.assign(oldline.begin(),oldline.end());
+    for(size_t j=2; j<line.size(); ++j) {
+        if (line[j] == variable) {
+            if (line[j-1] == "+") {
+                line[j-1] = "-";
+            } else if (line[j-1] == "-") {
+                if (isParAff(line[j-2])) {
+                    std::rotate(line.begin()+j-1,line.begin()+j,
+                                line.end());
+                    line.pop_back();
+                } else {
+                    line[j-1] = "+";
+                }
+            } else if (isParAff(line[j-1])) {
+                line.push_back("-");
+                std::rotate(line.begin()+j,line.end()-1,line.end());
+                ++j;
+            }
+            linmod = true;
+        }
+    }
+// std::clog << "# Negate variable (" << variable << "); " << oldline << " ---> " << line << std::endl;
+    return linmod;
+}
+// ============================================================
+
+
+// ============================================================
+// Negate temporaries for output lines starting with a '-'
+size_t endingMinus(VProgram_t & P, const char inchar, const char outchar) {
+    if (P.empty()) return 0;
+    for(int i=P.size()-1; i>=0; --i) {
+        auto & varline(P[i]);
+        if (varline.front()[0] == outchar) {
+            rotateMinus(varline);
+            if ( varline[2] == "-") {
+                for(size_t j=3; j<varline.size(); ++j) {
+                    const auto variable(varline[j]);
+                    if (isVariable(variable) &&
+                        (variable[0] != inchar) && (variable[0] != outchar) ) {
+// std::clog << "# found variable: " << variable << std::endl;
+                        for(int k=i-1; k>=0; --k) {
+                            if (P[k].front() == variable) {
+// std::clog << "# found line[" << k << "]: " << P[k] << std::endl;
+                                auto refline(negateLine(P[k]));
+                                rotateMinus(refline);
+                                P[k] = std::move(refline);
+// std::clog << "# repl. line[" << k << "]: " << P[k] << std::endl;
+
+                                for(size_t l=k+1; l<P.size(); ++l) {
+                                    std::vector<std::string> negline;
+                                    bool linmod(negatingVariable(negline, P[l], variable));
+                                    rotateMinus(negline);
+                                    P[l] = std::move(negline);
+// std::clog << "# impa. line[" << l << "]: " << P[l] << std::endl;
+                                    if (P[l].front() == variable) break;
+                                }
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    return 0;
+}
+// ============================================================
+
+
+
+
+
+// ============================================================
 size_t countMinus(const VProgram_t& P) {
     size_t cm(0);
     for(auto& line : P) if (line[2] == "-") ++cm;
@@ -587,55 +706,14 @@ size_t swapMinus(VProgram_t & P, const char outchar) {
     for(size_t i=0; i<P.size(); ++i) {
         if ( (P[i])[2] == "-" && (P[i].front()[0] != outchar) ) {
             std::map<size_t, std::vector<std::string>> mP;
-            size_t depth(0);
                 // Negating line
-            auto varline(P[i]);
-            for(size_t j=2; j<varline.size(); ++j) {
-                if (varline[j] == "(") ++depth;
-                if (varline[j] == ")") --depth;
-                if (depth == 0) {
-                    if (varline[j] == "-") {
-                        if (isParAff(varline[j-1])) {
-                            std::rotate(varline.begin()+j,varline.begin()+j+1,
-                                        varline.end());
-                            varline.pop_back();
-                            --j;
-                        } else {
-                            varline[j]= "+";
-                        }
-                    } else if (varline[j] == "+") {
-                            // should not happen after rotateMinus
-                        varline[j]= "-";
-                    }
-                }
-            }
-            mP[i] = varline;
+            mP[i] = negateLine(P[i]);
 
-                // Negating variable
-            const auto& variable(varline[0]);
+                // Negating variable until reaffect
+            const auto& variable(mP[i][0]);
             for( ; ++i < P.size() ; ) {
-                bool linmod(false);
-                auto line(P[i]);
-                for(size_t j=2; j<line.size(); ++j) {
-                    if (line[j] == variable) {
-                        if (line[j-1] == "+") {
-                            line[j-1] = "-";
-                        } else if (line[j-1] == "-") {
-                            if (isParAff(line[j-2])) {
-                                std::rotate(line.begin()+j-1,line.begin()+j,
-                                            line.end());
-                                line.pop_back();
-                            } else {
-                                line[j-1] = "+";
-                            }
-                        } else if (isParAff(line[j-1])) {
-                            line.push_back("-");
-                            std::rotate(line.begin()+j,line.end()-1,line.end());
-                            ++j;
-                        }
-                        linmod = true;
-                    }
-                }
+                std::vector<std::string> line; line.reserve(P[i].size());
+                bool linmod(negatingVariable(line, P[i], variable));
                 if (linmod) {
                     rotateMinus(line);
                     mP[i] = line;
@@ -753,6 +831,10 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
         // ==================================
         // [*] Rotates lines starting with a '-'
     for(auto& line : P) rotateMinus(line);
+
+        // ==================================
+        // [*] Negate temporary variables so that output do not start with a '-'
+    endingMinus(P, inchar, outchar);
 
     if (! simplSingle) return 0;
 
