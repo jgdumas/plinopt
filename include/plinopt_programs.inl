@@ -601,7 +601,7 @@ std::vector<std::string> negateLine(const std::vector<std::string>& line) {
             }
         }
     }
-//     std::clog << "# Negate line: " << line << " ---> " << varline << std::endl;
+// std::clog << "# Negate line: " << line << " ---> " << varline << std::endl;
     return std::move(varline);
 }
 // ============================================================
@@ -907,7 +907,7 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
                 }
 
                     // Whether replacement requires parenthesis
-                const auto penultimate(init.end()-1);
+                auto penultimate(init.end()-1);
                 size_t depth(0);
                 for(auto iter(init.begin()+3); iter != penultimate; ++iter) {
                     if (*iter == "(") ++depth;
@@ -919,10 +919,30 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
                 }
 
                     // Replacement expression
-                const auto replength(init.end()-init.begin()-2);
-                line[varloc] = std::move(init[2]); // replace previous variable
-                const bool tobeneg(line[varloc-1] == "-");
+                auto replength(init.end()-init.begin()-2);
+                bool tobeneg(line[varloc-1] == "-");
                 const bool tobemul(isMulDiv(line[varloc+1]));
+
+                if ((!tobemul) && tobeneg && multimonomial) {
+                        // Parenthesis not needed
+                        // Just negate the variable in place
+                    init = negateLine(init);
+                    rotateMinus(init);
+                    replength = init.end()-init.begin()-2;
+                    penultimate = init.end()-1;
+                    if ( (varloc == 3) || (init[2] == "-") ) {
+                            // If starting cmd, remove the minus sign
+                            // Or if replacement starts also with minus
+                        --varloc;
+                        line.erase (line.begin()+varloc);
+                    } else {
+                            // Otherwise transform it into a plus sign
+                        line[varloc-1] = "+";
+                    }
+                    tobeneg = false;
+                }
+
+                line[varloc] = std::move(init[2]); // replace previous variable
                 line.insert(line.begin()+varloc+1,init.begin()+3,penultimate);
                 if (multimonomial && (tobemul || tobeneg)) {
                     line.insert(line.begin()+varloc,"(");
@@ -947,6 +967,14 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
         // [*] Tries to reduce lines starting with a '-'
         //     by negating some temporary variables
     swapMinus(P, outchar);
+
+        // ==================================
+        // [*] Negate temporary variables so that output do not start with a '-'
+    endingMinus(P, inchar, outchar);
+
+        // ==================================
+        // [*] Rotates lines starting with a '-'
+    for(auto& line : P) rotateMinus(line);
 
     return tmpnum;
 }
