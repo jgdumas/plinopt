@@ -12,7 +12,7 @@ OPTFLAGS = -Ofast
 
 #######
 
-CXXFLAGS += -D RANDOM_TIES -D INPLACE_CHECKER
+CXXFLAGS += -D RANDOM_TIES # -D INPLACE_CHECKER
 
 CXXFLAGS += ${OPTFLAGS} -I`pwd`/include/ `pkg-config linbox --cflags`
 LOADLIBES+= `pkg-config linbox --libs |sed 's/-liml//;s/-lfplll//;s/-lflint//'`
