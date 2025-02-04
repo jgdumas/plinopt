@@ -4,12 +4,14 @@
 // ==========================================================================
 
 /****************************************************************
- * Transposition of programs via Tellegen's principle
- * Program syntax: see main Tellegen function below
- * References:
- *   [ Tellegen's principle into practice.
- *     ISSAC'03:37-44, A. Bostan, G. Lecerf, É. Schost
- *     https://doi.org/10.1145/860854.860870 ]
+ * Compacting straight-line programs
+ * Program syntax: see Compacter function below
+ *                 see also: optimizer.cpp and transpozer.cpp
+ * - Removes no-op
+ * - Replaces variable only assigned to temporary, directly by input
+ * - Rewrites singly used variables in-place
+ * - Reduces leading minus usage '-'
+ * Reference:
  *   [ J-G. Dumas, C. Pernet, A. Sedoglavic; Feb. 2024
  *     Strassen's algorithm is not optimally accurate
  *     (https://hal.science/hal-04441653) ]

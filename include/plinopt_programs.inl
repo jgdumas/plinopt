@@ -750,6 +750,7 @@ size_t swapMinus(VProgram_t & P, const char outchar) {
 //   [*] Removes all no-op operations like ai:=ai;
 //   [3] Backward reassingment of output variables
 //   [4] (optional) rewrites singly used variables in-place
+//   [5] reduces leading minus usage '-'
 size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
                        const char inchar, const char outchar) {
         // ==================================
