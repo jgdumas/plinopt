@@ -1,5 +1,5 @@
 # Sparsified Optimal growth factor product change of basis matrix (5 add, 4 mul)
-# 1013 is a placehodler for sqrt(3)
+# 1013 is a placeholder for sqrt(3)
 4 4 R
 1 1 -2026/3
 1 2 1013/3
