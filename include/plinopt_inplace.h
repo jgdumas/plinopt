@@ -6,8 +6,9 @@
 /****************************************************************
  * PLinOpt Library, In-place definitions
  * Reference:
- *   [ J-G. Dumas, B. Grenet; Jul. 2023
+ *   [ J-G. Dumas, B. Grenet;
  *     In-place accumulation of fast multiplication formulae
+ *     ISSAC 2024, Raleigh, NC USA, pp. 16-25.
  *     (https://hal.science/hal-04167499) ]
  ****************************************************************/
 

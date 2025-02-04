@@ -26,8 +26,9 @@
  *   [ Tellegen's principle into practice.
  *     ISSAC'03:37-44, A. Bostan, G. Lecerf, É. Schost
  *     https://doi.org/10.1145/860854.860870 ]
- *   [ J-G. Dumas, C. Pernet, A. Sedoglavic; Feb. 2024
+ *   [ J-G. Dumas, C. Pernet, A. Sedoglavic;
  *     Strassen's algorithm is not optimally accurate
+ *     ISSAC 2024, Raleigh, NC USA, pp. 254-263.
  *     (https://hal.science/hal-04441653) ]
  ****************************************************************/
 

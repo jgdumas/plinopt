@@ -8,9 +8,10 @@
  * Usage: L.sms R.sms P.sms [expansion]
  *
  * Reference:
- *      [ In-place accumulation of fast multiplication formulae
- *        J-G. Dumas, B. Grenet
- *        https://hal.science/hal-04167499 ]
+ *   [ J-G. Dumas, B. Grenet;
+ *     In-place accumulation of fast multiplication formulae
+ *     ISSAC 2024, Raleigh, NC USA, pp. 16-25.
+ *     (https://hal.science/hal-04167499) ]
  *
  * Matrix syntax: SMS format, see:
  *      [Sparse Integer Matrix Collection](https://hpac.imag.fr)

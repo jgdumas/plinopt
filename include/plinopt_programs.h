@@ -9,8 +9,9 @@
  *   [ J-G. Dumas, B. Grenet; Jul. 2023
  *     In-place accumulation of fast multiplication formulae
  *     (https://hal.science/hal-04167499) ]
- *   [ J-G. Dumas, C. Pernet, A. Sedoglavic; Feb. 2024
+ *   [ J-G. Dumas, C. Pernet, A. Sedoglavic;
  *     Strassen's algorithm is not optimally accurate
+ *     ISSAC 2024, Raleigh, NC USA, pp. 254-263.
  *     (https://hal.science/hal-04441653) ]
  ****************************************************************/
 

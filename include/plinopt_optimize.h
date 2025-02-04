@@ -5,9 +5,11 @@
 
 /****************************************************************
  * PLinOpt Library, Optimization definitions
- * Reference: [ J-G. Dumas, C. Pernet, A. Sedoglavic; Feb. 2024
- *              Strassen's algorithm is not optimally accurate
- *              (https://hal.science/hal-04441653) ]
+ * Reference:
+ *   [ J-G. Dumas, C. Pernet, A. Sedoglavic;
+ *     Strassen's algorithm is not optimally accurate
+ *     ISSAC 2024, Raleigh, NC USA, pp. 254-263.
+ *     (https://hal.science/hal-04441653) ]
  ****************************************************************/
 
 // ============================================================

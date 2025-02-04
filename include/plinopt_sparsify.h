@@ -12,8 +12,9 @@
  *   [ Gal Beniamini, Oded Schwartz;
  *     Faster Matrix Multiplication via Sparse Decomposition.
  *     SPAA 2019: 11-22]
- *   [ J-G. Dumas, C. Pernet, A. Sedoglavic; Feb. 2024
+ *   [ J-G. Dumas, C. Pernet, A. Sedoglavic;
  *     Strassen's algorithm is not optimally accurate
+ *     ISSAC 2024, Raleigh, NC USA, pp. 254-263.
  *     (https://hal.science/hal-04441653) ]
  ****************************************************************/
 
