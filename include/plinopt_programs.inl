@@ -743,6 +743,106 @@ size_t swapMinus(VProgram_t & P, const char outchar) {
 // ============================================================
 
 
+template<typename Iterator>
+Iterator endGroup(const Iterator& start, const Iterator& end) {
+    if (start[0]=="(") {
+        size_t depth(1);
+        const auto ocp = { "(", ")" };
+        auto closp = start;
+        do {
+            closp = std::find_first_of(closp+1,end,ocp.begin(),ocp.end());
+            if (*closp == ")") --depth;
+            else ++depth;
+        } while(depth>0);
+        return closp+1;
+    } else {
+        const auto ocp = { "+", "-" };
+        return std::find_first_of(start,end,ocp.begin(),ocp.end());
+    }
+}
+
+
+
+
+// ============================================================
+// Removes leading minus from parenthesis if possible:
+//         -(a-b) --> +(b-a)
+size_t parenthesisMinus(VProgram_t & P) {
+    for(auto& line : P) rotateMinus(line);
+    size_t pm( countMinus(P) );
+    if (pm == 0) return 0;
+
+
+    for(size_t i=0; i<P.size(); ++i) {
+        auto & line(P[i]); bool swapped(false);
+        std::vector<std::string> newline;
+        for (auto startl(line.begin()); startl != line.end(); ++startl) {
+            auto openp = std::find(startl,line.end(),"(");
+            if (openp != line.end()) {
+                auto closp( endGroup(openp, line.end()) );
+                size_t minusign(0);
+                std::vector<std::string> newgroup;
+                if (openp[-1]=="-") {
+                    newgroup.insert(newgroup.end(), openp-1, closp);
+// std::clog << "# Starting minus parenthesis from " << line << ", dealing with: " << newgroup << std::endl;
+                    newgroup[0]="+";
+                    size_t nosign(0);
+                    auto iter(newgroup.begin()+2); // (?
+                    do {
+                        if (iter[0]==")") {
+                            break;
+                        } else if (iter[0]=="-") {
+                            iter[0]="+"; ++iter; ++minusign;
+                        } else if (iter[0]=="+") {
+                            iter[0]="-"; ++iter;
+                        } else {
+// std::clog << '\n' << "# nosign: " << iter[0] << std::endl;
+                            ++nosign;
+                        }
+                        auto endg( endGroup(iter, newgroup.end()) );
+// if (endg == newgroup.end()) std::clog << "End ";
+// std::clog << '\n' << '|';
+// for(auto it(iter); it != endg; ++it) {
+//     std::clog << *it << ' ';
+// }
+// std::clog  << '|' << std::endl;
+                        iter = endg;
+                    } while(iter != newgroup.end());
+                    if (nosign>0) {
+                        newgroup.insert(newgroup.begin()+2,"-");
+                    }
+                    if (newgroup[2]=="+") {
+                        newgroup.erase(newgroup.begin()+2);
+                    }
+// std::clog << "# changing group(" << nosign << ',' << minusign << "): " << newgroup << std::endl;
+                }
+                if (minusign>0) {
+                    newline.insert(newline.end(), startl, openp-1);
+                    newline.insert(newline.end(), newgroup.begin(), newgroup.end());
+                    swapped = true;
+                } else {
+                    newline.insert(newline.end(), startl, closp);
+                }
+                startl = closp-1;
+           } else {
+               newline.insert(newline.end(), startl, line.end());
+               break;
+           }
+        }
+        if (newline[2] == "+") newline.erase(newline.begin()+2);
+        if (swapped) {
+#ifdef VERBATIM_PARSING
+            std::clog << "# Replaced " << line << std::endl
+                      << "#     with " << newline << std::endl;
+#endif
+            P[i] = newline;
+        }
+    }
+    return pm;
+}
+// ============================================================
+
+
 
 
 // ============================================================
@@ -965,6 +1065,10 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
         // ==================================
         // [*] Removes empty lines
     P.erase(std::remove_if(P.begin(), P.end(), emptyline), P.end());
+
+        // ==================================
+        // [*] Tries to remove minus signs before parenthesis
+    parenthesisMinus(P);
 
         // ==================================
         // [*] Tries to reduce lines starting with a '-'
