@@ -3,7 +3,7 @@
 # Authors: J-G. Dumas, C. Pernet, A. Sedoglavic
 ####################################################################
 
-OPTFLAGS = -Ofast
+OPTFLAGS = -O3 -ffast-math
 
 # OPTFLAGS += -D INPLACE_CHECKER		# adds Maple checks
 # OPTFLAGS += -D VERBATIM_PARSING		# Verbose output
