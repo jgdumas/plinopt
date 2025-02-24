@@ -1110,6 +1110,7 @@ _Mat& matrixBuilder(_Mat& A, const VProgram_t& P, const char outchar /* ='o'*/) 
             M.resize(m+1,n);
         }
         const size_t i(variables[output]);
+        _Mat newiline(F,1,M.coldim());
         for(auto word=line.begin()+2; word !=line.end(); ++word) {
 // std::clog << "## word: " << *word << " (output:" << output << ')' << std::endl;
             typename Field::Element coeff; F.init(coeff); F.assign(coeff, F.one);
@@ -1135,8 +1136,7 @@ _Mat& matrixBuilder(_Mat& A, const VProgram_t& P, const char outchar /* ='o'*/) 
                 } else {
                     --word;
                 }
-                if (F.isMOne(coeff)) negRow(M, i);
-                else if (! F.isOne(coeff)) mulRow(M, i, coeff);
+                opRow(newiline, 0, M[i], coeff);
 // std::clog << "## mul by " << coeff << std::endl;
                 continue;
             }
@@ -1151,6 +1151,7 @@ _Mat& matrixBuilder(_Mat& A, const VProgram_t& P, const char outchar /* ='o'*/) 
                     const size_t m(M.rowdim()), n(M.coldim());
                     inputs[*word] = n;
                     M.resize(m,n+1);
+                    newiline.resize(1,n+1);
                 }
                 const size_t j = inputs[*word]; ++word;
                 typename Field::Element tmp; F.init(tmp);
@@ -1167,8 +1168,8 @@ _Mat& matrixBuilder(_Mat& A, const VProgram_t& P, const char outchar /* ='o'*/) 
                 }  else {
                     --word;
                 }
-                F.assign(tmp, M.getEntry(i,j)); // might be zero (no refEntry)
-                M.setEntry(i,j, F.addin(tmp, coeff) );
+                F.assign(tmp, newiline.getEntry(0,j)); // can't refEntry (if 0)
+                newiline.setEntry(0, j, F.addin(tmp, coeff) );
             } else {
                 const size_t j(variables[*word]);
 // std::clog << "### row[" << i << "] : " << output << std::endl;
@@ -1195,10 +1196,12 @@ _Mat& matrixBuilder(_Mat& A, const VProgram_t& P, const char outchar /* ='o'*/) 
                 }
 
 // M.write(std::clog << "# BEF opR M:", FileFormat::Pretty) << std::endl;
-                opRow(M, i, M[j], coeff);
+                opRow(newiline, 0, M[j], coeff);
 // M.write(F.write(std::clog << "# AFT ", coeff) << " opR M:", FileFormat::Pretty) << std::endl;
             }
         }
+
+        setRow(M, i, newiline, 0);
 
 #ifdef VERBATIM_PARSING
         std::clog << "# I: " << inputs << std::endl;
