@@ -117,7 +117,7 @@ inline _DMat& any2dense(_DMat& A, const _SMat& M);
 
 template<typename _SMat>
 inline std::ostream& print(std::ostream& o, const _SMat& M,
-                           const FileFormat _ff=FileFormat::linalg) {
+                           const FileFormat _ff=FileFormat::Maple) {
     DenseMatrix T(M.field());
     any2dense(T, M);
     return T.write(o, _ff);
