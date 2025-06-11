@@ -1,0 +1,28 @@
+# Optimal growth factor right HM matrix (7 add, 4 mul)
+# Matrixc coefficients are polynomials
+# Polynomials are given by degrre & list of decreasing degree coeffcients
+# The polynomial indeterminate is here a placeholder for sqrt(3)
+# Computations are thus to be performed modulo X^2-3
+7 4 R
+1 2 1 2/3 0
+2 1 0 -1
+2 2 1 1/3 0
+3 2 1 1/3 0
+3 4 0 -1
+4 1 0 1/2
+4 3 1 1/2 0
+4 2 1 -1/6 0
+4 4 0 -1/2
+5 1 0 -1/2
+5 3 1 -1/2 0
+5 2 1 1/2 0
+5 4 0 -1/2
+6 1 0 1/2
+6 3 1 1/2 0
+6 2 1 1/6 0
+6 4 0 1/2
+7 1 0 1/2
+7 3 1 -1/2 0
+7 2 1 1/6 0
+7 4 0 -1/2
+0 0 0

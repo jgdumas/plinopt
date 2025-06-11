@@ -24,6 +24,7 @@ EXE += transpozer compacter PMchecker
 EXE += optimizer
 EXE += sparsifier factorizer
 EXE += inplacer trilplacer
+EXE += PMMchecker
 
 SRC=${EXE:%=src/%.cpp}
 
