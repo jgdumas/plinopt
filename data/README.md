@@ -7,7 +7,7 @@
 
 
 
-**Matrix Syntax**: SMS format (numbering from 1 to m), see [Sparse Integer Matrix Collection](https://hpac.imag.fr)
+**SMS Matrix Syntax**: SMS format (numbering from 1 to m), see [Sparse Integer Matrix Collection](https://hpac.imag.fr)
 |  |  |  |  |
 | :--- | :--- | :--- | :--- |
 | Starts with| `m` | `n` | `'R'` |
@@ -16,7 +16,7 @@
 |  |  |  |  |
 
 
-**SLP Syntax**:
+**SLP Program Syntax**: Straight-Line Program format
 
 |  |  |  |  |
 | :--- | :--- | :--- | :--- |
