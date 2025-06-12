@@ -31,11 +31,11 @@
 
 
 --------------------------------------------------------------------------------
-**Matrix Multiplication Algorithm files**: `#x#x#_#_text_[L|R|P].sms` `#x#T_#_text_[L|R|P].sms`
+**Matrix Multiplication Algorithm files**: `#x#x#_#_text_[L|R|P].sms` `#x#T_#+#_text_[L|R|P].sms`
 
 `MxKxN_R_text_[L|R|P].sms`: L, R or P matrix of the HM representation of the MxK by KxN  matrix multiplication algorithm of tensor rank R.
 
-`MxKT_R_text_[L|R|P].sms`: L, R or P matrix of the HM representation of the MxK by KxM  matrix multiplication algorithm by its adjoint of tensor rank R.
+`MxKT_R1+R2_text_[L|R|P].sms`: L, R or P matrix of the HM representation of the MxK by KxM  matrix multiplication algorithm by its adjoint with R1 recursive calls and R2 classical products.
 
 **Alternative basis files**: `#x#x#_#_text-ALT_[L|R|P].sms` `#x#x#_#_text-CoB_[L|R|P].sms`
 

@@ -18,21 +18,21 @@ apt install git make g++ pkg-config
 apt install libgmp-dev liblinbox-dev libntl-dev
 cd; git clone https://github.com/jgdumas/plinopt.git
 cd plinopt; make -j 4
-./bin/inplacer data/L_2x2x2_7_Winograd.sms
-./bin/inplacer -t data/P_2x2x2_7_Winograd.sms
-./bin/trilplacer data/L_2x2x2_7_Winograd.sms data/R_2x2x2_7_Winograd.sms data/P_2x2x2_7_Winograd.sms
-./bin/trilplacer data/L_1o1o1_3_Karatsuba.sms data/R_1o1o1_3_Karatsuba.sms data/P_1o1o1_3_Karatsuba.sms -e
-./bin/sms2pretty data/L_2x2x2_7_Strassen.sms data/R_2x2x2_7_Strassen.sms data/P_2x2x2_7_Strassen.sms
-./bin/matrix-transpose data/P_2x2x2_7_Winograd.sms
-./bin/MMchecker data/L_2x2x2_7_Winograd.sms data/R_2x2x2_7_Winograd.sms data/P_2x2x2_7_Winograd.sms
-./bin/MMchecker data/L_2x2x2_7_DPS-accurate.sms data/R_2x2x2_7_DPS-accurate.sms data/P_2x2x2_7_DPS-accurate.sms 32 3 1013
+./bin/inplacer data/2x2x2_7_Winograd_L.sms
+./bin/inplacer -t data/2x2x2_7_Winograd_P.sms
+./bin/trilplacer data/2x2x2_7_Winograd_L.sms data/2x2x2_7_Winograd_R.sms data/2x2x2_7_Winograd_P.sms
+./bin/trilplacer data/1o1o2_3_Karatsuba_L.sms data/1o1o2_3_Karatsuba_R.sms data/1o1o2_3_Karatsuba_P.sms -e
+./bin/sms2pretty data/2x2x2_7_Strassen_L.sms data/2x2x2_7_Strassen_R.sms data/2x2x2_7_Strassen_P.sms
+./bin/matrix-transpose data/2x2x2_7_Winograd_P.sms
+./bin/MMchecker data/2x2x2_7_Winograd_L.sms data/2x2x2_7_Winograd_R.sms data/2x2x2_7_Winograd_P.sms
+./bin/MMchecker data/2x2x2_7_DPS-accurate_L.sms data/2x2x2_7_DPS-accurate_R.sms data/2x2x2_7_DPS-accurate_P.sms 32 3 1013
 ./bin/compacter data/test-prg.slp
 ./bin/optimizer data/cyclic.sms
-./bin/optimizer data/R_2x2x2_7_DPS-smallrat-12.2034.sms -q 3
+./bin/optimizer data/2x2x2_7_DPS-smallrat-12.2034_R.sms -q 3
 ./bin/transpozer data/test-prg.slp
-./bin/optimizer data/P_2x2x2_7_DPS-integral-12.0662.sms
-./bin/optimizer data/L_2x2x2_7_DPS-integral-12.0662.sms |./bin/compacter -s
-./bin/matrix-transpose data/P_2x2x2_7_DPS-integral-12.0662.sms | ./bin/optimizer -K | ./bin/transpozer | ./bin/compacter -s
-./bin/sparsifier -c 4 data/L_2x2x2_7_DPS-smallrat-12.2034.sms
-./bin/factorizer -k 6 data/L_2x2x2_7_DPS-smallrat-12.2034.sms
+./bin/optimizer data/2x2x2_7_DPS-integral-12.0662_P.sms
+./bin/optimizer data/2x2x2_7_DPS-integral-12.0662_L.sms |./bin/compacter -s
+./bin/matrix-transpose data/2x2x2_7_DPS-integral-12.0662_P.sms | ./bin/optimizer -K | ./bin/transpozer | ./bin/compacter -s
+./bin/sparsifier -c 4 data/2x2x2_7_DPS-smallrat-12.2034_L.sms
+./bin/factorizer -k 6 data/2x2x2_7_DPS-smallrat-12.2034_L.sms
 make check
