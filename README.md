@@ -50,7 +50,7 @@
 | :--------- | :------ |
 |`bin/matrix-transpose` | transposes a matrix from an SMS file |
 |`bin/sms2pretty` | pretty prints a matrix from a file |
-|`bin/PMchecker` | asserts correctness of program, with respect to a matrix |
+|`bin/SLPchecker` | asserts correctness of program, with respect to a matrix |
 |`bin/MMchecker` | asserts correctness of trilinear program for matrix-multiplication |
 |  |  |
 
@@ -97,4 +97,4 @@
 - `./bin/inplacer data/2x2x2_7_Winograd_L.sms`: in-place matrix-vector accumulating multiplication
 - `./bin/trilplacer data/2x2x2_7_Winograd_L.sms data/2x2x2_7_Winograd_R.sms data/2x2x2_7_Winograd_P.sms`: in-place version of Strassen-Winograd's fast 2x2 accumulating multiplication
 - `./bin/trilplacer data/1o1o2_3_Karatsuba_L.sms data/1o1o2_3_Karatsuba_R.sms data/1o1o2_3_Karatsuba_P.sms -e`: in-place version of Karatsuba's fast accumulating polynomial multiplication
-- `./bin/optimizer -q 17 data/2x2x2_7_DPS-accurate_L.sms | ./bin/compacter -s | ./bin/PMchecker -q 17 -M data/2x2x2_7_DPS-accurate_L.sms`: creates a program for `2x2x2_7_DPS-accurate_L.sms` modulo 17, compacts it with less variables, then checks consistency
+- `./bin/optimizer -q 17 data/2x2x2_7_DPS-accurate_L.sms | ./bin/compacter -s | ./bin/SLPchecker -q 17 -M data/2x2x2_7_DPS-accurate_L.sms`: creates a program for `2x2x2_7_DPS-accurate_L.sms` modulo 17, compacts it with less variables, then checks consistency

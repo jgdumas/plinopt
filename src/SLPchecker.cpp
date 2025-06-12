@@ -19,7 +19,7 @@
 // ============================================================
 // Parsing a program and building the associated matrix
 template<typename _Mat>
-_Mat& PMbuilder(_Mat& A, std::istream& input) {
+_Mat& SLPbuilder(_Mat& A, std::istream& input) {
     std::stringstream ssin; ssin << input.rdbuf();
 
         // Line by line parsing
@@ -39,7 +39,7 @@ _Mat& PMbuilder(_Mat& A, std::istream& input) {
 // ============================================================
 // Checking a linear program with a matrix
 template<typename Field>
-int PMcheck(const std::string& prgname, const std::string& matname,
+int SLPcheck(const std::string& prgname, const std::string& matname,
             const Field& F) {
 
         // ============================================================
@@ -49,11 +49,11 @@ int PMcheck(const std::string& prgname, const std::string& matname,
     FMatrix A(F);
 
     if (prgname == "") {
-        PMbuilder(A, std::cin);
+        SLPbuilder(A, std::cin);
     } else {
         std::ifstream ifile(prgname);
         if ( ifile ) {
-            PMbuilder(A, ifile);
+            SLPbuilder(A, ifile);
             ifile.close();
         }
     }
@@ -119,10 +119,10 @@ int main(int argc, char** argv) {
 
     if (! Givaro::isZero(q)) {
         Givaro::Modular<Givaro::Integer> FF(q);
-        return PMcheck(prgname, matname, FF);
+        return SLPcheck(prgname, matname, FF);
     } else {
         QRat QQ;
-        return PMcheck(prgname, matname, QQ);
+        return SLPcheck(prgname, matname, QQ);
     }
 }
 // ============================================================
