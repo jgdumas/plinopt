@@ -48,10 +48,10 @@
 **Tools**:
 |  |  |
 | :--------- | :------ |
-|`bin/matrix-transpose`| transposes a matrix from an SMS file |
-|`bin/sms2pretty`| pretty prints a matrix from a file |
-|`bin/PMchecker`| asserts correctness of program, with respect to a matrix |
-|`bin/MMchecker`| asserts correctness of trilinear program for matrix-multiplication |
+|`bin/matrix-transpose` | transposes a matrix from an SMS file |
+|`bin/sms2pretty` | pretty prints a matrix from a file |
+|`bin/PMchecker` | asserts correctness of program, with respect to a matrix |
+|`bin/MMchecker` | asserts correctness of trilinear program for matrix-multiplication |
 |  |  |
 
 
@@ -81,20 +81,20 @@
 
 
 **Examples**:
-- `./bin/sms2pretty data/Lw.sms data/Rw.sms data/Pw.sms`: pretty print HM representation of Strassen-Winograd's fast 2x2 multiplication algorithm
-- `./bin/matrix-transpose data/Pw.sms`: the transposed matrix
-- `./bin/MMchecker data/Lw.sms data/Rw.sms data/Pw.sms`: probabilistically checking Strassen-Winograd's matrix-multiplication algorithm
-- `./bin/MMchecker data/Lo.sms data/Ro.sms data/Po.sms 32 3 1013`: probabilistically checking matrix-multiplication algorithm using 32 bits random elements and 1013 as a placeholder for sqrt(3)
+- `./bin/sms2pretty data/2x2x2_7_Winograd_L.sms data/2x2x2_7_Winograd_R.sms data/2x2x2_7_Winograd_P.sms`: pretty print HM representation of Strassen-Winograd's fast 2x2 multiplication algorithm
+- `./bin/matrix-transpose data/2x2x2_7_Winograd_P.sms`: the transposed matrix
+- `./bin/MMchecker data/2x2x2_7_Winograd_L.sms data/2x2x2_7_Winograd_R.sms data/2x2x2_7_Winograd_P.sms`: probabilistically checking Strassen-Winograd's matrix-multiplication algorithm
+- `./bin/MMchecker data/2x2x2_7_DPS-accurate_L.sms data/2x2x2_7_DPS-accurate_R.sms data/2x2x2_7_DPS-accurate_P.sms 32 3 1013`: probabilistically checking matrix-multiplication algorithm using 32 bits random elements and 1013 as a placeholder for sqrt(3)
 - `./bin/optimizer data/cyclic.sms`: a program computing that matrix-vector product
-- `./bin/optimizer data/Rr.sms -q 3`: a program computing that matrix-vector product modulo 3
+- `./bin/optimizer data/2x2x2_7_DPS-smallrat-12.2034_R.sms -q 3`: a program computing that matrix-vector product modulo 3
 - `./bin/transpozer data/test.prg`: a program computing the transposed program
 - `./bin/compacter data/test.prg`: a more compact program
-- `./bin/optimizer -D data/Pi.sms`: a program computing that matrix-vector product
-- `./bin/optimizer data/Li.sms | ./bin/compacter -s`: a compact program computing that matrix-vector product
-- `./bin/matrix-transpose data/Pi.sms | ./bin/optimizer -K | ./bin/transpozer`: a program computing that matrix-vector product
-- `./bin/sparsifier -c 4 data/Lr.sms`: a factorization of that matrix into a sparser one (also with many 1s) by an alternate change of basis (CoB) 4x4 matrix
-- `./bin/factorizer -k 6 data/Lr.sms`: a factorization of that matrix into a 7x6 sparser one by a 6x4 matrix
-- `./bin/inplacer data/Lw.sms`: in-place matrix-vector accumulating multiplication
-- `./bin/trilplacer data/Lw.sms data/Rw.sms data/Pw.sms`: in-place version of Strassen-Winograd's fast 2x2 accumulating multiplication
-- `./bin/trilplacer data/Lk.sms data/Rk.sms data/Pk.sms -e`: in-place version of Karatsuba's fast accumulating polynomial multiplication
-- `./bin/optimizer -q 17 data/Lo.sms | ./bin/compacter -s | ./bin/PMchecker -q 17 -M data/Lo.sms`: creates a program for `Lo.sms` modulo 17, compacts it with less variables, then checks consistency
+- `./bin/optimizer -D data/2x2x2_7_DPS-integral-12.0662_P.sms`: a program computing that matrix-vector product
+- `./bin/optimizer data/2x2x2_7_DPS-integral-12.0662_L.sms | ./bin/compacter -s`: a compact program computing that matrix-vector product
+- `./bin/matrix-transpose data/2x2x2_7_DPS-integral-12.0662_P.sms | ./bin/optimizer -K | ./bin/transpozer`: a program computing that matrix-vector product
+- `./bin/sparsifier -c 4 data/2x2x2_7_DPS-smallrat-12.2034_L.sms`: a factorization of that matrix into a sparser one (also with many 1s) by an alternate change of basis (CoB) 4x4 matrix
+- `./bin/factorizer -k 6 data/2x2x2_7_DPS-smallrat-12.2034_L.sms`: a factorization of that matrix into a 7x6 sparser one by a 6x4 matrix
+- `./bin/inplacer data/2x2x2_7_Winograd_L.sms`: in-place matrix-vector accumulating multiplication
+- `./bin/trilplacer data/2x2x2_7_Winograd_L.sms data/2x2x2_7_Winograd_R.sms data/2x2x2_7_Winograd_P.sms`: in-place version of Strassen-Winograd's fast 2x2 accumulating multiplication
+- `./bin/trilplacer data/1o1o2_3_Karatsuba_L.sms data/1o1o2_3_Karatsuba_R.sms data/1o1o2_3_Karatsuba_P.sms -e`: in-place version of Karatsuba's fast accumulating polynomial multiplication
+- `./bin/optimizer -q 17 data/2x2x2_7_DPS-accurate_L.sms | ./bin/compacter -s | ./bin/PMchecker -q 17 -M data/2x2x2_7_DPS-accurate_L.sms`: creates a program for `2x2x2_7_DPS-accurate_L.sms` modulo 17, compacts it with less variables, then checks consistency
