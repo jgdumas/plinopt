@@ -31,7 +31,7 @@ done
 MTRSP=${BINDIR}/matrix-transpose
 OPTIM=${BINDIR}/optimizer
 CMPCT=${BINDIR}/compacter
-PMCHK=${BINDIR}/PMchecker
+SLPCK=${BINDIR}/SLPchecker
 TELLG=${BINDIR}/transpozer
 FCTZR=${BINDIR}/factorizer
 INPLR=${BINDIR}/inplacer
@@ -46,11 +46,11 @@ do
     n=${mdims[1]}
     echo "${fic} ${m}x${n}:"
 
-    ((${OPTIM} -O ${numopt} $fic | ${CMPCT} -s | ${PMCHK} -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
+    ((${OPTIM} -O ${numopt} $fic | ${CMPCT} -s | ${SLPCK} -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
 
-    ((${MTRSP} $fic | ${OPTIM} -q ${modulus} -O ${numopt} | ${TELLG} | ${CMPCT} -s | ${PMCHK}  -q ${modulus} -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
+    ((${MTRSP} $fic | ${OPTIM} -q ${modulus} -O ${numopt} | ${TELLG} | ${CMPCT} -s | ${SLPCK}  -q ${modulus} -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
 
-    ((${MTRSP} $fic | ${OPTIM} -O ${numopt} | ${TELLG} | ${CMPCT} -s | ${PMCHK} -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
+    ((${MTRSP} $fic | ${OPTIM} -O ${numopt} | ${TELLG} | ${CMPCT} -s | ${SLPCK} -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
 
     ((${SPSFR} -c ${coeffs} $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
 
@@ -64,9 +64,9 @@ do
 	((${MTRSP} $fic |${FCTZR} -O ${numopt}) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
     fi
 
-    ((${INPLR} -O ${numopt} $fic | ${PMCHK} -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
+    ((${INPLR} -O ${numopt} $fic | ${SLPCK} -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
 
-    ((${MTRSP} $fic | ${INPLR} -t -O ${numopt} | ${PMCHK} -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
+    ((${MTRSP} $fic | ${INPLR} -t -O ${numopt} | ${SLPCK} -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
 
 fi
 done
