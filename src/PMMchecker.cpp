@@ -24,13 +24,86 @@ using LinBox::Tag::FileFormat;
 
 typedef Givaro::QField<Givaro::Rational> QRat;
 
+#if 0
 typedef LinBox::PolynomialRing<QRat> QPol;
+#else
+
+
+class QPol : public LinBox::PolynomialRing<QRat> {
+    typedef LinBox::PolynomialRing<QRat> Parent_t;
+public:
+    using Parent_t::Element;
+    using Parent_t::Element_ptr;
+    using Parent_t::ConstElement_ptr;
+    using Parent_t::Type_t;
+    using Parent_t::Parent_t; // using inherited constructors
+
+    std::istream& read ( std::istream& i, Element& P) const {
+        this->init(P); // reset P
+        using Givaro::Degree;
+        std::string s;
+        std::getline(i, s);
+        s.erase(std::remove_if(s.begin(), s.end(), ::isspace),s.end());
+
+        std::ostringstream Xstream; Xstream << this->getIndeter();
+        std::string X(Xstream.str());
+
+
+            // Break into units at every '+' or '-'; the limits will be [p,q)
+        int p = 0, q = p;
+        while ( q < s.size() ) {
+            for ( q = p + 1; q < s.size() && s[q] != '+' && s[q] != '-'; q++ );
+            std::string unit = s.substr( p, q - p );
+            // should be of form "cxn", meaning c times x^n
+            // Pick out coefficient and exponent
+            QRat::Element c; this->getDomain().assign(c,this->getDomain().one);
+            Givaro::Degree n(0);
+            int pos = unit.find( X ); // position of char X
+            if ( pos == std::string::npos ) { // X not found; pure number
+                std::stringstream( unit ) >> c;
+            } else { // identify coefficient (c) and exponent (n)
+                if ( pos != 0 ) { // pos == 0 would mean default c = 1
+                    std::string first = unit.substr( 0, pos );
+                    if ( first == "+" ) this->getDomain().assign(c,this->getDomain().one); // just "+" means +1
+                    else if ( first == "-" ) this->getDomain().assign(c,this->getDomain().mOne); // just "-" means -1
+                    else std::stringstream( first ) >> c;
+                }
+                if ( pos == unit.size() - 1 )
+                {
+                    n = 1;
+                }
+                else
+                {
+                    std::stringstream( unit.substr( pos + 1 ) ) >> n;
+                }
+            }
+
+//             this->write(std::clog << "Current P" << P << ':', P) << std::endl;
+//             std::clog << "Read deg: " << n << std::endl;
+//             std::clog << "Read coef: " << c << std::endl;
+
+            Element monomial; this->init(monomial, Degree(n), c);
+            this->addin(P,monomial);
+            p = q;
+        }
+
+//         this->write(std::clog << "Parent read" << P << ':', P)
+//                               << std::endl;
+
+        return i;
+    }
+};
+#endif
+
+
 typedef Givaro::QuotientDom<QPol> PMods;
 
 typedef LinBox::MatrixStream<PMods> QMstream;
 typedef LinBox::SparseMatrix<PMods,
                              LinBox::SparseMatrixFormat::SparseSeq > Matrix;
 typedef LinBox::DenseVector<PMods> QVector;
+
+
 
 
 // ===============================================================
@@ -51,14 +124,15 @@ int main(int argc, char ** argv) {
     QRat Rats;
     QPol QQX(Rats,'X');
     QPol::Element QP;
-    std::clog << "# Enter quotient polynomial\n#\t(degree, then list of decreasing degree coefficients):" << std::endl;
+    std::clog << "# Enter quotient polynomial in " << QQX.getIndeter()
+              << " :" << std::endl;
     QQX.read(std::cin, QP);
     QQX.write(std::clog << "# Quotient polynomial: ", QP) << " = 0" << std::endl;
-    
-            
+
+
 
     PMods QQXm(QQX, QP);
-    
+
 
 
     QMstream ls(QQXm, left), rs(QQXm, right), ss(QQXm, product);
@@ -111,7 +185,7 @@ int main(int argc, char ** argv) {
 
 
     if (BMD.areEqual (Rc,Mc))
-        std::clog <<"# \033[1;32mOK : correct Matrix-Multiplication!\033[0m" << std::endl;
+        QQX.write(std::clog <<"# \033[1;32mOK : correct Matrix-Multiplication modulo ",QP) << "!\033[0m" << std::endl;
     else{
         std::cerr << "# \033[1;31m****** ERROR, not a MM algorithm******\033[0m"
                   << std::endl;
