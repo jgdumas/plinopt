@@ -34,14 +34,6 @@ inline bool isNatural(const std::string& s) {
 }
 // ============================================================
 
-// ============================================================
-inline size_t progSize(const VProgram_t& P) {
-    size_t PVs(0);
-    for(const auto& line: P) PVs += line.size();
-    return PVs-(P.size()<<1); // do not count ':=', nor ';'
-}
-// ============================================================
-
 
 // ============================================================
 inline std::ostream& operator<<(std::ostream& sout, const VProgram_t& P) {
@@ -114,6 +106,38 @@ void swapsign(std::string& s) {
 // ============================================================
 
 
+// ============================================================
+inline size_t progSize(const VProgram_t& P) {
+    size_t PVs(0);
+    for(const auto& line: P) PVs += line.size();
+    return PVs-(P.size()<<1); // do not count ':=', nor ';'
+}
+
+inline Pair<size_t> progOperations(const VProgram_t& P) {
+    Pair<size_t> prgops{0,0};
+    size_t size(0);
+    for(const auto& line: P) {
+        size += (line.size()-4)/2;
+        bool negator=false;
+        for(const auto& word: line) {
+            if (isAddSub(word) && (!negator)) {
+                ++prgops.first;
+            } else if (isMulDiv(word)) {
+                ++prgops.second;
+            }
+
+                // Negation is not counted as an arithmetic operation
+            if (isParAff(word)) {
+                negator=true;
+            } else {
+                negator=false;
+            }
+        }
+    }
+
+    return std::move(prgops);
+}
+// ============================================================
 
 
 // ============================================================

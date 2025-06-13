@@ -24,8 +24,11 @@ _Mat& SLPbuilder(_Mat& A, std::istream& input) {
 
         // Line by line parsing
     VProgram_t ProgramVector; programParser(ProgramVector, ssin);
-//     const size_t PVs { progSize(ProgramVector) };
+    const auto PVs { progOperations(ProgramVector) };
     std::clog << std::string(40,'#') << std::endl;
+    std::clog << "# \033[1;32m" << PVs.first << "\tadditions" << "\033[0m" << std::endl;
+    std::clog << "# \033[1;32m" << PVs.second << "\tmultiplications" << "\033[0m" << std::endl;
+
 
     parenthesisExpand(ProgramVector);
     std::clog << std::string(40,'#') << std::endl;
