@@ -21,6 +21,10 @@
 #include <linbox/util/matrix-stream.h>
 
 using LinBox::Tag::FileFormat;
+using Givaro::Integer;
+using Givaro::Degree;
+using Givaro::Indeter;
+
 
 typedef Givaro::QField<Givaro::Rational> QRat;
 
@@ -50,15 +54,15 @@ public:
 
 
             // Break into units at every '+' or '-'; the limits will be [p,q)
-        int p = 0, q = p;
+        size_t p = 0, q = p;
         while ( q < s.size() ) {
             for ( q = p + 1; q < s.size() && s[q] != '+' && s[q] != '-'; q++ );
-            std::string unit = s.substr( p, q - p );
+            std::string unit(s.substr( p, q - p ));
             // should be of form "cxn", meaning c times x^n
             // Pick out coefficient and exponent
             QRat::Element c; this->getDomain().assign(c,this->getDomain().one);
             Givaro::Degree n(0);
-            int pos = unit.find( X ); // position of char X
+            const size_t pos(unit.find( X )); // position of char X
             if ( pos == std::string::npos ) { // X not found; pure number
                 std::stringstream( unit ) >> c;
             } else { // identify coefficient (c) and exponent (n)
@@ -68,13 +72,14 @@ public:
                     else if ( first == "-" ) this->getDomain().assign(c,this->getDomain().mOne); // just "-" means -1
                     else std::stringstream( first ) >> c;
                 }
-                if ( pos == unit.size() - 1 )
-                {
-                    n = 1;
-                }
-                else
-                {
-                    std::stringstream( unit.substr( pos + 1 ) ) >> n;
+                n = 1; // n>=1 now
+                if ( pos != unit.size() - 1 ) {
+
+                        // monomial c * X^n
+                    const std::size_t expo(unit.find_first_of("0123456789"));
+                    if (expo != std::string::npos) {
+                        std::stringstream( unit.substr( expo ) ) >> n;
+                    }
                 }
             }
 
@@ -110,26 +115,43 @@ typedef LinBox::DenseVector<PMods> QVector;
 // argv[1-3]: L.sms R.sms P.sms
 // argv[4]: bitsize
 int main(int argc, char ** argv) {
+    QRat Rats;
+    QPol QQX(Rats, 'X');
+    QPol::Element QP;
+    std::vector<std::string> files;
+    size_t bitsize(32u);
 
-    if ((argc <=3) || (std::string(argv[1]) == "-h")) {
-        std::clog << "Usage: " << argv[0] << " L.sms R.sms P.sms [bitsize]\n";
-        exit(-1);
+    for (int i = 1; argc>i; ++i) {
+        std::string args(argv[i]);
+        if (args == "-h") {
+            std::clog << "Usage: " << argv[0]
+                      << " [-h|-I x|-P P(x)|-b #] L.sms R.sms P.sms \n";
+            std::clog
+                << "  -I x: indeterminate (default is X)\n"
+                << "  -P P(x): modular polynomial(default is none)\n"
+                << "  -b #: random check with #-large values (default is 32)\n";
+
+            exit(-1);
+        }
+        else if (args == "-I") { QQX.setIndeter(Indeter(argv[++i][0])); }
+        else if (args == "-P") {
+            std::stringstream sargs( argv[++i] );
+            QQX.read(sargs, QP);
+        } else if (args == "-b") { std::stringstream(argv[++i]) >> bitsize; }
+        else { files.push_back(args); }
     }
 
         // =============================================
         // Reading matrices
-	std::ifstream left (argv[1]), right (argv[2]), product(argv[3]);
-    size_t bitsize(argc>4?atoi(argv[4]):32u);
+	std::ifstream left (files[0]), right (files[1]), product(files[2]);
 
-    QRat Rats;
-    QPol QQX(Rats,'X');
-    QPol::Element QP;
-    std::clog << "# Enter quotient polynomial in " << QQX.getIndeter()
-              << " :" << std::endl;
-    QQX.read(std::cin, QP);
-    QQX.write(std::clog << "# Quotient polynomial: ", QP) << " = 0" << std::endl;
-
-
+        // =============================================
+        // Reading modular polynomial
+//     std::clog << "# Enter quotient polynomial in " << QQX.getIndeter()
+//               << " :" << std::endl;
+//     QQX.read(std::cin, QP);
+    QQX.write(QQX.write(std::clog << "# Quotient polynomial over ")
+              << " : ", QP) << " = 0" << std::endl;
 
     PMods QQXm(QQX, QP);
 
@@ -185,7 +207,7 @@ int main(int argc, char ** argv) {
 
 
     if (BMD.areEqual (Rc,Mc))
-        QQX.write(std::clog <<"# \033[1;32mOK : correct Matrix-Multiplication modulo ",QP) << "!\033[0m" << std::endl;
+        QQX.write(std::clog <<"# \033[1;32mOK : correct Matrix-Multiplication modulo ",QP) << ".\033[0m" << std::endl;
     else{
         std::cerr << "# \033[1;31m****** ERROR, not a MM algorithm******\033[0m"
                   << std::endl;
