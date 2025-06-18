@@ -19,11 +19,11 @@ LOADLIBES+= `pkg-config linbox --libs |sed 's/-liml//;s/-lfplll//;s/-lflint//'`
 
 #######
 
-EXE  = sms2pretty matrix-transpose MMchecker
-EXE += transpozer compacter SLPchecker
-EXE += optimizer
+EXE  = optimizer
 EXE += sparsifier factorizer
 EXE += inplacer trilplacer
+EXE += transpozer compacter SLPchecker
+EXE += sms2pretty matrix-transpose columns-swap MMchecker
 EXE += PMMchecker
 
 SRC=${EXE:%=src/%.cpp}
