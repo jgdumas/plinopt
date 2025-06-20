@@ -1,3 +1,5 @@
+# Post CoB matrix multiplying 4x4 matrices using 48 non-complex multiplications
+# https://hal.science/hal-05112145
 16 47 R
 1 2 1/8
 1 4 -1/2

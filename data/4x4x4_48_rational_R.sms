@@ -1,3 +1,5 @@
+# Right HM matrix multiplying 4x4 matrices using 48 non-complex multiplications
+# https://hal.science/hal-05112145
 48 16 M
 1 9 -1
 1 13 -1

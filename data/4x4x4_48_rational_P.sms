@@ -1,3 +1,5 @@
+# Post HM matrix multiplying 4x4 matrices using 48 non-complex multiplications
+# https://hal.science/hal-05112145
 16 48 M
 1 2 -1/2
 1 9 1/8
