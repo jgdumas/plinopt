@@ -76,7 +76,7 @@ int SLPcheck(const std::string& prgname, const std::string& matname,
         BMD.sub(R,dB,dA);
 
         if (BMD.isZero (R))
-            std::clog <<"# \033[1;32mSUCCESS: correct "
+            std::clog <<"# \033[1;32mSUCCESS: correct SLP for "
                       << m << 'x' << n
                       << " Matrix-Vector multiplication!\033[0m" << std::endl;
         else {
