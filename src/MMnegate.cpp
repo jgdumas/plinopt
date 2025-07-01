@@ -23,8 +23,6 @@
 
 // ===============================================================
 // argv[1-3]: L.sms R.sms P.sms
-// argv[4]: bitsize
-// argv[5-6]: modulus = (argv[6]^2-argv[5]), and /2 if argv[5]!=2
 int main(int argc, char ** argv) {
 
     if ((argc <=3) || (std::string(argv[1]) == "-h")) {
@@ -56,15 +54,27 @@ int main(int argc, char ** argv) {
     std::clog << std::string(30,'#') << std::endl;
 #endif
 
+    Tricounter mkn(LRP2MM(L,R,P));
+    const size_t& m(std::get<0>(mkn)), k(std::get<1>(mkn)), n(std::get<2>(mkn));
+
+        // =============================================
+        // Optimizing negative values
+    std::clog <<"# Optimizing negative values for "
+              << m << 'x' << k << 'x' << n
+              << " Matrix-Multiplication..." << std::endl;
+
     Matrix Pt(QQ); Transpose(Pt,P);
+    size_t Gn(0), Nn(0), Sn(0);
 
     for(size_t i=0; i<L.rowdim(); ++i) {
+        Sn += L[i].size(); Sn += R[i].size(); Sn += Pt[i].size();
+
         size_t Lnegs(0), Rnegs(0), Pnegs(0);
         for(const auto& it: L[i]) if (it.second < QQ.zero) ++Lnegs;
         for(const auto& it: R[i]) if (it.second < QQ.zero) ++Rnegs;
         for(const auto& it: Pt[i]) if (it.second < QQ.zero) ++Pnegs;
 
-        size_t None(Lnegs+Rnegs+Pnegs);
+        size_t None(Lnegs+Rnegs+Pnegs); Gn += None;
         size_t NLR(L[i].size()-Lnegs+R[i].size()-Rnegs+Pnegs);
         size_t NLP(L[i].size()-Lnegs+Rnegs+Pt[i].size()-Pnegs);
         size_t NRP(Lnegs+R[i].size()-Rnegs+Pt[i].size()-Pnegs);
@@ -75,23 +85,27 @@ int main(int argc, char ** argv) {
                   << ' ' << Rnegs << '/' << R[i].size()
                   << ' ' << Pnegs << '/' << Pt[i].size()
                   << "  -->  "
-                  << None << ',' << NLR << ',' << NLP << ',' << NRP;
+                  << None << ':' << NLR << ',' << NLP << ',' << NRP;
 
         if ((NLR < None) && (NLR <= NLP) && (NLR <= NRP)) {
             std::clog << "  -->  swap signs L[" << i << "] & R[" << i << ']';
             for(auto& it: L[i]) QQ.negin(it.second);
             for(auto& it: R[i]) QQ.negin(it.second);
-        }
+            Nn += NLR;
+        } else
         if ((NLP < None) && (NLP < NLR) && (NLP <= NRP)) {
             std::clog << "  -->  swap signs L[" << i << "] & Pt[" << i << ']';
             for(auto& it: L[i]) QQ.negin(it.second);
             for(auto& it: Pt[i]) QQ.negin(it.second);
-        }
+            Nn += NLP;
+        } else
         if ((NRP < None) && (NRP < NLP) && (NRP < NLR)) {
             std::clog << "  -->  swap signs R[" << i << "] & Pt[" << i << ']';
             for(auto& it: R[i]) QQ.negin(it.second);
             for(auto& it: Pt[i]) QQ.negin(it.second);
-        }
+            Nn += NRP;
+        } else
+            Nn += None;
 
         std::clog << std::endl;
     }
@@ -110,6 +124,10 @@ int main(int argc, char ** argv) {
     R.write(oright,FileFormat(5));
     P.write(opost,FileFormat(5));
 
+
+       // =============================================
+    std::clog << "# \033[1;32m" << Nn << '/' << Sn << "\tnegative\tinstead of "
+              << Gn << '/' << Sn << "\033[0m" << std::endl;
 
     return 0;
 }
