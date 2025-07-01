@@ -65,9 +65,11 @@ int main(int argc, char ** argv) {
 
     Matrix Pt(QQ); Transpose(Pt,P);
     size_t Gn(0), Nn(0), Sn(0);
+    size_t GLn(0),NLn(0),SLn(0), GRn(0),NRn(0),SRn(0), GPn(0),NPn(0),SPn(0);
 
     for(size_t i=0; i<L.rowdim(); ++i) {
         Sn += L[i].size(); Sn += R[i].size(); Sn += Pt[i].size();
+        SLn += L[i].size(); SRn += R[i].size(); SPn += Pt[i].size();
 
         size_t Lnegs(0), Rnegs(0), Pnegs(0);
         for(const auto& it: L[i]) if (it.second < QQ.zero) ++Lnegs;
@@ -75,6 +77,8 @@ int main(int argc, char ** argv) {
         for(const auto& it: Pt[i]) if (it.second < QQ.zero) ++Pnegs;
 
         size_t None(Lnegs+Rnegs+Pnegs); Gn += None;
+        GLn += Lnegs; GRn += Rnegs; GPn += Pnegs;
+
         size_t NLR(L[i].size()-Lnegs+R[i].size()-Rnegs+Pnegs);
         size_t NLP(L[i].size()-Lnegs+Rnegs+Pt[i].size()-Pnegs);
         size_t NRP(Lnegs+R[i].size()-Rnegs+Pt[i].size()-Pnegs);
@@ -92,20 +96,33 @@ int main(int argc, char ** argv) {
             for(auto& it: L[i]) QQ.negin(it.second);
             for(auto& it: R[i]) QQ.negin(it.second);
             Nn += NLR;
+            NLn += L[i].size(); NLn -= Lnegs;
+            NRn += R[i].size(); NRn -= Rnegs;
+            NPn += Pnegs;
         } else
         if ((NLP < None) && (NLP < NLR) && (NLP <= NRP)) {
             std::clog << "  -->  swap signs L[" << i << "] & Pt[" << i << ']';
             for(auto& it: L[i]) QQ.negin(it.second);
             for(auto& it: Pt[i]) QQ.negin(it.second);
             Nn += NLP;
+            NLn += L[i].size(); NLn -= Lnegs;
+            NRn += Rnegs;
+            NPn += Pt[i].size(); NPn -= Pnegs;
         } else
         if ((NRP < None) && (NRP < NLP) && (NRP < NLR)) {
             std::clog << "  -->  swap signs R[" << i << "] & Pt[" << i << ']';
             for(auto& it: R[i]) QQ.negin(it.second);
             for(auto& it: Pt[i]) QQ.negin(it.second);
             Nn += NRP;
-        } else
+            NLn += Lnegs;
+            NRn += R[i].size(); NRn -= Rnegs;
+            NPn += Pt[i].size(); NPn -= Pnegs;
+        } else {
             Nn += None;
+            NLn += Lnegs;
+            NRn += Rnegs;
+            NPn += Pnegs;
+        }
 
         std::clog << std::endl;
     }
@@ -126,8 +143,12 @@ int main(int argc, char ** argv) {
 
 
        // =============================================
-    std::clog << "# \033[1;32m" << Nn << '/' << Sn << "\tnegative\tinstead of "
-              << Gn << '/' << Sn << "\033[0m" << std::endl;
+    std::clog << "# \033[1;32m" << Nn << '/' << Sn << ':'
+              << '(' << NLn << '+' << NRn << '+' << NPn << ')'
+              << '/' << '(' << SLn << '+' << SRn << '+' << SPn << ')'
+              << " negative instead of "
+              << Gn << '(' << GLn << '+' << GRn << '+' << GPn << ')'
+              << '/' << Sn << "\033[0m" << std::endl;
 
     return 0;
 }
