@@ -9,6 +9,7 @@
 
 #include "plinopt_inplace.h"
 
+namespace PLinOpt {
 // ===============================================================
 // Tools for atomic operation (ADD or SCA)
 struct Atom {
@@ -1070,6 +1071,7 @@ void CheckTriLinearProgram(const char L, const Matrix& AA,
               << L << "Input," << H << "Input," << F << "Output]);"
               << std::endl;
 }
-
 #endif
-// ===============================================================
+
+} // End of namespace PLinOpt
+// ============================================

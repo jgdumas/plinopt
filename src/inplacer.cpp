@@ -31,6 +31,8 @@ void usage(int argc, char ** argv) {
 }
 
 
+namespace PLinOpt {
+// ============================================================
 std::ostream& FindProgram(std::ostream& out, std::istream& input,
                           const size_t randomloops, const bool transposed) {
     QRat QQ; QMstream qs(QQ, input); Matrix M(qs);
@@ -78,6 +80,11 @@ std::ostream& FindProgram(std::ostream& out, std::istream& input,
 }
 
 
+} // End of namespace PLinOpt
+// ============================================
+
+
+
 
 // ===============================================================
 // argv[1]: L.sms
@@ -108,10 +115,10 @@ int main(int argc, char ** argv) {
     if (filenames.size() > 0) {
         for(size_t i(0); i<filenames.size(); ++i) {
             std::ifstream input (filenames[i]);
-            FindProgram(std::cout, input, randomloops, transposed) << std::flush;
+            PLinOpt::FindProgram(std::cout, input, randomloops, transposed);
         }
     } else {
-        FindProgram(std::cout, std::cin, randomloops, transposed) << std::flush;
+        PLinOpt::FindProgram(std::cout, std::cin, randomloops, transposed);
     }
 
     return 0;

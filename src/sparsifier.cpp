@@ -14,6 +14,7 @@
 
 #include "plinopt_sparsify.h"
 
+namespace PLinOpt {
 // ============================================================
 // Sparsifying and reducing coefficient diversity of a matrix
 int Selector(std::istream& input, const FileFormat& matformat,
@@ -65,6 +66,10 @@ int Selector(std::istream& input, const FileFormat& matformat,
 }
 
 
+} // End of namespace PLinOpt
+// ============================================
+
+
 // ============================================================
 // Main: select between file / std::cin
 //       -c #: sets the max number of coefficients per iteration
@@ -72,6 +77,7 @@ int Selector(std::istream& input, const FileFormat& matformat,
 //       -b #: states the blocking dimension
 //       -U [1|0]: uses an initial LU factorization | or not
 int main(int argc, char** argv) {
+    using PLinOpt::FileFormat;
 
     FileFormat matformat = FileFormat::Pretty;
     std::string filename;
@@ -101,12 +107,12 @@ int main(int argc, char** argv) {
     }
 
     if (filename == "") {
-        return Selector(std::cin, matformat,
-                        blocksize, maxnumcoeff, initialElimination);
+        return PLinOpt::Selector(std::cin, matformat,
+                                 blocksize, maxnumcoeff, initialElimination);
     } else {
         std::ifstream inputmatrix(filename);
-        return Selector(inputmatrix, matformat,
-                        blocksize, maxnumcoeff, initialElimination);
+        return PLinOpt::Selector(inputmatrix, matformat,
+                                 blocksize, maxnumcoeff, initialElimination);
     }
 
     return -1;

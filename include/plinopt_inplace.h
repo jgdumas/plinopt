@@ -12,11 +12,12 @@
  *     (https://hal.science/hal-04167499) ]
  ****************************************************************/
 
-#include "plinopt_library.h"
-
 #ifndef _PLINOPT_LIBRARY_INPLACE_H_
 #define _PLINOPT_LIBRARY_INPLACE_H_
 
+#include "plinopt_library.h"
+
+namespace PLinOpt {
 // ===============================================================
 // Inplace Program is a vector of atomic operations (ADD or SCA)
 struct Atom;
@@ -122,7 +123,7 @@ std::string rmnl(const std::string& str) {
 
 // ===============================================================
 // Enables checking a matrix multiplication with Maple
-#ifdef INPLACE_CHECKER
+#  ifdef INPLACE_CHECKER
     // Compare program with a matrix multiplication
 void CheckMatrixMultiplication(const char L, const Matrix& A,
                                const char H, const Matrix& B,
@@ -133,9 +134,11 @@ void CheckTriLinearProgram(const char L, const Matrix& AA,
                            const char H, const Matrix& BB,
                            const char F, const Matrix& CC,
                            bool expanded = false);
-#endif
+#  endif
 
+
+} // End of namespace PLinOpt
+// ============================================
 
 #include "plinopt_inplace.inl"
-
 #endif

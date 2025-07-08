@@ -18,6 +18,10 @@
  *     (https://hal.science/hal-04441653) ]
  ****************************************************************/
 
+
+#ifndef _PLINOPT_LIBRARY_SPARSIFY_H_
+#define _PLINOPT_LIBRARY_SPARSIFY_H_
+
 // ============================================================
 // Define to print comments during parsing
 //#define VERBATIM_PARSING
@@ -37,10 +41,7 @@
 #include "plinopt_library.h"
 #include <linbox/algorithms/gauss.h>
 
-
-#ifndef _PLINOPT_LIBRARY_SPARSIFY_H_
-#define _PLINOPT_LIBRARY_SPARSIFY_H_
-
+namespace PLinOpt {
 // ============================================================
 // Sparsifying a Matrix M, in-place
 //   uses a limited number of coefficients for the linear comb.
@@ -157,7 +158,9 @@ Matrix& augmentedMatrix(Matrix&, const std::vector<_Mat>&);
 template <typename Fwd>
 Givaro::Rational most_frequent_element(const Fwd& begin, const Fwd& end);
 
-// ============================================================
+
+} // End of namespace PLinOpt
+// ============================================
 
 #include "plinopt_sparsify.inl"
 #endif

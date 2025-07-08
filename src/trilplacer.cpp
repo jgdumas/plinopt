@@ -62,6 +62,7 @@ void usage(char ** argv) {
 //   -O # randomized search of that many loops
 //        looks for reduced number of additions, then multiplications
 int main(int argc, char ** argv) {
+    using PLinOpt::FileFormat;
 
     size_t randomloops(DORANDOMSEARCH?DEFAULT_RANDOM_LOOPS:1);
     bool doexpand(false), checkmat(false);
@@ -90,11 +91,11 @@ int main(int argc, char ** argv) {
         // Reading matrices
 	std::ifstream left (files[0]), right (files[1]), product(files[2]);
 
-    QRat QQ;
-    QMstream ls(QQ, left), rs(QQ, right), ps(QQ, product);
-    Matrix A(ls), B(rs), C(ps);
+    PLinOpt::QRat QQ;
+    PLinOpt::QMstream ls(QQ, left), rs(QQ, right), ps(QQ, product);
+    PLinOpt::Matrix A(ls), B(rs), C(ps);
 
-    Matrix T(QQ); Transpose(T, C);
+    PLinOpt::Matrix T(QQ); PLinOpt::Transpose(T, C);
 
 
 #ifdef VERBATIM_PARSING
@@ -106,14 +107,14 @@ int main(int argc, char ** argv) {
 #endif
 
 
-    Tricounter opcount; // 0:ADD, 1:SCA, 2:MUL
+    PLinOpt::Tricounter opcount; // 0:ADD, 1:SCA, 2:MUL
 
     if (doexpand) {
             // =================================
             // Duplicate intermediate products
             // to group them 2 by 2
-        Matrix AA(QQ), BB(QQ), TT(QQ);
-        DoubleExpand(AA,BB,TT, A,B,T);
+        PLinOpt::Matrix AA(QQ), BB(QQ), TT(QQ);
+        PLinOpt::DoubleExpand(AA,BB,TT, A,B,T);
 
 #ifdef VERBATIM_PARSING
     A.write(std::clog << "A:\n",FileFormat::Pretty) << std::endl;
@@ -123,31 +124,36 @@ int main(int argc, char ** argv) {
 #endif
 
 #ifdef INPLACE_CHECKER
-        InitializeVariables('a',AA.coldim(), 'b', BB.coldim(), 'c', TT.coldim());
+        PLinOpt::InitializeVariables('a',AA.coldim(), 'b', BB.coldim(),
+                                     'c', TT.coldim());
 #endif
             // TODO: a SearchTriLinearAlgorithm preserving 2 by 2 products ...
-        opcount = SearchTriLinearAlgorithm(std::cout, A, B, TT, randomloops, true);
+        opcount = PLinOpt::SearchTriLinearAlgorithm(std::cout, A, B, TT,
+                                                    randomloops, true);
 
 #ifdef INPLACE_CHECKER
-        Matrix CC(QQ); Transpose(CC, TT);
-        CheckTriLinearProgram('a', AA, 'b', BB, 'c', CC, true);
+        PLinOpt::Matrix CC(QQ); PLinOpt::Transpose(CC, TT);
+        PLinOpt::CheckTriLinearProgram('a', AA, 'b', BB, 'c', CC, true);
 #endif
 
     } else {
             // =================================
             // Direct computation
 #ifdef INPLACE_CHECKER
-        InitializeVariables('a',A.coldim(), 'b', B.coldim(), 'c', T.coldim());
+        PLinOpt::InitializeVariables('a',A.coldim(), 'b', B.coldim(),
+                                     'c', T.coldim());
 #endif
 
-        opcount = SearchTriLinearAlgorithm(std::cout, A, B, T, randomloops);
+        opcount = PLinOpt::SearchTriLinearAlgorithm(std::cout, A, B, T,
+                                                    randomloops);
 
 #ifdef INPLACE_CHECKER
-        CollectVariables('a',A.coldim(), 'b', B.coldim(), 'c', T.coldim());
+        PLinOpt::CollectVariables('a',A.coldim(), 'b', B.coldim(),
+                                  'c', T.coldim());
         if (checkmat)
-            CheckMatrixMultiplication('a', A, 'b', B, 'c', C);
+            PLinOpt::CheckMatrixMultiplication('a', A, 'b', B, 'c', C);
         else
-            CheckTriLinearProgram('a', A, 'b', B, 'c', C, false);
+            PLinOpt::CheckTriLinearProgram('a', A, 'b', B, 'c', C, false);
 #endif
 
     }

@@ -26,6 +26,7 @@
 #include <streambuf>
 
 
+namespace PLinOpt {
 // ============================================================
 // Testing for a natural number within a string
 inline bool isNatural(const std::string& s) {
@@ -1307,11 +1308,7 @@ size_t extractParenthesis(VProgram_t& newP, std::vector<std::string>& line,
     } else
         return 0;
 }
-// ============================================================
-
-
-
-
+// ============================================================x
 
 
 // ============================================================
@@ -1332,4 +1329,7 @@ VProgram_t& parenthesisExpand(VProgram_t& P) {
     }
     return P=std::move(nProgram);
 }
-// ============================================================
+
+
+} // End of namespace PLinOpt
+// ============================================

@@ -29,7 +29,7 @@
 #include <linbox/matrix/sparse-matrix.h>
 
 #include "plinopt_library.h"
-using LinBox::Tag::FileFormat;
+using PLinOpt::FileFormat;
 
 // ============================================================
 // Special latex formatting for matrices of rationals
@@ -74,7 +74,7 @@ std::ostream& PrettyPrint(std::ostream& out, std::istream& input,
 
     do {
         chrono.start();
-        Matrix A ( ms );
+        PLinOpt::Matrix A ( ms );
         chrono.stop();
 
             // ====================================================
@@ -103,7 +103,8 @@ std::ostream& PrettyPrint(std::ostream& out, std::istream& input,
                  (matformat == FileFormat::HTML)  ||
                  (matformat == FileFormat(6))     ||	// dense
                  (matformat == FileFormat(12))  ) {		// linalg
-                DenseMatrix B(QQ,A.rowdim(),A.coldim()); any2dense(B,A);
+                PLinOpt::DenseMatrix B(QQ,A.rowdim(),A.coldim());
+                PLinOpt::any2dense(B,A);
                 if (matformat == FileFormat(6))
                     out << B << std::endl;
                 else

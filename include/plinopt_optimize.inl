@@ -10,6 +10,9 @@
 #include "plinopt_optimize.h"
 
 
+namespace PLinOpt {
+// ===============================================================
+
 template<typename T1, typename T2>
 std::ostream& operator<<(std::ostream& out, const std::map<T1,T2>& v) {
     out << '{';
@@ -881,3 +884,7 @@ Pair<size_t> RecOptimizer(std::ostream& sout, _Mat& M,
 
     return Pair<size_t>(nbadd,alreadymuls);
 }
+
+
+} // End of namespace PLinOpt
+// ============================================

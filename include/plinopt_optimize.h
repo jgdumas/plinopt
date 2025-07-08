@@ -28,13 +28,15 @@
 // ============================================================
 
 
+#ifndef _PLINOPT_LIBRARY_OPTIMIZE_H_
+#define _PLINOPT_LIBRARY_OPTIMIZE_H_
+
 #include "plinopt_library.h"
 #include <givaro/modular.h>
 #include <linbox/algorithms/gauss.h>
 
-#ifndef _PLINOPT_LIBRARY_OPTIMIZE_H_
-#define _PLINOPT_LIBRARY_OPTIMIZE_H_
-
+namespace PLinOpt {
+// ===============================================================
 template<typename Ring>
 using Etriple = std::tuple<size_t, size_t, typename Ring::Element>;
 
@@ -123,6 +125,9 @@ Pair<size_t> nullspacedecomp(std::ostream& sout, _Mat& x, _Mat& A,
                              std::vector<size_t>& l,
                              const bool mostCSE=false);
 
+
+} // End of namespace PLinOpt
+// ============================================
 
 #include "plinopt_optimize.inl"
 #endif

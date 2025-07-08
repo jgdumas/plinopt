@@ -35,9 +35,10 @@ int main(int argc, char ** argv) {
         // Reading matrices
 	std::ifstream left (argv[1]), right (argv[2]), product(argv[3]);
 
-    QRat QQ;
-    QMstream ls(QQ, left), rs(QQ, right), ss(QQ, product);
-    Matrix L(ls), R(rs), P(ss);
+    using PLinOpt::FileFormat;
+    PLinOpt::QRat QQ;
+    PLinOpt::QMstream ls(QQ, left), rs(QQ, right), ss(QQ, product);
+    PLinOpt::Matrix L(ls), R(rs), P(ss);
 
     if ( (L.rowdim() != R.rowdim()) || (L.rowdim() != P.coldim()) ) {
          std::cerr << "# \033[1;31m****** ERROR, inner dimension mismatch: "
@@ -54,7 +55,7 @@ int main(int argc, char ** argv) {
     std::clog << std::string(30,'#') << std::endl;
 #endif
 
-    Tricounter mkn(LRP2MM(L,R,P));
+    PLinOpt::Tricounter mkn(PLinOpt::LRP2MM(L,R,P));
     const size_t& m(std::get<0>(mkn)), k(std::get<1>(mkn)), n(std::get<2>(mkn));
 
         // =============================================
@@ -63,7 +64,7 @@ int main(int argc, char ** argv) {
               << m << 'x' << k << 'x' << n
               << " Matrix-Multiplication..." << std::endl;
 
-    Matrix Pt(QQ); Transpose(Pt,P);
+    PLinOpt::Matrix Pt(QQ); PLinOpt::Transpose(Pt,P);
     size_t Gn(0), Nn(0), Sn(0);
     size_t GLn(0),NLn(0),SLn(0), GRn(0),NRn(0),SRn(0), GPn(0),NPn(0),SPn(0);
 
@@ -128,7 +129,7 @@ int main(int argc, char ** argv) {
     }
 
 
-    Transpose(P, Pt);
+    PLinOpt::Transpose(P, Pt);
 
         // =============================================
         // Writing matrices

@@ -81,7 +81,7 @@ int main(int argc, char ** argv) {
         else if (args == "-m") { m = atoi(argv[++i]); }
         else { filename = args; }
     }
-    
+
     if (filename.size() > 0) {
         std::ifstream inputmatrix(filename);
         if ( inputmatrix ) {
@@ -90,6 +90,6 @@ int main(int argc, char ** argv) {
             return rt;
         }
     }
-    
+
     return InputTranspose(std::cin, matformat, m);
 }
