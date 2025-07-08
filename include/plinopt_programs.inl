@@ -669,43 +669,65 @@ bool negatingVariable(std::vector<std::string>& line,
 
 // ============================================================
 // Negate temporaries for output lines starting with a '-'
-size_t endingMinus(VProgram_t & P, const char inchar, const char outchar) {
-    if (P.empty()) return 0;
-    for(int i=P.size()-1; i>=0; --i) {
-        auto & varline(P[i]);
+size_t endingMinus(VProgram_t & vP, const char inchar, const char outchar) {
+    if (vP.empty()) return 0;
+    size_t rm(0);
+    for(int i=vP.size()-1; i>=0; --i) {
+        auto & varline(vP[i]);
         if (varline.front()[0] == outchar) {
             rotateMinus(varline);
             if ( varline[2] == "-") {
+                
+// std::clog << "endingMinus: " << varline << std::endl;
+ 
                 for(size_t j=3; j<varline.size(); ++j) {
                     const auto variable(varline[j]);
+                    VProgram_t P; P.assign(vP.begin(), vP.end());
                     if (isVariable(variable) &&
                         (variable[0] != inchar) && (variable[0] != outchar) ) {
+                        int cm(1);
 // std::clog << "# found variable: " << variable << std::endl;
                         for(int k=i-1; k>=0; --k) {
                             if (P[k].front() == variable) {
-// std::clog << "# found line[" << k << "]: " << P[k] << std::endl;
+                                const int bkm( (P[k][2]=="-") ? 1 : 0);
                                 auto refline(negateLine(P[k]));
                                 rotateMinus(refline);
+                                const int dkm(((refline[2]=="-")?1:0)-bkm);
+// std::clog << "# found line[" << k << "]: " << P[k] << " --> lminus " << dkm << std::endl;
+                                    // does it create a new minus?
+                                if (dkm > 0) {
+                                    break;
+                                } else {
+                                    cm += dkm;
+                                }
+
                                 P[k] = std::move(refline);
 // std::clog << "# repl. line[" << k << "]: " << P[k] << std::endl;
 
                                 for(size_t l=k+1; l<P.size(); ++l) {
                                     std::vector<std::string> negline;
+                                    const int blm( (P[l][2] == "-") ? 1 : 0 );
                                     bool linmod(negatingVariable(negline, P[l], variable));
                                     rotateMinus(negline);
                                     P[l] = std::move(negline);
-// std::clog << "# impa. line[" << l << "]: " << P[l] << std::endl;
+                                    const int dlm( ((P[l][2]=="-")?1:0) - blm);
+                                    cm += dlm;
+// std::clog << "# impa. line[" << l << "]: " << P[l] << " --> lminus " << dlm << std::endl;
                                     if (P[l].front() == variable) break;
                                 }
                             }
                         }
-                        break;
+                        if (cm <= 0) {
+                            vP.assign(P.begin(), P.end());
+                            ++rm;
+                            break; // Stop when at least 1 sign removed
+                        }
                     }
                 }
             }
         }
     }
-    return 0;
+    return rm;
 }
 // ============================================================
 
@@ -728,7 +750,6 @@ size_t swapMinus(VProgram_t & P, const char outchar) {
     for(auto& line : P) rotateMinus(line);
     size_t pm( countMinus(P) );
     if (pm == 0) return 0;
-
 
     for(size_t i=0; i<P.size(); ++i) {
         if ( (P[i])[2] == "-" && (P[i].front()[0] != outchar) ) {
