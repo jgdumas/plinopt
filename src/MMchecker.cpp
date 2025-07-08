@@ -66,9 +66,10 @@ int main(int argc, char ** argv) {
 	std::ifstream left (argv[1]), right (argv[2]), product(argv[3]);
     size_t bitsize(argc>4?atoi(argv[4]):32u);
 
-    QRat QQ;
-    QMstream ls(QQ, left), rs(QQ, right), ss(QQ, product);
-    Matrix L(ls), R(rs), P(ss);
+    using PLinOpt::FileFormat;
+    PLinOpt::QRat QQ;
+    PLinOpt::QMstream ls(QQ, left), rs(QQ, right), ss(QQ, product);
+    PLinOpt::Matrix L(ls), R(rs), P(ss);
 
     if ( (L.rowdim() != R.rowdim()) || (L.rowdim() != P.coldim()) ) {
          std::cerr << "# \033[1;31m****** ERROR, inner dimension mismatch: "
@@ -85,14 +86,14 @@ int main(int argc, char ** argv) {
     std::clog << std::string(30,'#') << std::endl;
 #endif
 
-    Tricounter mkn(LRP2MM(L,R,P));
+    PLinOpt::Tricounter mkn(PLinOpt::LRP2MM(L,R,P));
     const size_t& m(std::get<0>(mkn)), k(std::get<1>(mkn)), n(std::get<2>(mkn));
 
         // =============================================
         // Random inputs
-    QVector va(QQ,L.rowdim()), ua(QQ,L.coldim());
-    QVector vb(QQ,R.rowdim()), ub(QQ,R.coldim());
-    QVector wc(QQ,P.rowdim()), vc(QQ,P.coldim());
+    PLinOpt::QVector va(QQ,L.rowdim()), ua(QQ,L.coldim());
+    PLinOpt::QVector vb(QQ,R.rowdim()), ub(QQ,R.coldim());
+    PLinOpt::QVector wc(QQ,P.rowdim()), vc(QQ,P.coldim());
 
     if ( (ua.size()!=(m*k)) || (ub.size()!=(k*n)) || (wc.size()!=(m*n)) ) {
         std::cerr << "# \033[1;31m****** ERROR, outer dimension mismatch: "
@@ -120,15 +121,15 @@ int main(int argc, char ** argv) {
 
         // =============================================
         // Compute the matrix product directly
-    LinBox::DenseMatrix<QRat> Ma(QQ,m,k), Mb(QQ,k,n), Delta(QQ,m,n);
+    LinBox::DenseMatrix<PLinOpt::QRat> Ma(QQ,m,k), Mb(QQ,k,n), Delta(QQ,m,n);
 
         // row-major vectorization
     for(size_t i=0; i<ua.size(); ++i) Ma.setEntry(i/k,i%k,ua[i]);
     for(size_t i=0; i<ub.size(); ++i) Mb.setEntry(i/n,i%n,ub[i]);
     for(size_t i=0; i<wc.size(); ++i) Delta.setEntry(i/n,i%n,wc[i]);
 
-    LinBox::MatrixDomain<QRat> BMD(QQ);
-    LinBox::DenseMatrix<QRat> Mc(QQ,m,n);
+    LinBox::MatrixDomain<PLinOpt::QRat> BMD(QQ);
+    LinBox::DenseMatrix<PLinOpt::QRat> Mc(QQ,m,n);
     BMD.mul(Mc,Ma,Mb); // Direct matrix multiplication
 
     BMD.subin(Delta, Mc);

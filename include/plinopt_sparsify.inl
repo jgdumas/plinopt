@@ -10,6 +10,8 @@
 #include "plinopt_sparsify.h"
 
 
+namespace PLinOpt {
+// ===============================================================
 auto zeroTest { [](const auto& e) { return isZero(e);} };
 auto sizeSup { [](const auto& a, const auto& b) { return a.size() > b.size();} };
 auto secondInf {[](const auto& a, const auto& b) { return a.second < b.second;}};
@@ -801,3 +803,6 @@ std::ostream& consistency(std::ostream& out, const _Mat1& M,
 
     return out;
 }
+
+} // End of namespace PLinOpt
+// ============================================

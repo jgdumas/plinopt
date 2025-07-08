@@ -21,9 +21,7 @@
 
 #include "plinopt_programs.h"
 
-
-
-
+namespace PLinOpt {
 // ============================================================
 // Main compacting procedure, parsing then rewriting
 std::ostream& Compacter(std::ostream& sout, std::istream& input,
@@ -67,8 +65,9 @@ std::ostream& Compacter(std::ostream& sout, std::istream& input,
 
     return sout;
 }
-// ============================================================
 
+} // End of namespace PLinOpt
+// ============================================
 
 
 // ============================================================
@@ -94,11 +93,11 @@ int main(int argc, char** argv) {
     }
 
     if (filename == "") {
-        Compacter(std::cout, std::cin, numloops, simplSingle);
+        PLinOpt::Compacter(std::cout, std::cin, numloops, simplSingle);
     } else {
         std::ifstream ifile(filename);
         if ( ifile ) {
-            Compacter(std::cout, ifile, numloops, simplSingle);
+            PLinOpt::Compacter(std::cout, ifile, numloops, simplSingle);
             ifile.close();
         }
     }

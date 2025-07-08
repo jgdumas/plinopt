@@ -51,12 +51,12 @@ int main(int argc, char** argv) {
 
         std::ifstream ifile(argv[1]);
         if ( ifile ) {
-            int rt=Tellegen(ifile);
+            int rt=PLinOpt::Tellegen(ifile);
             ifile.close();
             return rt;
         }
     } else {
-        return Tellegen(std::cin);
+        return PLinOpt::Tellegen(std::cin);
     }
     return -1;
 }

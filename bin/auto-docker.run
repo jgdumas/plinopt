@@ -16,7 +16,7 @@
 apt update
 apt install git make g++ pkg-config
 apt install libgmp-dev liblinbox-dev libntl-dev
-cd; git clone https://github.com/jgdumas/plinopt.git
+cd; git clone --depth=1 https://github.com/jgdumas/plinopt.git
 cd plinopt; make -j 4
 ./bin/inplacer data/2x2x2_7_Winograd_L.sms
 ./bin/inplacer -t data/2x2x2_7_Winograd_P.sms
