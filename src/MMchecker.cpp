@@ -9,12 +9,6 @@
  *        [ a11 a12 ]
  *        [ a21 a22 ] is vectorized as [a11 a12 a21 a22]
  *
- * Usage: L.sms R.sms P.sms [bitsize [sq srep]]
- *          L.sms/R.sms/P.sms the 3 HM matrices
- *          bitsize: if present bitsize of random matrices
- *          sq srep: if present srep represents sqrt(sq)
- *                  then results is correct up to srep^2=sq,
- *                  thus checked modulo: (srep^2-sq) or /2 or /4
  * References:
  *   [ J-G. Dumas, C. Pernet, A. Sedoglavic;
  *     Strassen's algorithm is not optimally accurate
@@ -70,10 +64,9 @@ int main(int argc, char ** argv) {
         //    For sq=3, then srep=1013, gives mod: (1013^2-3)/2 =  512083
         //    For sq=5, then srep=1013, gives mod: (1013^2-5)/4 =  256541
         //    For sq=7, then srep=1011, gives mod: (1011^2-7)/2 =  511057
-    while( (modulus % 2) == 0 ) { modulus >>=1; };
-    if (modulus == 1) modulus = 2;
-
     if (modulus>0) {
+        while( (modulus % 2) == 0 ) { modulus >>=1; };
+        if (modulus == 1) modulus = 2;
         std::clog << std::string(30,'#') << std::endl;
         std::clog << "# Check is modulo: " << modulus << std::endl;
     }
