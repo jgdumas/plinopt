@@ -22,6 +22,7 @@
  *     SPAA 2019: 11-22]
  ****************************************************************/
 
+namespace PLinOpt {
 // ============================================================
 template<typename _Mat>
 int Factorizer(const _Mat& M, const FileFormat& matformat,
@@ -123,27 +124,33 @@ int Factorizer(const _Mat& M, const FileFormat& matformat,
 }
 
 
+
+} // End of namespace PLinOpt
+// ============================================
+
+
 // ============================================================
 // Checking a linear program with a matrix
 int Fmain(std::istream& input, const Givaro::Integer& q,
-          const FileFormat& mformat, const size_t innerdim, const size_t loops){
+          const PLinOpt::FileFormat& mformat,
+          const size_t innerdim, const size_t loops){
         // ============================================================
         // Read Matrix of Linear Transformation
-    QRat QQ;
-    QMstream ms(QQ,input);
-    Matrix rM(ms); rM.resize(rM.rowdim(),rM.coldim());
+    PLinOpt::QRat QQ;
+    PLinOpt::QMstream ms(QQ,input);
+    PLinOpt::Matrix rM(ms); rM.resize(rM.rowdim(),rM.coldim());
 
     if (! Givaro::isZero(q)) {
             // ============================================================
             // Rebind matrix type over sub field matrix type
         using Field = Givaro::Modular<Givaro::Integer>;
-        using FMatrix=typename Matrix::template rebind<Field>::other;
+        using FMatrix=typename PLinOpt::Matrix::template rebind<Field>::other;
 
         const Field FF(q);
         FMatrix fM(rM, FF);
-        return Factorizer(fM, mformat, innerdim, loops);
+        return PLinOpt::Factorizer(fM, mformat, innerdim, loops);
     } else {
-        return Factorizer(rM, mformat, innerdim, loops);
+        return PLinOpt::Factorizer(rM, mformat, innerdim, loops);
     }
 }
 
@@ -154,6 +161,7 @@ int Fmain(std::istream& input, const Givaro::Integer& q,
 //       -O # search for reduced randomized sparsity
 //      i.e. min of random # tries (requires definition of RANDOM_TIES)
 int main(int argc, char** argv) {
+    using PLinOpt::FileFormat;
 
     FileFormat matformat = FileFormat::Pretty;
     std::string filename;

@@ -15,6 +15,9 @@
  *     (https://hal.science/hal-04441653) ]
  ****************************************************************/
 
+#ifndef _PLINOPT_LIBRARY_PROGRAMS_H_
+#define _PLINOPT_LIBRARY_PROGRAMS_H_
+
 #include "plinopt_library.h"
 
 #include <iostream>
@@ -23,9 +26,7 @@
 #include <set>
 #include <givaro/givprint.h>
 
-#ifndef _PLINOPT_LIBRARY_PROGRAMS_H_
-#define _PLINOPT_LIBRARY_PROGRAMS_H_
-
+namespace PLinOpt {
 // ============================================================
 // Program is vector of lines
 typedef std::vector<std::vector<std::string>> VProgram_t;
@@ -119,6 +120,9 @@ char unusedChar(const std::set<char>& C, const char cstart = 'a'-1);
 // ============================================================
 
 
-#include "plinopt_programs.inl"
 
+} // End of namespace PLinOpt
+// ============================================
+
+#include "plinopt_programs.inl"
 #endif

@@ -16,6 +16,7 @@
 
 #include "plinopt_programs.h"
 
+namespace PLinOpt {
 // ============================================================
 // Parsing a program and building the associated matrix
 template<typename _Mat>
@@ -23,7 +24,8 @@ _Mat& SLPbuilder(_Mat& A, std::istream& input) {
     std::stringstream ssin; ssin << input.rdbuf();
 
         // Line by line parsing
-    VProgram_t ProgramVector; programParser(ProgramVector, ssin);
+    VProgram_t ProgramVector;
+    programParser(ProgramVector, ssin);
     const auto PVs { progOperations(ProgramVector) };
     std::clog << std::string(40,'#') << std::endl;
     std::clog << "# \033[1;32m" << PVs.first << "\tadditions" << "\033[0m" << std::endl;
@@ -35,9 +37,6 @@ _Mat& SLPbuilder(_Mat& A, std::istream& input) {
 
     return matrixBuilder(A, ProgramVector);
 }
-// ============================================================
-
-
 
 // ============================================================
 // Checking a linear program with a matrix
@@ -76,7 +75,7 @@ int SLPcheck(const std::string& prgname, const std::string& matname,
         BMD.sub(R,dB,dA);
 
         if (BMD.isZero (R))
-            std::clog <<"# \033[1;32mSUCCESS: correct "
+            std::clog <<"# \033[1;32mSUCCESS: correct SLP for "
                       << m << 'x' << n
                       << " Matrix-Vector multiplication!\033[0m" << std::endl;
         else {
@@ -96,6 +95,10 @@ int SLPcheck(const std::string& prgname, const std::string& matname,
 
     return 0;
 }
+
+
+} // End of namespace PLinOpt
+// ============================================
 
 
 
@@ -122,10 +125,10 @@ int main(int argc, char** argv) {
 
     if (! Givaro::isZero(q)) {
         Givaro::Modular<Givaro::Integer> FF(q);
-        return SLPcheck(prgname, matname, FF);
+        return PLinOpt::SLPcheck(prgname, matname, FF);
     } else {
-        QRat QQ;
-        return SLPcheck(prgname, matname, QQ);
+        PLinOpt::QRat QQ;
+        return PLinOpt::SLPcheck(prgname, matname, QQ);
     }
 }
 // ============================================================

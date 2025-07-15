@@ -40,6 +40,7 @@
 #include "plinopt_optimize.h"
 
 
+namespace PLinOpt {
 // ============================================================
 // Optimizing a linear program
 template<typename Field>
@@ -293,8 +294,6 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
 
     return 0;
 }
-// ====================================================================
-
 
 
 // ============================================================
@@ -314,7 +313,10 @@ int Selector(std::istream& input, const size_t randomloops,
                            tryDirect, tryKernel, mostCSE, allkernels, QQ);
     }
 }
-// ============================================================
+
+} // End of namespace PLinOpt
+// ============================================
+
 
 
 // ============================================================
@@ -374,12 +376,12 @@ int main(int argc, char** argv) {
     const bool tryKernel(kernelOnly || !directOnly);
 
     if (filename == "") {
-        return Selector(std::cin, randomloops, printMaple, printPretty,
-                        tryDirect, tryKernel, mostCSE, allkernels, prime);
+        return PLinOpt::Selector(std::cin, randomloops, printMaple, printPretty,
+                                 tryDirect, tryKernel, mostCSE, allkernels, prime);
     } else {
         std::ifstream inputmatrix(filename);
         if ( inputmatrix ) {
-            int s=Selector(inputmatrix, randomloops, printMaple, printPretty,
+            int s=PLinOpt::Selector(inputmatrix, randomloops, printMaple, printPretty,
                            tryDirect, tryKernel, mostCSE, allkernels, prime);
             inputmatrix.close();
             return s;

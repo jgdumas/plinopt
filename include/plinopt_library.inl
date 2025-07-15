@@ -9,6 +9,11 @@
 
 #include "plinopt_library.h"
 
+namespace PLinOpt {
+// ===============================================================
+// ==================
+// Matrix operations
+
 template<typename _Mat1, typename _Mat2>
 inline _Mat1& Transpose(_Mat1& T, const _Mat2& A) {
     T.resize(0,0); T.resize(A.coldim(), A.rowdim());
@@ -187,8 +192,7 @@ inline Matrix& permuteRows(Matrix& R, const Permutation& P,
     return dense2sparse(R, dR);
 }
 
-
-
+// ==================
 // Returns the kth-permutation of 0..(n-1) via the factoradic
 // Fn is the factorial vector up to n-1 -- from 'factorial(m)'
 std::vector<size_t> kthpermutation(const size_t k, const size_t n,
@@ -209,9 +213,7 @@ std::vector<size_t> kthpermutation(const size_t k, const size_t n,
 }
 
 
-
-
-
+// ==================
 // Sets new temporaries with the input values
 void input2Temps(std::ostream& sout, const size_t N,
                  const char inv, const char tev) {
@@ -235,9 +237,8 @@ void input2Temps(std::ostream& sout, const size_t N,
     }
 }
 
-
-
-
+// ==================
+// Program outputs
 template<typename Ring>
 std::ostream& printmulorjustdiv(std::ostream& out,
                                 const char c, const size_t i,
@@ -267,9 +268,6 @@ std::ostream& printmulorjustdiv(std::ostream& out,
     return out;
 }
 
-
-
-
 std::ostream& printSCA(std::ostream& out,
                        const char c, const size_t i, const char p,
                        const Givaro::Rational& r,
@@ -281,3 +279,7 @@ std::ostream& printSCA(std::ostream& out,
         return printmulorjustdiv(out, c, i, u, nbmul, QQ);
     }
 }
+
+
+} // End of namespace PLinOpt
+// ============================================

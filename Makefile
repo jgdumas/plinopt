@@ -23,7 +23,8 @@ EXE  = optimizer
 EXE += sparsifier factorizer
 EXE += inplacer trilplacer
 EXE += transpozer compacter SLPchecker
-EXE += sms2pretty matrix-transpose columns-swap MMchecker
+EXE += sms2pretty MMchecker
+EXE += matrix-transpose columns-swap negater
 EXE += PMMchecker
 
 SRC=${EXE:%=src/%.cpp}

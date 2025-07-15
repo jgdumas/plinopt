@@ -44,6 +44,8 @@
 #include <linbox/util/matrix-stream.h>
 #include <linbox/blackbox/permutation.h>
 
+
+namespace PLinOpt {
 // ============================================
 
 using LinBox::Tag::FileFormat;
@@ -213,7 +215,9 @@ std::vector<size_t> factorial(const size_t n) {
 std::vector<size_t> kthpermutation(const size_t k, const size_t n,
                                    const std::vector<long>& Fn );
 
+} // End of namespace PLinOpt
 // ============================================
+
 
 #include "plinopt_library.inl"
 #endif
