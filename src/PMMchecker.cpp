@@ -19,10 +19,10 @@
 #include <linbox/ring/polynomial-ring.h>
 #include <linbox/matrix/sparse-matrix.h>
 #include <linbox/util/matrix-stream.h>
+#include "plinopt_library.h"
 
 using LinBox::Tag::FileFormat;
 using Givaro::Integer;
-using Givaro::Degree;
 using Givaro::Indeter;
 
 
@@ -43,49 +43,57 @@ public:
     using Parent_t::Parent_t; // using inherited constructors
 
     std::istream& read ( std::istream& i, Element& P) const {
+        static std::ostringstream Xstream; Xstream << this->getIndeter();
+        static std::string X(Xstream.str()); // Indeterminate
+
         this->init(P); // reset P
         using Givaro::Degree;
         std::string s;
         std::getline(i, s);
         s.erase(std::remove_if(s.begin(), s.end(), ::isspace),s.end());
 
-        std::ostringstream Xstream; Xstream << this->getIndeter();
-        std::string X(Xstream.str());
-
-
-            // Break into units at every '+' or '-'; the limits will be [p,q)
+            // Break s into units at every '+' or '-'; the limits will be [p,q)
+            // Units should be of the generic form c*X^n:
+            //   --> coefficient before X, degree afterwars
         size_t p = 0, q = p;
         while ( q < s.size() ) {
-            for ( q = p + 1; q < s.size() && s[q] != '+' && s[q] != '-'; q++ );
+            for ( q = p + 1; q < s.size() && s[q] != '+' && s[q] != '-'; ++q );
             std::string unit(s.substr( p, q - p ));
-            // should be of form "cxn", meaning c times x^n
-            // Pick out coefficient and exponent
+// std::clog << "unit: " << unit << std::endl;
+                // Identify coefficient (c) and exponent (n)
+                // First comes the coefficient c
             QRat::Element c; this->getDomain().assign(c,this->getDomain().one);
             Givaro::Degree n(0);
             const size_t pos(unit.find( X )); // position of char X
             if ( pos == std::string::npos ) { // X not found; pure number
                 std::stringstream( unit ) >> c;
-            } else { // identify coefficient (c) and exponent (n)
-                if ( pos != 0 ) { // pos == 0 would mean default c = 1
-                    std::string first = unit.substr( 0, pos );
-                    if ( first == "+" ) this->getDomain().assign(c,this->getDomain().one); // just "+" means +1
-                    else if ( first == "-" ) this->getDomain().assign(c,this->getDomain().mOne); // just "-" means -1
-                    else std::stringstream( first ) >> c;
+            } else {
+                if ( pos != 0 ) {
+                        // pos == 0 would mean default c = 1
+                    const std::string first = unit.substr( 0, pos );
+// std::clog << "first: " << first << std::endl;
+                    if ( first == "+" ) {
+                            // just "+" means +1
+                        this->getDomain().assign(c,this->getDomain().one);
+                    } else if ( first == "-" ) {
+                            // just "-" means -1
+                        this->getDomain().assign(c,this->getDomain().mOne);
+                    } else std::stringstream( first ) >> c;
                 }
+
+                    // Second, X, followed by the degree n
                 n = 1; // n>=1 now
                 if ( pos != unit.size() - 1 ) {
-
                         // monomial c * X^n
-                    const std::size_t expo(unit.find_first_of("0123456789"));
-                    if (expo != std::string::npos) {
-                        std::stringstream( unit.substr( expo ) ) >> n;
+                    const std::size_t exp(unit.find_first_of("0123456789",pos));
+                    if (exp != std::string::npos) {
+                        std::stringstream( unit.substr( exp ) ) >> n;
                     }
                 }
             }
 
-//             this->write(std::clog << "Current P" << P << ':', P) << std::endl;
-//             std::clog << "Read deg: " << n << std::endl;
-//             std::clog << "Read coef: " << c << std::endl;
+// std::clog << "coeff.: " << c << std::endl;
+// std::clog << "degree: " << n << std::endl;
 
             Element monomial; this->init(monomial, Degree(n), c);
             this->addin(P,monomial);
@@ -102,13 +110,10 @@ public:
 
 
 typedef Givaro::QuotientDom<QPol> PMods;
-
 typedef LinBox::MatrixStream<PMods> QMstream;
 typedef LinBox::SparseMatrix<PMods,
                              LinBox::SparseMatrixFormat::SparseSeq > Matrix;
 typedef LinBox::DenseVector<PMods> QVector;
-
-
 
 
 // ===============================================================
@@ -147,9 +152,6 @@ int main(int argc, char ** argv) {
 
         // =============================================
         // Reading modular polynomial
-//     std::clog << "# Enter quotient polynomial in " << QQX.getIndeter()
-//               << " :" << std::endl;
-//     QQX.read(std::cin, QP);
     QQX.write(QQX.write(std::clog << "# Quotient polynomial over ")
               << " : ", QP) << " = 0" << std::endl;
 
@@ -163,13 +165,15 @@ int main(int argc, char ** argv) {
 	assert(L.coldim() == R.coldim());
 	assert(L.coldim() == P.rowdim());
 
-
 #ifdef VERBATIM_PARSING
     L.write(std::clog << "L:=",FileFormat::Maple) << ';' << std::endl;
     R.write(std::clog << "R:=",FileFormat::Maple) << ';' << std::endl;
     P.write(std::clog << "P:=",FileFormat::Maple) << ';' << std::endl;
     std::clog << std::string(20,'#') << std::endl;
 #endif
+
+    PLinOpt::Tricounter mkn(PLinOpt::LRP2MM(L,R,P));
+    const size_t& m(std::get<0>(mkn)), k(std::get<1>(mkn)), n(std::get<2>(mkn));
 
         // =============================================
         // Random inputs
@@ -178,15 +182,23 @@ int main(int argc, char ** argv) {
 
     QVector va(QQXm,L.rowdim()), ua(QQXm,L.coldim());
     QVector vb(QQXm,R.rowdim()), ub(QQXm,R.coldim());
-    for(auto iter=ua.begin(); iter!=ua.end(); ++iter) QQX.random(generator, *iter, bitsize);
-    for(auto iter=ub.begin(); iter!=ub.end(); ++iter) QQX.random(generator, *iter, bitsize);
+    QVector wc(QQXm,P.rowdim()), vc(QQXm,P.coldim());
+
+    for(auto iter=ua.begin(); iter!=ua.end(); ++iter) {
+        QQX.random(generator, *iter, bitsize);
+//         QQX.modin(*iter, QP);
+    }
+    for(auto iter=ub.begin(); iter!=ub.end(); ++iter) {
+        QQX.random(generator, *iter, bitsize);
+//         QQX.modin(*iter, QP);
+    }
+
 
         // =============================================
         // Compute matrix product via the HM algorithm
     L.apply(va,ua);
     R.apply(vb,ub);
 
-    QVector wc(QQXm,P.rowdim()), vc(QQXm,P.coldim());
     for(size_t i=0; i<vc.size(); ++i) QQXm.mul(vc[i],va[i],vb[i]);
 
     P.apply(wc,vc);
@@ -194,20 +206,19 @@ int main(int argc, char ** argv) {
 
         // =============================================
         // Compute the matrix product directly
-    size_t n(L.coldim()>>1);
-    LinBox::DenseMatrix<PMods> Ma(QQXm,n,n), Mb(QQXm,n,n), Mc(QQXm,n,n);
+    LinBox::DenseMatrix<PMods> Ma(QQXm,m,k), Mb(QQXm,k,n), Delta(QQXm,m,n);
 
-    for(size_t i=0; i<ua.size(); ++i) Ma.setEntry(i/n,i%n,ua[i]);
+    for(size_t i=0; i<ua.size(); ++i) Ma.setEntry(i/k,i%k,ua[i]);
     for(size_t i=0; i<ub.size(); ++i) Mb.setEntry(i/n,i%n,ub[i]);
-    for(size_t i=0; i<wc.size(); ++i) Mc.setEntry(i/n,i%n,wc[i]);
+    for(size_t i=0; i<wc.size(); ++i) Delta.setEntry(i/n,i%n,wc[i]);
 
     LinBox::MatrixDomain<PMods> BMD(QQXm);
-    LinBox::DenseMatrix<PMods> Rc(QQXm,n,n);
-    BMD.mul(Rc,Ma,Mb); // Direct matrix multiplication
+    LinBox::DenseMatrix<PMods> Mc(QQXm,m,n);
+    BMD.mul(Mc,Ma,Mb); // Direct matrix multiplication
+    BMD.subin(Delta,Mc);
 
-
-    if (BMD.areEqual (Rc,Mc))
-        QQX.write(std::clog <<"# \033[1;32mOK : correct Matrix-Multiplication modulo ",QP) << ".\033[0m" << std::endl;
+    if (BMD.isZero (Delta))
+        QQXm.write(std::clog <<"# \033[1;32mOK : correct Matrix-Multiplication modulo ",QP) << ".\033[0m" << std::endl;
     else{
         std::cerr << "# \033[1;31m****** ERROR, not a MM algorithm******\033[0m"
                   << std::endl;
@@ -221,8 +232,13 @@ int main(int argc, char ** argv) {
 
         Ma.write(std::clog << "Ma:=", FileFormat::Maple) << ';' << std::endl;
         Mb.write(std::clog << "Mb:=", FileFormat::Maple) << ';' << std::endl;
+            // Correct value
         Mc.write(std::clog << "Mc:=", FileFormat::Maple) << ';' << std::endl;
-        Rc.write(std::clog << "Rc:=", FileFormat::Maple) << ';' << std::endl;
+            // Difference with computed value
+        Delta.write(std::clog << "Df:=", FileFormat::Maple) << ';' << std::endl;
+        BMD.addin(Delta, Mc);
+           // Computed value
+        Delta.write(std::clog << "Rc:=", FileFormat::Maple) << ';' << std::endl;
     }
 
     return 0;
