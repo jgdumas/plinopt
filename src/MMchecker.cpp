@@ -28,47 +28,62 @@
 
 #include "plinopt_library.h"
 
+
 // ===============================================================
-// argv[1-3]: L.sms R.sms P.sms
-// argv[4]: bitsize
-// argv[5-6]: modulus = (argv[6]^2-argv[5]), and /2 if argv[5]!=2
+void usage(const char* prgname) {
+    std::clog << "Usage:" << prgname
+              << "  [-h|-b b|-m m|-p p(x)] L.sms R.sms P.sms\n"
+              << "  [-b b]: random check with values of size 'bitsize'\n"
+              << "  [-m m]: check is modulo (mod) or /2^k (default no)\n"
+              << "  [-r r e s]: check is modulo (r^e-s) or /2^k (default no)\n";
+
+    exit(-1);
+}
+
+// ===============================================================
 int main(int argc, char ** argv) {
 
-    if ((argc <=3) || (std::string(argv[1]) == "-h")) {
-        std::clog << "Usage:" << argv[0]
-                  << "  L.sms R.sms P.sms [bitsize [sq srep]]\n"
-                  << "  [bitsize]: random check with values of size 'bitsize'\n"
-                  << "  [sq srep]: check is modulo (srep^2-sq) or /2 or /4\n";
+    size_t bitsize(32u);
+    Givaro::Integer modulus(0u);
+    std::vector<std::string> filenames;
 
-        exit(-1);
+    for(int i=1; i<argc; ++i) {
+        std::string args(argv[i]);
+        if (args[0] == '-') {
+            if (args[1] == 'h') { usage(argv[0]); }
+            else if (args[1] == 'b') { bitsize = atoi(argv[++i]); }
+            else if (args[1] == 'm') { modulus = Givaro::Integer(argv[++i]); }
+            else if (args[1] == 'r') {
+                Givaro::Integer r(argv[++i]);
+                size_t e(atoi(argv[++i]));
+                Givaro::Integer s(argv[++i]);
+                modulus = pow(r,e)-s;
+            }
+        } else { filenames.push_back(args); }
     }
+    if (filenames.size() < 3) { usage(argv[0]); }
 
         // =============================================
         // if present, result is checked modulo
-        // sq=2, check is mod (srep^2-sq) or /2 or /4
-        // Indeed (2k+1)^2 - (2v+1) is even, so at least remove 2
         // Probability of correctness is better if modulus is prime
-        // Examples:
         //    For sq=2, then srep=1013, gives mod: 1013^2-2     = 1026167
         //    For sq=3, then srep=1013, gives mod: (1013^2-3)/2 =  512083
         //    For sq=5, then srep=1013, gives mod: (1013^2-5)/4 =  256541
         //    For sq=7, then srep=1011, gives mod: (1011^2-7)/2 =  511057
-    Givaro::Integer sq(argc>6?argv[5]:""), srep(argc>6?argv[6]:"");
-    Givaro::Integer modulus(srep*srep-sq);
-    if ( (sq%2) != 0) modulus >>=1; // (2k+1)^2 - (2v+1) is 0 mod 2
-    if ( (sq%4) == 1) modulus >>=1; // (2k+1)^2 - (4v+1) is 0 mod 4
-#ifdef VERBATIM_PARSING
-    std::clog << std::string(30,'#') << std::endl;
-    std::clog << "# Check is modulo: " << modulus << std::endl;
-#endif
+    while( (modulus % 2) == 0 ) { modulus >>=1; };
+    if (modulus == 1) modulus = 2;
+
+    if (modulus>0) {
+        std::clog << std::string(30,'#') << std::endl;
+        std::clog << "# Check is modulo: " << modulus << std::endl;
+    }
         // =============================================
         // Reading matrices
-	std::ifstream left (argv[1]), right (argv[2]), product(argv[3]);
-    size_t bitsize(argc>4?atoi(argv[4]):32u);
+	std::ifstream left (filenames[0]), right (filenames[1]), post(filenames[2]);
 
     using PLinOpt::FileFormat;
     PLinOpt::QRat QQ;
-    PLinOpt::QMstream ls(QQ, left), rs(QQ, right), ss(QQ, product);
+    PLinOpt::QMstream ls(QQ, left), rs(QQ, right), ss(QQ, post);
     PLinOpt::Matrix L(ls), R(rs), P(ss);
 
     if ( (L.rowdim() != R.rowdim()) || (L.rowdim() != P.coldim()) ) {
@@ -137,7 +152,7 @@ int main(int argc, char ** argv) {
         // =============================================
         // Computations should agree modulo (srep^2-sq)
         //              as 'srep' represents sqrt('sq')
-    if(argc>6) {
+    if(modulus > 0) {
         for(size_t i=0; i<m; ++i) {
             for(size_t j=0; j<n; ++j) {
                 Delta.setEntry(i,j, Givaro::Rational(
