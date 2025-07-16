@@ -152,7 +152,6 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
                      || cmpOpCount(lnbops,nbops) ) {
                     ssout.clear(); ssout.str(std::string());
                     ssout << lssout.str();
-                    nbops = lnbops;
                     if (cmpOpCount(lnbops,nbops)) {
                         std::clog << "# Found K: "
                                   << lnbops.first << '|' << lnbops.second
@@ -160,6 +159,7 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
                                   << nbops.first << '|' << nbops.second
                                   << std::endl;
                     }
+                    nbops = lnbops;
                 }
             }
         }
