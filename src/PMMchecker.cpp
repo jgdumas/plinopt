@@ -112,7 +112,7 @@ public:
 typedef Givaro::QuotientDom<QPol> PMods;
 typedef LinBox::MatrixStream<PMods> QMstream;
 typedef LinBox::SparseMatrix<PMods,
-                             LinBox::SparseMatrixFormat::SparseSeq > Matrix;
+                             LinBox::SparseMatrixFormat::SparseSeq > QMatrix;
 typedef LinBox::DenseVector<PMods> QVector;
 
 
@@ -160,7 +160,7 @@ int main(int argc, char ** argv) {
 
 
     QMstream ls(QQXm, left), rs(QQXm, right), ss(QQXm, product);
-    Matrix L(ls), R(rs), P(ss);
+    QMatrix L(ls), R(rs), P(ss);
 
 	assert(L.coldim() == R.coldim());
 	assert(L.coldim() == P.rowdim());
