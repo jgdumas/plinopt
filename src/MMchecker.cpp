@@ -21,24 +21,160 @@
  ****************************************************************/
 
 #include "plinopt_library.h"
+#include "plinopt_polynomial.h"
 
 
 // ===============================================================
 void usage(const char* prgname) {
     std::clog << "Usage:" << prgname
-              << "  [-h|-b b|-m m|-p p(x)] L.sms R.sms P.sms\n"
+              << "  [-h|-b #|-m #|-r # # #|-I x|-P P(x)] L.sms R.sms P.sms\n"
               << "  [-b b]: random check with values of size 'bitsize'\n"
               << "  [-m m]: check is modulo (mod) or /2^k (default no)\n"
-              << "  [-r r e s]: check is modulo (r^e-s) or /2^k (default no)\n";
+              << "  [-r r e s]: check is modulo (r^e-s) or /2^k (default no)\n"
+              << "  [-I x]: indeterminate (default is X)\n"
+              << "  [-P P(x)]: modular polynomial(default is none)\n";
 
     exit(-1);
 }
 
+
+// ===============================================================
+template<typename Field>
+int MMchecker(const Field& FF, const size_t bitsize,
+              const Givaro::Integer& modulus,
+              const std::vector<std::string>& filenames) {
+    typedef LinBox::MatrixStream<Field> FMstream;
+    typedef LinBox::SparseMatrix<Field,
+        LinBox::SparseMatrixFormat::SparseSeq > FMatrix;
+    typedef LinBox::DenseVector<Field> FVector;
+    
+        // =============================================
+        // Reading matrices
+	std::ifstream left (filenames[0]), right (filenames[1]), post(filenames[2]);
+
+    using PLinOpt::FileFormat;
+
+    FMstream ls(FF, left), rs(FF, right), ss(FF, post);
+    FMatrix L(ls), R(rs), P(ss);
+ 
+    if ( (L.rowdim() != R.rowdim()) || (L.rowdim() != P.coldim()) ) {
+         std::cerr << "# \033[1;31m****** ERROR, inner dimension mismatch: "
+                   << L.rowdim() << "(.)" << R.rowdim() << '|' << P.coldim()
+                  << " ******\033[0m"
+                  << std::endl;
+         return 2;
+    }
+
+#ifdef VERBATIM_PARSING
+    L.write(std::clog << "L:=",FileFormat::Maple) << ';' << std::endl;
+    R.write(std::clog << "R:=",FileFormat::Maple) << ';' << std::endl;
+    P.write(std::clog << "P:=",FileFormat::Maple) << ';' << std::endl;
+    std::clog << std::string(30,'#') << std::endl;
+#endif
+
+    PLinOpt::Tricounter mkn(PLinOpt::LRP2MM(L,R,P));
+    const size_t& m(std::get<0>(mkn)), k(std::get<1>(mkn)), n(std::get<2>(mkn));
+
+        // =============================================
+        // Random inputs
+    PLinOpt::QVector va(FF,L.rowdim()), ua(FF,L.coldim());
+    PLinOpt::QVector vb(FF,R.rowdim()), ub(FF,R.coldim());
+    PLinOpt::QVector wc(FF,P.rowdim()), vc(FF,P.coldim());
+
+    if ( (ua.size()!=(m*k)) || (ub.size()!=(k*n)) || (wc.size()!=(m*n)) ) {
+        std::cerr << "# \033[1;31m****** ERROR, outer dimension mismatch: "
+                  << L.coldim() << ':' << m << 'x' << k << ' '
+                  << R.coldim() << ':' << k << 'x' << n << ' '
+                  << P.rowdim() << ':' << m << 'x' << n
+                  << " ******\033[0m"
+                  << std::endl;
+        return 3;
+    }
+
+    Givaro::GivRandom generator;
+    Givaro::Integer::seeding(generator.seed());
+    for(auto &iter:ua) FF.random(generator, iter, bitsize);
+    for(auto &iter:ub) FF.random(generator, iter, bitsize);
+
+        // =============================================
+        // Compute matrix product via the HM algorithm
+    L.apply(va,ua);
+    R.apply(vb,ub);
+
+    for(size_t i=0; i<vc.size(); ++i) FF.mul(vc[i],va[i],vb[i]);
+
+    P.apply(wc,vc);
+
+        // =============================================
+        // Compute the matrix product directly
+    LinBox::DenseMatrix<Field> Ma(FF,m,k), Mb(FF,k,n), Delta(FF,m,n);
+
+        // row-major vectorization
+    for(size_t i=0; i<ua.size(); ++i) Ma.setEntry(i/k,i%k,ua[i]);
+    for(size_t i=0; i<ub.size(); ++i) Mb.setEntry(i/n,i%n,ub[i]);
+    for(size_t i=0; i<wc.size(); ++i) Delta.setEntry(i/n,i%n,wc[i]);
+
+    LinBox::MatrixDomain<Field> BMD(FF);
+    LinBox::DenseMatrix<Field> Mc(FF,m,n);
+    BMD.mul(Mc,Ma,Mb); // Direct matrix multiplication
+
+    BMD.subin(Delta, Mc);
+
+//         // =============================================
+//         // Computations should agree modulo (srep^2-sq)
+//         //              as 'srep' represents sqrt('sq')
+//     if(modulus > 0) {
+//         for(size_t i=0; i<m; ++i) {
+//             for(size_t j=0; j<n; ++j) {
+//                 Delta.setEntry(i,j, Givaro::Rational(
+//                     Delta.getEntry(i,j).nume() % modulus,
+//                     Delta.getEntry(i,j).deno() ) );
+//             }
+//         }
+//     }
+
+        // =============================================
+        // Both computations should agree
+    if (BMD.isZero (Delta))
+        FF.write(std::clog <<"# \033[1;32mSUCCESS: correct "
+                 << m << 'x' << k << 'x' << n
+                 << " Matrix-Multiplication \033[0m") << std::endl;
+    else{
+        FF.write(std::cerr << "# \033[1;31m****** ERROR, not a "
+                 << m << 'x' << k << 'x' << n
+                 << " MM algorithm******\033[0m") << std::endl;
+
+        ua.write(std::clog << "Ua:=", FileFormat::Maple ) << ';' << std::endl;
+        va.write(std::clog << "Va:=", FileFormat::Maple ) << ';' << std::endl;
+        ub.write(std::clog << "Ub:=", FileFormat::Maple ) << ';' << std::endl;
+        vb.write(std::clog << "Vb:=", FileFormat::Maple ) << ';' << std::endl;
+        vc.write(std::clog << "Vc:=", FileFormat::Maple ) << ';' << std::endl;
+        wc.write(std::clog << "wc:=", FileFormat::Maple ) << ';' << std::endl;
+
+        Ma.write(std::clog << "Ma:=", FileFormat::Maple) << ';' << std::endl;
+        Mb.write(std::clog << "Mb:=", FileFormat::Maple) << ';' << std::endl;
+            // Correct value
+        Mc.write(std::clog << "Mc:=", FileFormat::Maple) << ';' << std::endl;
+            // Difference with computed value
+        Delta.write(std::clog << "Df:=", FileFormat::Maple) << ';' << std::endl;
+        BMD.addin(Delta, Mc);
+            // Computed value
+        Delta.write(std::clog << "Rc:=", FileFormat::Maple) << ';' << std::endl;
+
+        return 1;
+    }
+    return 0;
+}
+
 // ===============================================================
 int main(int argc, char ** argv) {
-
+ 
     size_t bitsize(32u);
     Givaro::Integer modulus(0u);
+    PLinOpt::QRat QQ;
+    typedef PLinOpt::PRing<PLinOpt::QRat> QPol;
+    QPol QQX(QQ, 'X');
+    QPol::Element QP;
     std::vector<std::string> filenames;
 
     for(int i=1; i<argc; ++i) {
@@ -53,9 +189,24 @@ int main(int argc, char ** argv) {
                 Givaro::Integer s(argv[++i]);
                 modulus = pow(r,e)-s;
             }
+            else if (args[1] == 'I') { 
+                QQX.setIndeter(Givaro::Indeter(argv[++i][0])); 
+            }
+            else if (args[1] == 'P') {
+                std::stringstream sargs( argv[++i] );
+                QQX.read(sargs, QP);
+            }
         } else { filenames.push_back(args); }
     }
     if (filenames.size() < 3) { usage(argv[0]); }
+
+    if (modulus>0) {
+        while( (modulus % 2) == 0 ) { modulus >>=1; };
+        if (modulus == 1) modulus = 2;
+        std::clog << std::string(30,'#') << std::endl;
+        std::clog << "# Check is modulo: " << modulus << std::endl;
+    } else
+        return MMchecker(QQ, bitsize, modulus, filenames);
 
         // =============================================
         // if present, result is checked modulo
@@ -64,18 +215,13 @@ int main(int argc, char ** argv) {
         //    For sq=3, then srep=1013, gives mod: (1013^2-3)/2 =  512083
         //    For sq=5, then srep=1013, gives mod: (1013^2-5)/4 =  256541
         //    For sq=7, then srep=1011, gives mod: (1011^2-7)/2 =  511057
-    if (modulus>0) {
-        while( (modulus % 2) == 0 ) { modulus >>=1; };
-        if (modulus == 1) modulus = 2;
-        std::clog << std::string(30,'#') << std::endl;
-        std::clog << "# Check is modulo: " << modulus << std::endl;
-    }
         // =============================================
         // Reading matrices
 	std::ifstream left (filenames[0]), right (filenames[1]), post(filenames[2]);
 
     using PLinOpt::FileFormat;
-    PLinOpt::QRat QQ;
+
+
     PLinOpt::QMstream ls(QQ, left), rs(QQ, right), ss(QQ, post);
     PLinOpt::Matrix L(ls), R(rs), P(ss);
 
