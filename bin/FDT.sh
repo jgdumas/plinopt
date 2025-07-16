@@ -16,6 +16,8 @@ if [ "$#" -ge 1 ]; then
     fics=("$@")
 else
     fics=(data/*sms)
+    # Do not test polynomial files yet
+    fics=(${fics[@]//*-X_*})
 fi
 
 BINDRS=(./ ./bin)

@@ -34,7 +34,7 @@ numopt=100
 if [ "$#" -ge 1 ]; then
     fics=("$@")
 else
-    fics=(data/L*sms)
+    fics=(data/*_L.sms)
 fi
 
 BINDRS=(./ ./bin)

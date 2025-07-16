@@ -25,7 +25,6 @@ EXE += inplacer trilplacer
 EXE += transpozer compacter SLPchecker
 EXE += sms2pretty MMchecker
 EXE += matrix-transpose columns-swap negater
-EXE += PMMchecker
 
 SRC=${EXE:%=src/%.cpp}
 
@@ -42,5 +41,10 @@ clean:
 	- \rm ${BIN}
 
 
+SHELL=/bin/bash
 check: ${BIN}
+	./bin/MMchecker data/2x2x2_7_DPS-accurate_{L,R,P}.sms -m 513083
+	./bin/MMchecker data/2x2x2_7_Strassen_{L,R,P}.sms
+	./bin/MMchecker data/2x2x2_7_DPS-accurate-X_{L,R,P}.sms -P "X^2-3"
+	./bin/MMchecker data/2x2x2_7_DPS-accurate_{L,R,P}.sms -r 1013 2 3
 	./bin/FDT.sh
