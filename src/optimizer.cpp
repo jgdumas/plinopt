@@ -39,6 +39,14 @@
 #include <sstream>
 #include "plinopt_optimize.h"
 
+#ifdef OPTIMIZE_ADDITIONS
+// Optimize for additions first, then multiplications
+auto cmpOpCount {[](const auto& a, const auto& b) { return (a.first<b.first) || ( (a.first==b.first) && (a.second<b.second) ); } };
+#else
+// Optimize for sum of additions and multiplications
+auto cmpOpCount {[](const auto& a, const auto& b) { return (a.first+a.second<b.first+b.second); } };
+#endif
+
 
 namespace PLinOpt {
 // ============================================================
@@ -108,10 +116,13 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
                           << lnbops.first << "\tadditions, "
                           << lnbops.second << "\tmultiplications." << std::endl;
 #endif
-                if ( (ssout.tellp() == std::streampos(0)) ||
-                     (lnbops.first<nbops.first) ||
-                     ( (lnbops.first==nbops.first)
-                       && (lnbops.second<nbops.second) ) ) {
+                if ( (ssout.tellp() == std::streampos(0))
+                     || cmpOpCount(lnbops,nbops) ) {
+                    std::clog << "# Found D: "
+                              << lnbops.first << '|' << lnbops.second
+                              << " instead of "
+                              << nbops.first << '|' << nbops.second
+                              << std::endl;
                     ssout.clear(); ssout.str(std::string());
                     ssout << lssout.str();
                     nbops = lnbops;
@@ -137,12 +148,17 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
                           << lnbops.first << "\tadditions, "
                           << lnbops.second << "\tmultiplications." << std::endl;
 #endif
-                if ( (ssout.tellp() == std::streampos(0)) ||
-                     (lnbops.first<nbops.first) ||
-                     ( (lnbops.first==nbops.first)
-                       && (lnbops.second<nbops.second) ) ) {
+                if ( (ssout.tellp() == std::streampos(0) )
+                     || cmpOpCount(lnbops,nbops) ) {
                     ssout.clear(); ssout.str(std::string());
                     ssout << lssout.str();
+                    if (cmpOpCount(lnbops,nbops)) {
+                        std::clog << "# Found K: "
+                                  << lnbops.first << '|' << lnbops.second
+                                  << " instead of "
+                                  << nbops.first << '|' << nbops.second
+                                  << std::endl;
+                    }
                     nbops = lnbops;
                 }
             }
@@ -184,10 +200,13 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
                           << lkops.first << "\tadditions, "
                           << lkops.second << "\tmultiplications." << std::endl;
 #endif
-                if ( (kout.tellp() == std::streampos(0)) ||
-                     (lkops.first<knbops.first) ||
-                     ((lkops.first==knbops.first)
-                      && (lkops.second<knbops.second))) {
+                if ( (kout.tellp() == std::streampos(0))
+                     || cmpOpCount(lkops,knbops) ) {
+                    std::clog << "# Found E: "
+                              << lkops.first << '|' << lkops.second
+                              << " instead of "
+                              << knbops.first << '|' << knbops.second
+                              << std::endl;
                     kout.clear(); kout.str(std::string());
                     kout << lkout.str();
                     knbops = lkops;
@@ -197,9 +216,7 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
 
         chrono.stop(); global += chrono;
 
-        if ( (knbops.first < nbops.first) ||
-             ( (knbops.first == nbops.first)
-               && (knbops.second < nbops.second) ) ) {
+        if (cmpOpCount(knbops,nbops)) {
             nbops = knbops;
             std::clog << "# \033[1;36m"
                       << "Exhaustive kernel permutation, found:"
@@ -210,11 +227,14 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
             ssout.str(kout.str());
 
             if ((knbops.first !=0 || knbops.second != 0)) {
-                std::clog << std::string(40,'#') << std::endl;
-                std::clog << "# \033[1;32m" << knbops.first << "\tadditions\tinstead of " << addinit
-                          << "\033[0m \t" << chrono << std::endl;
-                std::clog << "# \033[1;32m" << knbops.second << "\tmultiplications\tinstead of " << mulinit << "\033[0m" << std::endl;
-                std::clog << std::string(40,'#') << std::endl;
+                std::clog << std::string(40,'#') << std::endl
+                          << "# \033[1;32m" << knbops.first
+                          << "\tadditions\tinstead of " << addinit
+                          << "\033[0m \t" << chrono << std::endl
+                          << "# \033[1;32m" << knbops.second
+                          << "\tmultiplications\tinstead of " << mulinit
+                          << "\033[0m" << std::endl
+                          << std::string(40,'#') << std::endl;
             }
         } else {
                 // Optimal was already found
@@ -239,8 +259,7 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
 
         chrono.stop(); global += chrono;
 
-        if ( (rnbops.first < nbops.first) ||
-             ( (rnbops.first == nbops.first) && (rnbops.second < nbops.second) ) ) {
+        if (cmpOpCount(rnbops, nbops)) {
             std::clog << "# \033[1;36m"
                       << "Exhaustive greedy CSE search, found:"
                       << "\033[0m" << std::endl;
@@ -326,7 +345,7 @@ int Selector(std::istream& input, const size_t randomloops,
 // -E option for exhaustive greedy CSE search
 // -N option for exhaustive nullspace permutation search
 // -q # search for linear map modulo # (default is over the rationals)
-// -O # search for reduced number of additions, then multiplications
+// -O # search for reduced number of additions and/then multiplications
 //      i.e. min of random # tries (requires definition of RANDOM_TIES)
 int main(int argc, char** argv) {
 
@@ -351,7 +370,7 @@ int main(int argc, char** argv) {
                 << "  -N: exhaustive nullspace permutations (default is not)\n"
                 << "  -P/-M: choose the printing format\n"
                 << "  -q #: search modulo (default is Rationals)\n"
-                << "  -O #: search for reduced number of additions, then multiplications\n";
+                << "  -O #: search for reduced number of additions and/then multiplications\n";
 
             exit(-1);
         }

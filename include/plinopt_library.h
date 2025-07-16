@@ -207,7 +207,8 @@ std::ostream& printmulorjustdiv(std::ostream& out,
 // Vector of factorial up to n
 std::vector<size_t> factorial(const size_t n) {
     std::vector<size_t> a(n); a[0]=1u;
-    for(size_t j=1; j<n; ++j) { a[j] = a[j-1]*(j+1); } return a;
+    for(size_t j=1; j<n; ++j) { a[j] = a[j-1]*(j+1); }
+    return std::move(a);
 }
 
 // Returns the kth-permutation of 0..(n-1) via the factoradic
