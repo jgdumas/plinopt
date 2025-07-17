@@ -42,9 +42,13 @@ clean:
 
 
 SHELL=/bin/bash
-check: ${BIN}
-	./bin/MMchecker data/2x2x2_7_DPS-accurate_{L,R,P}.sms -m 513083
+check: ${BIN} mmcheck slpcheck
+
+mmcheck:
 	./bin/MMchecker data/2x2x2_7_Strassen_{L,R,P}.sms
-	./bin/MMchecker data/2x2x2_7_DPS-accurate-X_{L,R,P}.sms -P "X^2-3"
+	./bin/MMchecker data/2x2x2_7_DPS-accurate_{L,R,P}.sms -m 513083
 	./bin/MMchecker data/2x2x2_7_DPS-accurate_{L,R,P}.sms -r 1013 2 3
+	./bin/MMchecker data/2x2x2_7_DPS-accurate-X_{L,R,P}.sms -P "X^2-3"
+
+slpcheck:
 	./bin/FDT.sh

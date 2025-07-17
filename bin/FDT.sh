@@ -39,6 +39,7 @@ FCTZR=${BINDIR}/factorizer
 INPLR=${BINDIR}/inplacer
 SPSFR=${BINDIR}/sparsifier
 
+let current=0
 
 for fic in ${fics[@]}
 do
@@ -70,6 +71,13 @@ do
 
     ((${MTRSP} $fic | ${INPLR} -t -O ${numopt} | ${SLPCK} -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
 
+let current=8+${current}
+success=`grep SUCCESS ${tmpfile} | wc -l`
+echo -ne "\033[1;93mSUCCESS: "
+if [ ${success} -ne ${current} ]; then
+    echo -ne "\033[1;91m"
+fi
+echo -e "${success} \033[1;93m/ ${current}\033[0m"
 fi
 done
 
