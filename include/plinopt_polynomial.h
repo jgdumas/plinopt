@@ -27,10 +27,10 @@ template<typename Ring> using PRing = Givaro::Poly1Dom<Ring,Givaro::Dense>;
 template<typename Ring> class PRing : public Givaro::Poly1Dom<Ring,Givaro::Dense> {
     typedef Givaro::Poly1Dom<Ring,Givaro::Dense> Parent_t;
 public:
-    using Parent_t::Element;
+    typedef typename Parent_t::Element Element;
     typedef typename Parent_t::Element* Element_ptr;
     typedef const typename Parent_t::Element* ConstElement_ptr;
-    using Parent_t::Type_t;
+    typedef typename Parent_t::Type_t Type_t;
     using Parent_t::Parent_t; // using inherited constructors
 
     std::istream& read ( std::istream& i, typename Parent_t::Element& P) const {
@@ -47,7 +47,7 @@ public:
         size_t p = 0, q = p;
         while ( q < s.size() ) {
             for ( q = p + 1; q < s.size() && s[q] != '+' && s[q] != '-'; ++q );
-            std::string unit(s.substr( p, q - p ));
+            const std::string unit(s.substr( s[p]=='(' ? p+1: p, q - p ));
 // std::clog << "unit: " << unit << std::endl;
                 // Identify coefficient (c) and exponent (n)
                 // First comes the coefficient c
@@ -60,6 +60,7 @@ public:
             } else {
                 if ( pos != 0 ) { // pos == 0 would mean default c = 1
                     const std::string first = unit.substr( 0, pos );
+
 // std::clog << "first: " << first << std::endl;
                     if ( first != "+" ) { // just "+" would mean default c = +1
                         if ( first == "-" ) {

@@ -34,8 +34,7 @@ using PLinOpt::FileFormat;
 // ============================================================
 // Special latex formatting for matrices of rationals
 // ============================================================
-template<typename Matrix>
-std::ostream& latex_print(std::ostream& out, const Matrix& A) {
+std::ostream& latex_print(std::ostream& out, const PLinOpt::Matrix& A) {
     out << "\\begin{bmatrix}\n";
     Givaro::Rational tmp;
     for(size_t i=0; i<A.rowdim();++i) {
@@ -57,6 +56,28 @@ std::ostream& latex_print(std::ostream& out, const Matrix& A) {
 }
 // ============================================================
 
+#include "plinopt_polynomial.h"
+
+template<typename AMatrix>
+std::ostream& PrintChooser(std::ostream& out, const AMatrix& A,
+                           const FileFormat& matformat) {
+    using Field=typename AMatrix::Field;
+
+    if ( (matformat == FileFormat::Plain) ||
+         (matformat == FileFormat::HTML)  ||
+         (matformat == FileFormat(6))     ||	// dense
+         (matformat == FileFormat(12))  ) {		// linalg
+        LinBox::DenseMatrix<Field> B(A.field(), A.rowdim(),A.coldim());
+        PLinOpt::any2dense(B,A);
+        if (matformat == FileFormat(6))
+            return out << B << std::endl;
+        else
+            return B.write(out, matformat);
+    } else {
+        return A.write(out, matformat);
+    }
+}
+
 
 
 // ============================================================
@@ -65,8 +86,13 @@ std::ostream& latex_print(std::ostream& out, const Matrix& A) {
 std::ostream& PrettyPrint(std::ostream& out, std::istream& input,
                 const FileFormat& matformat)
 {
-    Givaro::QField<Givaro::Rational> QQ;
-    LinBox::MatrixStream<Givaro::QField<Givaro::Rational>> ms( QQ, input );
+    using QPol = PLinOpt::PRing<PLinOpt::QRat>;
+    using PMatrix = LinBox::SparseMatrix<QPol, LinBox::SparseMatrixFormat::SparseSeq > ;
+    PLinOpt::QRat QQ;
+    QPol QQX(QQ, 'X');
+//     Givaro::QField<Givaro::Rational> QQ;
+//     LinBox::MatrixStream<Givaro::QField<Givaro::Rational>> ms( QQ, input );
+    LinBox::MatrixStream<QPol> ms( QQX, input );
 
         // ====================================================
         // Read Matrix
@@ -74,16 +100,22 @@ std::ostream& PrettyPrint(std::ostream& out, std::istream& input,
 
     do {
         chrono.start();
-        PLinOpt::Matrix A ( ms );
+//         PLinOpt::Matrix A ( ms );
+        PMatrix A ( ms );
         chrono.stop();
 
             // ====================================================
             // number of non-zero & Frobenius norm
         size_t nnz(0); Givaro::Rational FNormSq(0);
+        size_t maxsize(0);
         for(auto row=A.rowBegin(); row != A.rowEnd(); ++row) {
             nnz += row->size(); // # of non-zero elements
-            for(const auto& iter:*row)
-                FNormSq += (iter.second)*(iter.second); // Square of Frobenius norm
+            for(const auto& iter:*row) {
+                Givaro::Rational tmp;
+                QQX.eval(tmp,iter.second,QQ.one);
+                maxsize = std::max(maxsize,iter.second.size());
+                FNormSq += tmp*tmp;
+            }
         }
 
         std::clog << "# [READ]: \033[1;32m" << A.rowdim() << 'x' << A.coldim() << ' ' << nnz << ' ' << FNormSq << "\033[0m " << chrono << std::endl;
@@ -93,26 +125,22 @@ std::ostream& PrettyPrint(std::ostream& out, std::istream& input,
         for(size_t i(0); i<A.rowdim(); ++i) std::clog << A[i].size() << ' ';
         std::clog << std::endl;
 #endif
+
+        if (maxsize <= 1) {
+            PLinOpt::Matrix RA(QQ,A.rowdim(),A.coldim());
+            for(auto it = A.IndexedBegin(); it != A.IndexedEnd(); ++it)
+                RA.setEntry(it.rowIndex(), it.colIndex(), it.value()[0]);
             // ====================================================
             // Special latex for rationals or one of LinBox formats
-        if (matformat == FileFormat::LaTeX) {
-            latex_print(out, A) << std::endl;
-        } else {
-
-            if ( (matformat == FileFormat::Plain) ||
-                 (matformat == FileFormat::HTML)  ||
-                 (matformat == FileFormat(6))     ||	// dense
-                 (matformat == FileFormat(12))  ) {		// linalg
-                PLinOpt::DenseMatrix B(QQ,A.rowdim(),A.coldim());
-                PLinOpt::any2dense(B,A);
-                if (matformat == FileFormat(6))
-                    out << B << std::endl;
-                else
-                    B.write(out, matformat);
+            if (matformat == FileFormat::LaTeX) {
+                latex_print(out, RA) << std::endl;
             } else {
-                A.write(out, matformat);
+                PrintChooser(out, RA, matformat);
             }
+        } else {
+            PrintChooser(out, A, matformat);
         }
+
             // Stop when no new matrix or empty file
         try { ms.newmatrix(); } catch(LinBox::MatrixStreamError& e) { break; };
     } while(! input.eof());
