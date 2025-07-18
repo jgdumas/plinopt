@@ -5,7 +5,7 @@
 
 OPTFLAGS = -O3 -ffast-math
 
-# OPTFLAGS += -D INPLACE_CHECKER		# adds Maple checks
+# OPTFLAGS += -D INPLACE_CHECKER		# adds Maple checks (needed by ./bin/TTP.sh)
 # OPTFLAGS += -D VERBATIM_PARSING		# Verbose output
 # OPTFLAGS += -D DEFAULT_RANDOM_LOOPS=30u	# Default # of loops
 # OPTFLAGS += -D COEFFICIENT_SEARCH=20u		# Default # sparsifier coeffs
@@ -41,5 +41,14 @@ clean:
 	- \rm ${BIN}
 
 
-check: ${BIN}
+SHELL=/bin/bash
+check: ${BIN} mmcheck slpcheck
+
+mmcheck:
+	./bin/MMchecker data/2x2x2_7_Strassen_{L,R,P}.sms
+	./bin/MMchecker data/2x2x2_7_DPS-accurate_{L,R,P}.sms -m 513083
+	./bin/MMchecker data/2x2x2_7_DPS-accurate_{L,R,P}.sms -r 1013 2 3
+	./bin/MMchecker data/2x2x2_7_DPS-accurate-X_{L,R,P}.sms -P "X^2-3"
+
+slpcheck:
 	./bin/FDT.sh

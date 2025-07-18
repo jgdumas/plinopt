@@ -34,7 +34,8 @@ numopt=100
 if [ "$#" -ge 1 ]; then
     fics=("$@")
 else
-    fics=(data/L*sms)
+    fics=(data/*_L.sms)
+    fics=(${fics[@]//*-X_*})
 fi
 
 BINDRS=(./ ./bin)
@@ -60,10 +61,10 @@ do
       Rn=${mdims[4]}; let Rdn=2*${Rn}
       Pm=${mdims[6]}; let Pdm=2*${Pm}
       Pn=${mdims[7]}; let Pdn=1+${Pn}
-      echo -n "${fic} ${Lm}x${Ln} ${Rm}x${Rn} ${Pm}x${Pn} :"
+      echo -n "${fic} ${Lm}x${Ln} ${Rm}x${Rn} ${Pm}x${Pn} :" | sed 's/_L.sms/_\{L,R,P\}.sms/'
       (${TRIPL} -O ${numopt} `./bin/3.sh $fic`  >& /dev/stdout) | ${MAPLEPROG} | egrep '(errors :=|ADD|SCA|[0-9][^#]*AXPY)' | tr '\n' '\t'| tee -a ${tmpfile}
       echo | tee -a ${tmpfile}
-      echo -n "${fic} ${Ldm}x${Ldn} ${Rdm}x${Rdn} ${Pdm}x${Pdn} :"
+      echo -n "${fic} ${Ldm}x${Ldn} ${Rdm}x${Rdn} ${Pdm}x${Pdn} :" | sed 's/_L.sms/_\{L,R,P\}.sms/'
       (${TRIPL} -e -O ${numopt} `./bin/3.sh $fic`  >& /dev/stdout) | ${MAPLEPROG} | egrep '(errors :=|ADD|SCA|[0-9][^#]*AXPY)' | tr '\n' '\t'| tee -a ${tmpfile}
       echo | tee -a ${tmpfile}
   fi

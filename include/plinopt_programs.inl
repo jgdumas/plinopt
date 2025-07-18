@@ -136,7 +136,7 @@ inline Pair<size_t> progOperations(const VProgram_t& P) {
         }
     }
 
-    return std::move(prgops);
+    return prgops;
 }
 // ============================================================
 
@@ -629,7 +629,7 @@ std::vector<std::string> negateLine(const std::vector<std::string>& line) {
         }
     }
 // std::clog << "# Negate line: " << line << " ---> " << varline << std::endl;
-    return std::move(varline);
+    return varline;
 }
 // ============================================================
 
@@ -707,7 +707,7 @@ size_t endingMinus(VProgram_t & vP, const char inchar, const char outchar) {
                                 for(size_t l=k+1; l<P.size(); ++l) {
                                     std::vector<std::string> negline;
                                     const int blm( (P[l][2] == "-") ? 1 : 0 );
-                                    bool linmod(negatingVariable(negline, P[l], variable));
+                                    negatingVariable(negline, P[l], variable);
                                     rotateMinus(negline);
                                     P[l] = std::move(negline);
                                     const int dlm( ((P[l][2]=="-")?1:0) - blm);
