@@ -48,8 +48,8 @@ std::ostream& Compacter(std::ostream& sout, std::istream& input,
         prevPRs = currPRs;
         variablesTrimer(ProgramVector, simplSingle);
         currPRs = progSize(ProgramVector);
-        std::clog << "# \033[1;32m" << currPRs << "\telements\tinstead of "
-                  << prevPRs << "\033[0m" << std::endl;
+        std::clog << "# " << currPRs << "\telements\tinstead of "
+                  << prevPRs << std::endl;
 #ifdef VERBATIM_PARSING
         std::clog << ProgramVector;
         std::clog << std::string(40,'#') << std::endl;
