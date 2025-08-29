@@ -5,8 +5,8 @@
 
 OPTFLAGS = -O3 -ffast-math
 
-# OPTFLAGS += -D INPLACE_CHECKER		# adds Maple checks (needed by ./bin/TTP.sh)
-# OPTFLAGS += -D VERBATIM_PARSING		# Verbose output
+# OPTFLAGS += -D INPLACE_CHECKER	# adds Maple checks (needed by ./bin/TTP.sh)
+# OPTFLAGS += -D VERBATIM_PARSING=1	# Verbose output
 # OPTFLAGS += -D DEFAULT_RANDOM_LOOPS=30u	# Default # of loops
 # OPTFLAGS += -D COEFFICIENT_SEARCH=20u		# Default # sparsifier coeffs
 

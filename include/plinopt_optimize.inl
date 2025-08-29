@@ -54,12 +54,13 @@ inline size_t score(const std::vector<std::vector<triple>>& AllPairs,
 
 
 template<typename triple, typename _Mat>
-Pair<size_t> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
+Pair<long> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
                        std::vector<triple>& lmultiples, const triple& cse,
                        const std::vector<std::vector<triple>>& AllPairs,
                        const char tev, const char rav) {
     const auto& FF(lM.field());
-    size_t savedadds(0), savedmuls(0), lm(lM.coldim());
+    size_t lm(lM.coldim());
+    long savedadds(0), savedmuls(0);
 
         // Looking for the most number of ones in either columns of cse
     _Mat lT(FF, lM.coldim(), lM.rowdim()); Transpose(lT, lM);
@@ -150,7 +151,7 @@ Pair<size_t> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
     ++lm;
     lM.resize(lM.rowdim(), lm);
 
-    return Pair<size_t>{savedadds,savedmuls};
+    return Pair<long>{savedadds,savedmuls};
 }
 
 
@@ -160,12 +161,9 @@ bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
             size_t& nbmul, const char tev, const char rav) {
     const auto& FF(M.field());
 
+        // Compute all pairs, in a row
     std::vector<std::vector<triple>> AllPairs;
-    std::vector<size_t> Density;
-
-        // Compute initial density, and all pairs, in a row
     for(auto iter=M.rowBegin(); iter != M.rowEnd(); ++iter) {
-        Density.emplace_back(iter->size());
         AllPairs.push_back(listpairs(*iter, FF));
     }
 
@@ -204,6 +202,12 @@ bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
                                std::default_random_engine(Givaro::BaseTimer::seed()) );
                 cse = MaxCSE.front();
 #else
+                    // Compute density in a row
+                std::vector<size_t> Density;
+                for(auto iter=M.rowBegin(); iter != M.rowEnd(); ++iter) {
+                    Density.emplace_back(iter->size());
+                }
+
                 size_t maxscore(0);
                 for(const auto& element: MaxCSE) {
                     const size_t newscore(score(AllPairs,Density,element));
@@ -222,10 +226,15 @@ bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
 #endif
             }
 
+
+                // Now factoring out that CSE from the matrix
+            auto savings(RemOneCSE(sout, M, nbmul, multiples, cse, AllPairs,
+                                   tev, rav));
+
 #ifdef VERBATIM_PARSING
             printEtriple(std::clog << "# Found: ", FF, cse) << '=' << maxfrq
-                                   << ',' << score(AllPairs,Density,cse)
-                                   << std::endl;
+                                   << ", Saved: " << savings.first << "+|"
+                                   << savings.second << 'x' << std::endl;
 #  if VERBATIM_PARSING >= 3
             for (const auto& [element, frequency] : PairMap) {
                 if ( (frequency == maxfrq) && (element != cse)) {
@@ -238,8 +247,6 @@ bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
 #  endif
 #endif
 
-                // Now factoring out that CSE from the matrix
-            RemOneCSE(sout, M, nbmul, multiples, cse, AllPairs, tev, rav);
             return true;
         }
     }
@@ -398,8 +405,9 @@ bool Triangle(std::ostream& sout, _Mat& M, _Mat& T,
 
                         // Second, in j-th column, divide both elements by a
 #ifdef VERBATIM_PARSING
+                    size_t dummy(0);
                     printmulorjustdiv(std::clog << "# Found Triangle [",
-                                      tev, j, ais, nbmul, FF);
+                                      tev, j, ais, dummy, FF);
                     std::clog << "]: (" << iter->first << ',' << j << ')' << '('
                               << i << ',' << j << ')' << '('
                               << i << ',' << third->first << ')' << std::endl;
@@ -621,7 +629,7 @@ Pair<size_t> nullspacedecomp(std::ostream& sout, _Mat& x, _Mat& A,
 
         // ============================================
         // Now find subset of independent rows
-    LinBox::Permutation<typename _Mat::Field> P(FF,(int)Nj);
+    LinBox::Permutation<typename _Mat::Field> P(FF,(long)Nj);
     LinBox::GaussDomain<typename _Mat::Field> GD(FF);
 
         // LUP decomposition
@@ -694,8 +702,6 @@ Pair<size_t> nullspacedecomp(std::ostream& sout, _Mat& x, _Mat& A,
 
 
 #ifdef VERBATIM_PARSING
-//         FreePart.write(std::clog << "# FreePart:", FileFormat::Maple)
-//                                  << std::endl;
         std::clog << "# FreePart dimensions:\t" << FreePart.rowdim()
                   << 'x' << FreePart.coldim() << std::endl;
         std::clog << std::string(30,'#') << std::endl;
@@ -722,7 +728,6 @@ Pair<size_t> nullspacedecomp(std::ostream& sout, _Mat& x, _Mat& A,
 
 #ifdef VERBATIM_PARSING
         std::clog << std::string(30,'#') << std::endl;
-//         Tx.write(std::clog << "# Dependent:", FileFormat::Maple) << std::endl;
         std::clog << "# Dependent dimensions:\t" << Tx.rowdim()
                   << 'x' << Tx.coldim() << std::endl;
 #endif
@@ -816,9 +821,9 @@ bool RecSub(std::vector<std::string>& out, _Mat& Mat,
                 size_t moremul(0);
 
                     // Factoring out that CSE from the matrix
-                const Pair<size_t> savings = RemOneCSE(ssout, lM, moremul,
-                                                       lmultiples, cse,
-                                                       AllPairs, tev, rav);
+                const Pair<long> savings = RemOneCSE(ssout, lM, moremul,
+                                                     lmultiples, cse,
+                                                     AllPairs, tev, rav);
 
                 size_t ladditions(nbadd-savings.first);
                 size_t lmuls(nbmul-savings.second);
@@ -867,7 +872,7 @@ Pair<size_t> RecOptimizer(std::ostream& sout, _Mat& M,
 
     size_t nbadd(0), nbmul(0);
     for(auto iter=M.rowBegin(); iter != M.rowEnd(); ++iter)
-        nbadd += std::max((int)iter->size()-1,0);
+        nbadd += std::max((long)iter->size()-1l,0l);
     for(auto it = M.IndexedBegin(); it != M.IndexedEnd(); ++it)
         if (notAbsOne(FF,it.value())) ++nbmul;
 
