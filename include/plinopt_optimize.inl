@@ -242,7 +242,7 @@ bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
             // More than one pair with maximal frequency
         if (MaxCSE.size()>1) {
                 // Tie breaking heuristics
-#ifdef RANDOM_TIES
+#if defined(RANDOM_TIES) && !defined(DENSITY_OPTIMIZATION)
             std::shuffle ( MaxCSE.begin(), MaxCSE.end(),
                            std::default_random_engine(Givaro::BaseTimer::seed()) );
             cse = MaxCSE.front();
@@ -277,9 +277,11 @@ bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
                                AllPairs, PairMap, tev, rav));
 
 #ifdef VERBATIM_PARSING
+#  if VERBATIM_PARSING >= 2
         printEtriple(std::clog << "# Found: ", FF, cse) << '=' << maxfrq
                                << ", Saved: " << savings.first << "+|"
                                << savings.second << 'x' << std::endl;
+#  endif
 #  if VERBATIM_PARSING >= 3
         for (const auto& [element, frequency] : PairMap) {
             if ( (frequency == maxfrq) && (element != cse)) {
@@ -447,12 +449,14 @@ bool Triangle(std::ostream& sout, _Mat& M, _Mat& T,
 
                         // Second, in j-th column, divide both elements by a
 #ifdef VERBATIM_PARSING
+#  if VERBATIM_PARSING >= 2
                     size_t dummy(0);
                     printmulorjustdiv(std::clog << "# Found Triangle [",
                                       tev, j, ais, dummy, FF);
                     std::clog << "]: (" << iter->first << ',' << j << ')' << '('
                               << i << ',' << j << ')' << '('
                               << i << ',' << third->first << ')' << std::endl;
+#  endif
 #endif
 
                         //   second.i) add column with 1 and quot

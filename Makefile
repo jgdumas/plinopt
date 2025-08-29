@@ -9,7 +9,7 @@ OPTFLAGS = -O3 -ffast-math
 # OPTFLAGS += -D VERBATIM_PARSING=1	# Verbose output
 # OPTFLAGS += -D DEFAULT_RANDOM_LOOPS=30u	# Default # of loops
 # OPTFLAGS += -D COEFFICIENT_SEARCH=20u		# Default # sparsifier coeffs
-
+# OPTFLAGS += -D DENSITY_OPTIMIZATION	# Non-random optimizer
 #######
 
 CXXFLAGS += -D RANDOM_TIES # -D INPLACE_CHECKER
