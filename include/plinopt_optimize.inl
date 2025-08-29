@@ -55,10 +55,10 @@ inline size_t score(const std::vector<std::vector<triple>>& AllPairs,
 
 template<typename triple, typename _Mat>
 Pair<long> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
-                    std::vector<triple>& lmultiples, const triple& cse,
-                    std::vector<std::vector<triple>>& AllPairs,
-                    std::map<triple,size_t>& PairMap,
-                    const char tev, const char rav) {
+                     std::vector<triple>& lmultiples, const triple& cse,
+                     std::vector<std::vector<triple>>& AllPairs,
+                     std::map<triple,size_t>& PairMap,
+                     const char tev, const char rav) {
     const auto& FF(lM.field());
     size_t lm(lM.coldim());
     long savedadds(0), savedmuls(0);
@@ -216,11 +216,10 @@ bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
             size_t& nbadd, size_t& nbmul, const char tev, const char rav) {
     const auto& FF(M.field());
 
-    std::vector<std::vector<triple>> AllPairs;
-
 //     Givaro::Timer chrono; chrono.start();
 
-        // Compute initial density, and all pairs, in a row
+        // Compute all pairs, in a row
+    std::vector<std::vector<triple>> AllPairs;
     for(auto iter=M.rowBegin(); iter != M.rowEnd(); ++iter) {
         AllPairs.push_back(listpairs(*iter, FF));
     }
@@ -251,8 +250,7 @@ bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
 
     bool goodfreq(false);
 
-    while(PairMap.size() > 0)
-    {
+    while(PairMap.size() > 0) {
             // Found some pairs
         size_t maxfrq(0);
         std::vector<triple> MaxCSE;
@@ -282,11 +280,12 @@ bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
                            std::default_random_engine(Givaro::BaseTimer::seed()) );
             cse = MaxCSE.front();
 #else
+                // Compute density in a row
             std::vector<size_t> Density;
-                // Compute  density
             for(auto iter=M.rowBegin(); iter != M.rowEnd(); ++iter) {
                 Density.emplace_back(iter->size());
             }
+
             size_t maxscore(0);
             for(const auto& element: MaxCSE) {
                 const size_t newscore(score(AllPairs,Density,element));
@@ -304,7 +303,6 @@ bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
             }
 #endif
         }
-
 //     chrono.start();
 
             // Now factoring out that CSE from the matrix
@@ -329,9 +327,7 @@ bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
         }
 #  endif
 #endif
-
     }
-
     return true;
 }
 
@@ -908,9 +904,9 @@ bool RecSub(std::vector<std::string>& out, _Mat& Mat,
 
                     // Factoring out that CSE from the matrix
                 const Pair<long> savings = RemOneCSE(ssout, lM, moremul,
-                                                       lmultiples, cse,
-                                                       AllPairs, PairMap,
-                                                       tev, rav);
+                                                     lmultiples, cse,
+                                                     AllPairs, PairMap,
+                                                     tev, rav);
 
                 size_t ladditions(nbadd-savings.first);
                 size_t lmuls(nbmul-savings.second);
@@ -959,7 +955,7 @@ Pair<size_t> RecOptimizer(outstream& sout, _Mat& M,
 
     size_t nbadd(0), nbmul(0);
     for(auto iter=M.rowBegin(); iter != M.rowEnd(); ++iter)
-        nbadd += std::max((long)iter->size()-1,0l);
+        nbadd += std::max((long)iter->size()-1l,0l);
     for(auto it = M.IndexedBegin(); it != M.IndexedEnd(); ++it)
         if (notAbsOne(FF,it.value())) ++nbmul;
 
