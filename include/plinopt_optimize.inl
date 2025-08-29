@@ -84,15 +84,11 @@ Pair<long> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
         FF.assign( std::get<2>(lcse), std::get<2>(cse) );
     }
 
-//     Givaro::Timer global, g2;
-
         // Factor out cse, in all rows
         // adds a column for the new factor
     for(size_t i=0; i<AllPairs.size(); ++i) {
         const auto& rows(AllPairs[i]);
         if (std::find(rows.begin(), rows.end(), cse) != rows.end()) {
-            Givaro::Timer chrono; chrono.start();
-
             typename _Mat::Element coeff; FF.init(coeff);
             for(auto iter=lM[i].begin(); iter!= lM[i].end(); ++iter) {
                 if (iter->first==std::get<0>(lcse)) {
@@ -111,16 +107,13 @@ Pair<long> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
             }
 
                 // Update AllPairs and PairMap
+                // Decrease PairMap by old AP[i]
             for (const auto& iter: AllPairs[i]) {
                 PairMap[iter]--;
                 if (PairMap[iter] == 0) PairMap.erase(iter);
             }
 
-
-//             chrono.start();
-
-//             std::clog << "## BEF AP[" << i << "]:<"; AllPairs[i]) std::clog << it << ' '; std::clog << '>' << std::endl;
-//             std::clog << "## BEF AP[" << i << "]: " << AllPairs[i].size() << std::endl;
+                // Update AllPairs[i]
             std::vector<triple> newrow;
             for (const auto& iter: AllPairs[i]) {
                 if ( (std::get<0>(iter) != std::get<0>(lcse)) &&
@@ -137,31 +130,14 @@ Pair<long> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
                 newrow.emplace_back(iter->first, endlMi->first,
                                     FF.div(tmp, endlMi->second, iter->second));
             }
-
             AllPairs[i] = newrow;
 
-//             chrono.stop();
-//             g2 += chrono;
-
-//             chrono.start();
-//             listpairs(lM[i],FF);
-//             chrono.stop();
-//             global += chrono;
-
-//             if (newrow.size() != AllPairs[i].size()) {
-//                     //             std::clog << "## AFT AP[" << i << "]:<"; for(const auto& it: AllPairs[i]) std::clog << it << ' '; std::clog << '>' << std::endl;
-//                 std::clog << "## AFT AP[" << i << "]: " << AllPairs[i].size() << std::endl;
-//                 std::clog << "## AFT newrow: " << newrow.size() << std::endl;
-//             }
-
-
-
-            for (const auto& iter: AllPairs[i]) {
+                // Increase PairMap by new AP[i]
+            for (const auto& iter: newrow) {
                 PairMap[iter]++;
             }
         }
     }
-//     std::clog << "# listpairs: " << global << " vs " << g2 << std::endl;
 
         // If coefficient was already applied
         //    then reuse the multiplication
@@ -216,17 +192,11 @@ bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
             size_t& nbadd, size_t& nbmul, const char tev, const char rav) {
     const auto& FF(M.field());
 
-//     Givaro::Timer chrono; chrono.start();
-
         // Compute all pairs, in a row
     std::vector<std::vector<triple>> AllPairs;
     for(auto iter=M.rowBegin(); iter != M.rowEnd(); ++iter) {
         AllPairs.push_back(listpairs(*iter, FF));
     }
-
-//     chrono.stop();
-//     std::clog << "# AllPairs: " << chrono << std::endl;
-//     chrono.start();
 
         // Count occurences of each pair in whole matrix
     std::map<triple,size_t> PairMap;
@@ -235,9 +205,6 @@ bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
             PairMap[iter]++;
         }
     }
-
-//     chrono.stop();
-//     std::clog << "# PairMap: " << chrono << std::endl;
 
 #ifdef VERBATIM_PARSING
     size_t apcount(0);
@@ -303,14 +270,11 @@ bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
             }
 #endif
         }
-//     chrono.start();
 
             // Now factoring out that CSE from the matrix
         ++nbadd;
-        auto savings(RemOneCSE(sout, M, nbmul, multiples, cse, AllPairs, PairMap,
-                               tev, rav));
-//     chrono.stop();
-//     std::clog << "# RemOne: " << chrono << std::endl;
+        auto savings(RemOneCSE(sout, M, nbmul, multiples, cse,
+                               AllPairs, PairMap, tev, rav));
 
 #ifdef VERBATIM_PARSING
         printEtriple(std::clog << "# Found: ", FF, cse) << '=' << maxfrq
@@ -637,14 +601,9 @@ Pair<size_t> Optimizer(outstream& sout, _Mat& M,
     using triple=std::tuple<size_t, size_t, typename _Mat::Element>;
     size_t nbadd(0), nbmul(0);
 
-    Givaro::Timer chrono; chrono.start();
-
         // Factoring sums
     std::vector<triple> multiples;
     for( ; OneSub(sout, M, multiples, nbadd, nbmul, tev, rav) ; ) { }
-
-    chrono.stop();
-    std::clog << "# Optimizer: " << chrono << std::endl;
 
         // No more useful CSE, thus
         // generate the rest of the program from the new M
