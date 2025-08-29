@@ -226,6 +226,7 @@ bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
             printEtriple(std::clog << "# Found: ", FF, cse) << '=' << maxfrq
                                    << ',' << score(AllPairs,Density,cse)
                                    << std::endl;
+#  if VERBATIM_PARSING >= 3
             for (const auto& [element, frequency] : PairMap) {
                 if ( (frequency == maxfrq) && (element != cse)) {
                     printEtriple(std::clog << "# tied : ", FF, element)
@@ -234,6 +235,7 @@ bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
                                            << std::endl;
                 }
             }
+#  endif
 #endif
 
                 // Now factoring out that CSE from the matrix
@@ -643,7 +645,7 @@ Pair<size_t> nullspacedecomp(std::ostream& sout, _Mat& x, _Mat& A,
     size_t nullity = A.coldim()-Rank;
     x.resize(x.rowdim(),nullity);
 #ifdef VERBATIM_PARSING
-    std::clog << "# NullSpace dimensions:" << x.rowdim() << 'x' << x.coldim() << std::endl;
+    std::clog << "# NullSpace dimensions:\t" << x.rowdim() << 'x' << x.coldim() << std::endl;
     std::clog << std::string(30,'#') << std::endl;
 #endif
     if ( (Rank != 0) && (nullity != 0) ) {
@@ -692,8 +694,10 @@ Pair<size_t> nullspacedecomp(std::ostream& sout, _Mat& x, _Mat& A,
 
 
 #ifdef VERBATIM_PARSING
-        FreePart.write(std::clog << "# FreePart:", FileFormat::Maple)
-                                 << std::endl;
+//         FreePart.write(std::clog << "# FreePart:", FileFormat::Maple)
+//                                  << std::endl;
+        std::clog << "# FreePart dimensions:\t" << FreePart.rowdim()
+                  << 'x' << FreePart.coldim() << std::endl;
         std::clog << std::string(30,'#') << std::endl;
 #endif
 
@@ -718,7 +722,9 @@ Pair<size_t> nullspacedecomp(std::ostream& sout, _Mat& x, _Mat& A,
 
 #ifdef VERBATIM_PARSING
         std::clog << std::string(30,'#') << std::endl;
-        Tx.write(std::clog << "# Dependent:", FileFormat::Maple) << std::endl;
+//         Tx.write(std::clog << "# Dependent:", FileFormat::Maple) << std::endl;
+        std::clog << "# Dependent dimensions:\t" << Tx.rowdim()
+                  << 'x' << Tx.coldim() << std::endl;
 #endif
 
         input2Temps(sout, Tx.coldim(), 'o', 'v', x);
