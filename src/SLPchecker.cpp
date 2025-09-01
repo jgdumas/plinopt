@@ -65,6 +65,8 @@ int SLPcheck(const std::string& prgname, const std::string& matname,
         QRat QQ;
         QMstream ms(QQ, matfile);
         Matrix M(ms);
+        const Pair<size_t> nbops(naiveOps(M));
+
         const size_t m(std::max(M.rowdim(),A.rowdim()));
         const size_t n(std::max(M.coldim(),A.coldim()));
         M.resize(m,n); A.resize(m,n);
@@ -77,7 +79,9 @@ int SLPcheck(const std::string& prgname, const std::string& matname,
         if (BMD.isZero (R))
             std::clog <<"# \033[1;32mSUCCESS: correct SLP for "
                       << m << 'x' << n
-                      << " Matrix-Vector multiplication!\033[0m" << std::endl;
+                      << " (" << nbops.first << '+'
+                      << '|' << nbops.second << 'x'
+                      << ") Matrix-Vector multiplication!\033[0m" << std::endl;
         else {
             std::cerr << "# \033[1;31m****** ERROR, not a "
                       << m << 'x' << n
