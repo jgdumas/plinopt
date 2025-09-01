@@ -52,3 +52,8 @@ mmcheck:
 
 slpcheck:
 	./bin/FDT.sh
+
+largeslpcheck:
+	SLPchecker -M data/32x32x32_15096_L.s{ms,lp}
+	SLPchecker -M data/32x32x32_15096_R.s{ms,lp}
+	SLPchecker -M data/32x32x32_15096_P.s{ms,lp}
