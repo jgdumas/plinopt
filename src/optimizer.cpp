@@ -78,18 +78,14 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
         std::clog << std::string(40,'#') << std::endl;
     }
 
+    std::clog << std::string(40,'#') << std::endl;
+    std::ostringstream ssout;
+
         // ============================================================
         // Compute naive number of operations
-    int addinit(0), mulinit(0);
-    for(auto iter=M.rowBegin(); iter != M.rowEnd(); ++iter)
-        addinit += std::max((int)iter->size()-1,0);
-    for(auto it = M.IndexedBegin(); it != M.IndexedEnd(); ++it)
-        if (!isOne(abs(it.value()))) ++mulinit;
 
-    std::clog << std::string(40,'#') << std::endl;
-
-    std::ostringstream ssout;
-    Pair<size_t> nbops{addinit,mulinit};
+    const Pair<size_t> opsinit(naiveOps(M));
+    Pair<size_t> nbops(opsinit);
 
         // ============================================================
         // Rebind matrix type over sub field matrix type
@@ -229,10 +225,10 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
             if ((knbops.first !=0 || knbops.second != 0)) {
                 std::clog << std::string(40,'#') << std::endl
                           << "# \033[1;32m" << knbops.first
-                          << "\tadditions\tinstead of " << addinit
+                          << "\tadditions\tinstead of " << opsinit.first
                           << "\033[0m \t" << chrono << std::endl
                           << "# \033[1;32m" << knbops.second
-                          << "\tmultiplications\tinstead of " << mulinit
+                          << "\tmultiplications\tinstead of " << opsinit.second
                           << "\033[0m" << std::endl
                           << std::string(40,'#') << std::endl;
             }
@@ -268,9 +264,9 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
 
             if ((rnbops.first !=0 || rnbops.second != 0)) {
                 std::clog << std::string(40,'#') << std::endl;
-                std::clog << "# \033[1;32m" << rnbops.first << "\tadditions\tinstead of " << addinit
+                std::clog << "# \033[1;32m" << rnbops.first << "\tadditions\tinstead of " << opsinit.first
                           << "\033[0m \t" << chrono << std::endl;
-                std::clog << "# \033[1;32m" << rnbops.second << "\tmultiplications\tinstead of " << mulinit << "\033[0m" << std::endl;
+                std::clog << "# \033[1;32m" << rnbops.second << "\tmultiplications\tinstead of " << opsinit.second << "\033[0m" << std::endl;
                 std::clog << std::string(40,'#') << std::endl;
             }
         } else {
@@ -287,9 +283,9 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
 
     if ((nbops.first !=0 || nbops.second != 0)) {
         std::clog << std::string(40,'#') << std::endl;
-        std::clog << "# \033[1;32m" << nbops.first << "\tadditions\tinstead of " << addinit
+        std::clog << "# \033[1;32m" << nbops.first << "\tadditions\tinstead of " << opsinit.first
                   << "\033[0m \t" << global << std::endl;
-        std::clog << "# \033[1;32m" << nbops.second << "\tmultiplications\tinstead of " << mulinit << "\033[0m" << std::endl;
+        std::clog << "# \033[1;32m" << nbops.second << "\tmultiplications\tinstead of " << opsinit.second << "\033[0m" << std::endl;
         std::clog << std::string(40,'#') << std::endl;
     }
 

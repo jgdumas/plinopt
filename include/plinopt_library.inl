@@ -192,6 +192,18 @@ inline Matrix& permuteRows(Matrix& R, const Permutation& P,
     return dense2sparse(R, dR);
 }
 
+// Matrix operations
+template<typename _Mat>
+Pair<size_t> naiveOps(const _Mat& M) {
+    const auto& FF(M.field());
+    size_t nbadd(0), nbmul(0);
+    for(auto iter=M.rowBegin(); iter != M.rowEnd(); ++iter)
+        nbadd += std::max((long)iter->size()-1l,0l);
+    for(auto it = M.IndexedBegin(); it != M.IndexedEnd(); ++it)
+        if (notAbsOne(FF,it.value())) ++nbmul;
+    return Pair<size_t>{nbadd,nbmul};
+}
+
 // ==================
 // Returns the kth-permutation of 0..(n-1) via the factoradic
 // Fn is the factorial vector up to n-1 -- from 'factorial(m)'

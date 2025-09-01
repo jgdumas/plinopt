@@ -185,6 +185,10 @@ int Fsign(const Givaro::Modular<Element>& F, const Element& e) {
     return (a<e ? -1 : 1);
 }
 
+// Matrix operations
+template<typename _Mat>
+Pair<size_t> naiveOps(const _Mat& M);
+
 // ============================================
 // Sets new temporaries with the input values
 void input2Temps(std::ostream& sout, const size_t N,

@@ -51,8 +51,6 @@ inline size_t score(const std::vector<std::vector<triple>>& AllPairs,
     return score;
 }
 
-
-
 template<typename triple, typename _Mat>
 Pair<long> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
                        std::vector<triple>& lmultiples, const triple& cse,
@@ -869,19 +867,14 @@ Pair<size_t> RecOptimizer(std::ostream& sout, _Mat& M,
     using triple=std::tuple<size_t, size_t, typename _Mat::Element>;
     const auto& FF(M.field());
 
-
-    size_t nbadd(0), nbmul(0);
-    for(auto iter=M.rowBegin(); iter != M.rowEnd(); ++iter)
-        nbadd += std::max((long)iter->size()-1l,0l);
-    for(auto it = M.IndexedBegin(); it != M.IndexedEnd(); ++it)
-        if (notAbsOne(FF,it.value())) ++nbmul;
+    Pair<size_t> nbops(naiveOps(M));
 
         // Factoring sums
     std::vector<std::string> dout;
     std::vector<triple> multiples;
-    RecSub(dout, M, multiples, nbadd, nbmul, 0, tev, rav);
+    RecSub(dout, M, multiples, nbops.first, nbops.second, 0, tev, rav);
 
-    size_t alreadymuls(nbmul);
+    size_t alreadymuls(nbops.second);
     for(auto it = M.IndexedBegin(); it != M.IndexedEnd(); ++it)
         if (notAbsOne(FF,it.value())) --alreadymuls;
 
@@ -893,7 +886,7 @@ Pair<size_t> RecOptimizer(std::ostream& sout, _Mat& M,
 
     ProgramGen(sout, M, multiples, addcount, alreadymuls, inv, ouv, tev, rav);
 
-    return Pair<size_t>(nbadd,alreadymuls);
+    return Pair<size_t>(nbops.first,alreadymuls);
 }
 
 
