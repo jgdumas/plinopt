@@ -18,6 +18,8 @@ else
     fics=(data/*sms)
     # Do not test polynomial files yet
     fics=(${fics[@]//*-X_*})
+    # Do not test large files automatically
+    fics=(${fics[@]//*32x32x32*})
 fi
 
 BINDRS=(./ ./bin)
