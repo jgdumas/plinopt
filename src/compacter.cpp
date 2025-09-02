@@ -51,8 +51,10 @@ std::ostream& Compacter(std::ostream& sout, std::istream& input,
         std::clog << "# " << currPRs << "\telements\tinstead of "
                   << prevPRs << std::endl;
 #ifdef VERBATIM_PARSING
+#  if VERBATIM_PARSING >= 5
         std::clog << ProgramVector;
         std::clog << std::string(40,'#') << std::endl;
+#  endif
 #endif
     } while ( (currPRs < prevPRs) && (--iter != 0) ) ;
 
