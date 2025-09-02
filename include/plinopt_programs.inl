@@ -800,7 +800,8 @@ Iterator endGroup(const Iterator& start, const Iterator& end) {
             if (*closp == ")") --depth;
             else ++depth;
         } while(depth>0);
-        return closp+1;
+        const auto ncp = { "+", "-", ")", ";" };
+        return std::find_first_of(closp+1,end,ncp.begin(),ncp.end());
     } else {
         const auto ocp = { "+", "-" };
         return std::find_first_of(start,end,ocp.begin(),ocp.end());
@@ -833,7 +834,7 @@ size_t parenthesisMinus(VProgram_t & P) {
 // std::clog << "# Starting minus parenthesis from " << line << ", dealing with: " << newgroup << std::endl;
                     newgroup[0]="+";
                     size_t nosign(0);
-                    auto iter(newgroup.begin()+2); // (?
+                    auto iter(newgroup.begin()+2); // + ( ?
                     do {
                         if (iter[0]==")") {
                             break;
