@@ -104,14 +104,14 @@ Pair<long> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
                 }
             }
 
-                // Update AllPairs and PairMap
+                // Update AllPairs[i] and PairMap
                 // Decrease PairMap by old AP[i]
             for (const auto& iter: AllPairs[i]) {
                 PairMap[iter]--;
                 if (PairMap[iter] == 0) PairMap.erase(iter);
             }
 
-                // Update AllPairs[i]
+                // Preserve pairs not involving the change
             std::vector<triple> newrow;
             for (const auto& iter: AllPairs[i]) {
                 if ( (std::get<0>(iter) != std::get<0>(lcse)) &&
@@ -122,18 +122,21 @@ Pair<long> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
                     newrow.push_back(iter);
                 }
             }
+                 // Add all pairs with new (last) element
             typename _Mat::Element tmp; FF.init(tmp);
             auto endlMi(lM[i].end()); --endlMi;
             for(auto iter=lM[i].begin(); iter != endlMi; ++iter) {
                 newrow.emplace_back(iter->first, endlMi->first,
                                     FF.div(tmp, endlMi->second, iter->second));
             }
-            AllPairs[i] = newrow;
 
                 // Increase PairMap by new AP[i]
             for (const auto& iter: newrow) {
                 PairMap[iter]++;
             }
+
+                // Update AllPairs[i]
+            AllPairs[i].assign(newrow.begin(),newrow.end());
         }
     }
 
@@ -205,9 +208,8 @@ bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
     }
 
 #ifdef VERBATIM_PARSING
-    size_t apcount(0);
-    for(const auto& rows: AllPairs) apcount += rows.size();
-    std::clog << "# Pairs: " << apcount << '|'
+    size_t apcount(0); for(const auto& rows: AllPairs) apcount += rows.size();
+    std::clog << "# Pairs: " << PairMap.size() << '|' << apcount << '|'
               << double(apcount)/double(AllPairs.size()) << std::endl;
 #endif
 
@@ -747,7 +749,7 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
 
 
 #ifdef VERBATIM_PARSING
-        std::clog << "# FreePart dimensions:\t" << FreePart.rowdim()
+        std::clog << "# FreePart dimensions:\t" << Rank
                   << 'x' << FreePart.coldim() << std::endl;
         std::clog << std::string(30,'#') << std::endl;
 #endif
