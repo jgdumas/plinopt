@@ -905,7 +905,7 @@ std::vector<std::string> swapParenthesisMinus(const Iterator& start,
         std::vector<std::string> newgroup;
         newgroup.insert(newgroup.end(), openp-1, closp);
         newline.pop_back();
-std::clog << "## newgroup: " << newgroup << std::endl;
+// std::clog << "## newgroup: " << newgroup << std::endl;
         if ((openp != startl) && (newgroup[2] == "-")) {
             bool swap(false);
             if (newgroup[0] == "+") {
@@ -916,7 +916,7 @@ std::clog << "## newgroup: " << newgroup << std::endl;
             if (swap) {
                 newgroup = negateLine(newgroup);
             }
-std::clog << "## transform: " << newgroup << std::endl;
+// std::clog << "## transform: " << newgroup << std::endl;
         }
         newline.insert(newline.end(),newgroup.begin(),newgroup.begin()+2);
 
@@ -927,7 +927,7 @@ std::clog << "## transform: " << newgroup << std::endl;
 
         startl = closp;
     }
-std::clog << "## newline: " << newline << std::endl;
+// std::clog << "## newline: " << newline << std::endl;
     return newline;
 }
 
