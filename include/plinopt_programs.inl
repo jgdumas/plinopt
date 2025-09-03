@@ -896,6 +896,10 @@ size_t parenthesisMinus(VProgram_t & P) {
 template<typename Iterator>
 std::vector<std::string> swapParenthesisMinus(const Iterator& start,
                                               const Iterator& endl) {
+// std::clog << "## sPM: ";
+// for(auto it(start); it != endl; ++it) std::clog << *it << ' ';
+// std::clog << std::endl;
+
     std::vector<std::string> newline;
     for (auto startl(start); startl != endl;) {
         auto openp = std::find(startl,endl,"(");
@@ -903,10 +907,15 @@ std::vector<std::string> swapParenthesisMinus(const Iterator& start,
         if (openp == endl) break;
         auto closp( endGroup(openp, endl) );
         std::vector<std::string> newgroup;
-        newgroup.insert(newgroup.end(), openp-1, closp);
-        newline.pop_back();
+        size_t offset(0);
+        if (openp != startl) {
+            ++offset;
+            newline.pop_back();
+        }
+        newgroup.insert(newgroup.end(), openp-offset, closp);
+        ++offset;
 // std::clog << "## newgroup: " << newgroup << std::endl;
-        if ((openp != startl) && (newgroup[2] == "-")) {
+        if ((openp != startl) && (newgroup[offset] == "-")) {
             bool swap(false);
             if (newgroup[0] == "+") {
                 newgroup[0]="-"; swap=true;
@@ -918,10 +927,10 @@ std::vector<std::string> swapParenthesisMinus(const Iterator& start,
             }
 // std::clog << "## transform: " << newgroup << std::endl;
         }
-        newline.insert(newline.end(),newgroup.begin(),newgroup.begin()+2);
+        newline.insert(newline.end(),newgroup.begin(),newgroup.begin()+offset);
 
         std::vector<std::string> newblock(
-            swapParenthesisMinus(newgroup.begin()+2, newgroup.end()) );
+            swapParenthesisMinus(newgroup.begin()+offset, newgroup.end()) );
 
         newline.insert(newline.end(),newblock.begin(), newblock.end());
 
