@@ -29,7 +29,7 @@
 //   - Common Subexpressions selection:
 //       will determine the maximal size of CSE
 //       then among CSE with the maximal size, select:
-//         * by default (not defined), via a score
+//         * by default (if not defined), via a score
 //         * otherwise define the following for random choice
 //   - Choice of independent rows for the Kernel method;
 //         * by default (not defined), start with sparsest

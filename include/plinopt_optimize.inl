@@ -53,9 +53,10 @@ inline size_t score(const std::vector<std::vector<triple>>& AllPairs,
 
 template<typename triple, typename _Mat>
 Pair<long> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
-                       std::vector<triple>& lmultiples, const triple& cse,
-                       const std::vector<std::vector<triple>>& AllPairs,
-                       const char tev, const char rav) {
+                     std::vector<triple>& lmultiples, const triple& cse,
+                     std::vector<std::vector<triple>>& AllPairs,
+                     std::map<triple,size_t>& PairMap,
+                     const char tev, const char rav) {
     const auto& FF(lM.field());
     size_t lm(lM.coldim());
     long savedadds(0), savedmuls(0);
@@ -81,7 +82,6 @@ Pair<long> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
         FF.assign( std::get<2>(lcse), std::get<2>(cse) );
     }
 
-
         // Factor out cse, in all rows
         // adds a column for the new factor
     for(size_t i=0; i<AllPairs.size(); ++i) {
@@ -103,6 +103,40 @@ Pair<long> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
                     break;
                 }
             }
+
+                // Update AllPairs[i] and PairMap
+                // Decrease PairMap by old AP[i]
+            for (const auto& iter: AllPairs[i]) {
+                PairMap[iter]--;
+                if (PairMap[iter] == 0) PairMap.erase(iter);
+            }
+
+                // Preserve pairs not involving the change
+            std::vector<triple> newrow;
+            for (const auto& iter: AllPairs[i]) {
+                if ( (std::get<0>(iter) != std::get<0>(lcse)) &&
+                     (std::get<1>(iter) != std::get<0>(lcse)) &&
+                     (std::get<0>(iter) != std::get<1>(lcse)) &&
+                     (std::get<1>(iter) != std::get<1>(lcse))
+                     ) {
+                    newrow.push_back(iter);
+                }
+            }
+                 // Add all pairs with new (last) element
+            typename _Mat::Element tmp; FF.init(tmp);
+            auto endlMi(lM[i].end()); --endlMi;
+            for(auto iter=lM[i].begin(); iter != endlMi; ++iter) {
+                newrow.emplace_back(iter->first, endlMi->first,
+                                    FF.div(tmp, endlMi->second, iter->second));
+            }
+
+                // Increase PairMap by new AP[i]
+            for (const auto& iter: newrow) {
+                PairMap[iter]++;
+            }
+
+                // Update AllPairs[i]
+            AllPairs[i].assign(newrow.begin(),newrow.end());
         }
     }
 
@@ -156,7 +190,7 @@ Pair<long> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
 // Removing one pair (CSE)
 template<typename triple,typename _Mat>
 bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
-            size_t& nbmul, const char tev, const char rav) {
+            size_t& nbadd, size_t& nbmul, const char tev, const char rav) {
     const auto& FF(M.field());
 
         // Compute all pairs, in a row
@@ -173,11 +207,22 @@ bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
         }
     }
 
-        // Found some pairs
-    if (PairMap.size()) {
+#ifdef VERBATIM_PARSING
+    size_t apcount(0); for(const auto& rows: AllPairs) apcount += rows.size();
+    std::clog << "# Pairs: " << PairMap.size() << '|' << apcount << '|'
+              << double(apcount)/double(AllPairs.size()) << std::endl;
+#endif
+
+    if (PairMap.size()==0) return false;
+
+    bool goodfreq(false);
+
+    while(PairMap.size() > 0) {
+            // Found some pairs
         size_t maxfrq(0);
         std::vector<triple> MaxCSE;
         triple cse;
+
             // Find all pairs with maximal frequency
         for (const auto& [element, frequency] : PairMap) {
             if (frequency == maxfrq) {
@@ -190,65 +235,66 @@ bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
             }
         }
 
+        if (maxfrq <=1) return goodfreq;
             // Factoring will gain something if maximal frequency > 1
-        if (maxfrq > 1) {
-                // More than one pair with maximal frequency
-            if (MaxCSE.size()>1) {
-                    // Tie breaking heuristics
-#ifdef RANDOM_TIES
-                std::shuffle ( MaxCSE.begin(), MaxCSE.end(),
-                               std::default_random_engine(Givaro::BaseTimer::seed()) );
-                cse = MaxCSE.front();
-#else
-                    // Compute density in a row
-                std::vector<size_t> Density;
-                for(auto iter=M.rowBegin(); iter != M.rowEnd(); ++iter) {
-                    Density.emplace_back(iter->size());
-                }
+        goodfreq = true;
 
-                size_t maxscore(0);
-                for(const auto& element: MaxCSE) {
-                    const size_t newscore(score(AllPairs,Density,element));
-                    if (newscore == maxscore) {
-                            // Tie breaking by multiplier
-                        if (isAbsOne(FF,std::get<2>(element))) {
-                            cse = element;
-                        }
-                    }
-                        // Tie breaking by score
-                    if (newscore > maxscore) {
-                        maxscore = newscore;
+            // More than one pair with maximal frequency
+        if (MaxCSE.size()>1) {
+                // Tie breaking heuristics
+#if defined(RANDOM_TIES) && !defined(DENSITY_OPTIMIZATION)
+            std::shuffle ( MaxCSE.begin(), MaxCSE.end(),
+                           std::default_random_engine(Givaro::BaseTimer::seed()) );
+            cse = MaxCSE.front();
+#else
+                // Compute density in a row
+            std::vector<size_t> Density;
+            for(auto iter=M.rowBegin(); iter != M.rowEnd(); ++iter) {
+                Density.emplace_back(iter->size());
+            }
+
+            size_t maxscore(0);
+            for(const auto& element: MaxCSE) {
+                const size_t newscore(score(AllPairs,Density,element));
+                if (newscore == maxscore) {
+                        // Tie breaking by multiplier
+                    if (isAbsOne(FF,std::get<2>(element))) {
                         cse = element;
                     }
                 }
-#endif
-            }
-
-
-                // Now factoring out that CSE from the matrix
-            auto savings(RemOneCSE(sout, M, nbmul, multiples, cse, AllPairs,
-                                   tev, rav));
-
-#ifdef VERBATIM_PARSING
-            printEtriple(std::clog << "# Found: ", FF, cse) << '=' << maxfrq
-                                   << ", Saved: " << savings.first << "+|"
-                                   << savings.second << 'x' << std::endl;
-#  if VERBATIM_PARSING >= 3
-            for (const auto& [element, frequency] : PairMap) {
-                if ( (frequency == maxfrq) && (element != cse)) {
-                    printEtriple(std::clog << "# tied : ", FF, element)
-                                           << '=' << maxfrq << ','
-                                           << score(AllPairs,Density,element)
-                                           << std::endl;
+                    // Tie breaking by score
+                if (newscore > maxscore) {
+                    maxscore = newscore;
+                    cse = element;
                 }
             }
+#endif
+        }
+
+            // Now factoring out that CSE from the matrix
+        ++nbadd;
+        auto savings(RemOneCSE(sout, M, nbmul, multiples, cse,
+                               AllPairs, PairMap, tev, rav));
+
+#ifdef VERBATIM_PARSING
+#  if VERBATIM_PARSING >= 2
+        printEtriple(std::clog << "# Found: ", FF, cse) << '=' << maxfrq
+                               << ", Saved: " << savings.first << "+|"
+                               << savings.second << 'x' << std::endl;
+#  endif
+#  if VERBATIM_PARSING >= 3
+        for (const auto& [element, frequency] : PairMap) {
+            if ( (frequency == maxfrq) && (element != cse)) {
+                printEtriple(std::clog << "# tied : ", FF, element)
+                                       << '=' << maxfrq << ','
+                                       << score(AllPairs,Density,element)
+                                       << std::endl;
+            }
+        }
 #  endif
 #endif
-
-            return true;
-        }
     }
-    return false;
+    return true;
 }
 
 // Factors out same coefficient in a column
@@ -403,12 +449,14 @@ bool Triangle(std::ostream& sout, _Mat& M, _Mat& T,
 
                         // Second, in j-th column, divide both elements by a
 #ifdef VERBATIM_PARSING
+#  if VERBATIM_PARSING >= 2
                     size_t dummy(0);
                     printmulorjustdiv(std::clog << "# Found Triangle [",
                                       tev, j, ais, dummy, FF);
                     std::clog << "]: (" << iter->first << ',' << j << ')' << '('
                               << i << ',' << j << ')' << '('
                               << i << ',' << third->first << ')' << std::endl;
+#  endif
 #endif
 
                         //   second.i) add column with 1 and quot
@@ -445,8 +493,8 @@ bool Triangle(std::ostream& sout, _Mat& M, _Mat& T,
 
 
 // Direct program generateur from a matrix
-template<typename _Mat, typename triple>
-std::ostream& ProgramGen(std::ostream& sout, _Mat& M,
+template<typename outstream, typename _Mat, typename triple>
+std::ostream& ProgramGen(outstream& sout, _Mat& M,
                          std::vector<triple>& multiples,
                          size_t& addcount, size_t& nbmul,
                          const char inv, const char ouv,
@@ -475,6 +523,7 @@ std::ostream& ProgramGen(std::ostream& sout, _Mat& M,
 
     Transpose(T,M);
 
+        // Factoring triangle multiplier
     for(size_t j=0; j<M.coldim(); ++j) {
         Triangle(sout, M, T, multiples, addcount, nbmul, tev, rav, j);
     }
@@ -548,8 +597,8 @@ std::ostream& ProgramGen(std::ostream& sout, _Mat& M,
 
 
 // Global random optimization function (pairs and factors)
-template<typename _Mat>
-Pair<size_t> Optimizer(std::ostream& sout, _Mat& M,
+template<typename outstream, typename _Mat>
+Pair<size_t> Optimizer(outstream& sout, _Mat& M,
                        const char inv, const char ouv,
                        const char tev, const char rav) {
 
@@ -558,7 +607,7 @@ Pair<size_t> Optimizer(std::ostream& sout, _Mat& M,
 
         // Factoring sums
     std::vector<triple> multiples;
-    for( ; OneSub(sout, M, multiples, nbmul, tev, rav) ; ++nbadd) { }
+    for( ; OneSub(sout, M, multiples, nbadd, nbmul, tev, rav) ; ) { }
 
         // No more useful CSE, thus
         // generate the rest of the program from the new M
@@ -570,16 +619,16 @@ Pair<size_t> Optimizer(std::ostream& sout, _Mat& M,
 
 
 	// Postcondition _Matrix A is nullified
-template<typename _Mat>
-Pair<size_t> nullspacedecomp(std::ostream& sout, _Mat& x, _Mat& A,
+template<typename outstream, typename _Mat>
+Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
                              const bool mostCSE) {
 	std::vector<size_t> l;
     return nullspacedecomp(sout, x, A, l, mostCSE);
 }
 
 	// Postcondition _Matrix A is nullified
-template<typename _Mat>
-Pair<size_t> nullspacedecomp(std::ostream& sout, _Mat& x, _Mat& A,
+template<typename outstream, typename _Mat>
+Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
                              std::vector<size_t>& l, const bool mostCSE) {
     const auto& FF(A.field());
     typename _Mat::Element Det;
@@ -700,11 +749,10 @@ Pair<size_t> nullspacedecomp(std::ostream& sout, _Mat& x, _Mat& A,
 
 
 #ifdef VERBATIM_PARSING
-        std::clog << "# FreePart dimensions:\t" << FreePart.rowdim()
+        std::clog << "# FreePart dimensions:\t" << Rank
                   << 'x' << FreePart.coldim() << std::endl;
         std::clog << std::string(30,'#') << std::endl;
 #endif
-
 
             // ============================================
             // Optimize the set of independent rows
@@ -716,7 +764,6 @@ Pair<size_t> nullspacedecomp(std::ostream& sout, _Mat& x, _Mat& A,
         } else {
             Fops = Optimizer(sout, FreePart, 'i', 'o', 't', 'r');
         }
-
 
             // ============================================
             // Optimize the dependent rows (transposed nullspace)
@@ -770,7 +817,7 @@ bool RecSub(std::vector<std::string>& out, _Mat& Mat,
 
     std::vector<std::vector<triple>> AllPairs;
     std::vector<size_t> Density;
-        // Compute initial density, and all pairs, in a row
+        // Compute all pairs, in a row
     for(auto iter=Mat.rowBegin(); iter != Mat.rowEnd(); ++iter) {
         AllPairs.push_back(listpairs(*iter, FF));
     }
@@ -821,7 +868,8 @@ bool RecSub(std::vector<std::string>& out, _Mat& Mat,
                     // Factoring out that CSE from the matrix
                 const Pair<long> savings = RemOneCSE(ssout, lM, moremul,
                                                      lmultiples, cse,
-                                                     AllPairs, tev, rav);
+                                                     AllPairs, PairMap,
+                                                     tev, rav);
 
                 size_t ladditions(nbadd-savings.first);
                 size_t lmuls(nbmul-savings.second);
@@ -860,8 +908,8 @@ bool RecSub(std::vector<std::string>& out, _Mat& Mat,
 
 
 // Global exhaustive greedy CSE optimization function (pairs and factors)
-template<typename _Mat>
-Pair<size_t> RecOptimizer(std::ostream& sout, _Mat& M,
+template<typename outstream, typename _Mat>
+Pair<size_t> RecOptimizer(outstream& sout, _Mat& M,
                           const char inv, const char ouv,
                           const char tev, const char rav) {
     using triple=std::tuple<size_t, size_t, typename _Mat::Element>;

@@ -62,8 +62,8 @@ size_t score(const std::vector<std::vector<triple>>& AllPairs,
              const triple& cse);
 
 // Direct program generateur from a matrix
-template<typename _Mat, typename triple>
-std::ostream& ProgramGen(std::ostream& sout, _Mat& M,
+template<typename outstream, typename _Mat, typename triple>
+std::ostream& ProgramGen(outstream& sout, _Mat& M,
                          std::vector<triple>& multiples,
                          size_t& addcount, size_t& nbmul,
                          const char inv, const char ouv,
@@ -72,7 +72,7 @@ std::ostream& ProgramGen(std::ostream& sout, _Mat& M,
 // Removing one CSE
 template<typename triple, typename _Mat>
 bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
-            size_t& nbmul, const char tev, const char rav);
+            size_t& nbadd, size_t& nbmul, const char tev, const char rav);
 
 // Recusive search for the best CSE
 template<typename triple,typename _Mat>
@@ -104,24 +104,24 @@ bool Triangle(std::ostream& sout, _Mat& M, _Mat& T,
 
 
 // Global random optimization function (pairs and factors)
-template<typename _Mat>
-Pair<size_t> Optimizer(std::ostream& sout, _Mat& M,
+template<typename outstream, typename _Mat>
+Pair<size_t> Optimizer(outstream& sout, _Mat& M,
                        const char inv, const char ouv,
                        const char tev, const char rav);
 
 // Global exhaustive optimization function (pairs and factors)
-template<typename _Mat>
-Pair<size_t> RecOptimizer(std::ostream& sout, _Mat& M,
+template<typename outstream, typename _Mat>
+Pair<size_t> RecOptimizer(outstream& sout, _Mat& M,
                           const char inv, const char ouv,
                           const char tev, const char rav);
 
 // Precondition _Matrix A is upper triangular
-template<typename _Mat>
-Pair<size_t> nullspacedecomp(std::ostream& sout, _Mat& x, _Mat& A,
+template<typename outstream, typename _Mat>
+Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
                              const bool mostCSE=false);
 
-template<typename _Mat>
-Pair<size_t> nullspacedecomp(std::ostream& sout, _Mat& x, _Mat& A,
+template<typename outstream, typename _Mat>
+Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
                              std::vector<size_t>& l,
                              const bool mostCSE=false);
 
