@@ -598,7 +598,7 @@ bool rotateMinus(std::vector<std::string>& line) {
 
 
 // ============================================================
-// Negating line after afect
+// Negating line after 2 words (a := XXX --> a := -XXX)
 std::vector<std::string> negateLine(const std::vector<std::string>& line) {
     size_t depth(0);
     std::vector<std::string> varline(line.size()+1); varline.resize(2);
@@ -677,9 +677,7 @@ size_t endingMinus(VProgram_t & vP, const char inchar, const char outchar) {
         if (varline.front()[0] == outchar) {
             rotateMinus(varline);
             if ( varline[2] == "-") {
-                
 // std::clog << "endingMinus: " << varline << std::endl;
- 
                 for(size_t j=3; j<varline.size(); ++j) {
                     const auto variable(varline[j]);
                     VProgram_t P; P.assign(vP.begin(), vP.end());
@@ -820,8 +818,8 @@ size_t parenthesisMinus(VProgram_t & P) {
     if (pm == 0) return 0;
 
 
-    for(size_t i=0; i<P.size(); ++i) {
-        auto & line(P[i]); bool swapped(false);
+    for(auto& line : P) {
+        bool swapped(false);
         std::vector<std::string> newline;
         for (auto startl(line.begin()); startl != line.end(); ++startl) {
             auto openp = std::find(startl,line.end(),"(");
@@ -831,7 +829,7 @@ size_t parenthesisMinus(VProgram_t & P) {
                 std::vector<std::string> newgroup;
                 if (openp[-1]=="-") {
                     newgroup.insert(newgroup.end(), openp-1, closp);
-// std::clog << "# Starting minus parenthesis from " << line << ", dealing with: " << newgroup << std::endl;
+// std::clog << "## Starting minus parenthesis from " << line << ", dealing with: " << newgroup << std::endl;
                     newgroup[0]="+";
                     size_t nosign(0);
                     auto iter(newgroup.begin()+2); // + ( ?
@@ -864,6 +862,8 @@ size_t parenthesisMinus(VProgram_t & P) {
 // std::clog << "# changing group(" << nosign << ',' << minusign << "): " << newgroup << std::endl;
                 }
                 if (minusign>0) {
+std::clog << "## newgroup modified: " << newgroup << std::endl;
+
                     newline.insert(newline.end(), startl, openp-1);
                     newline.insert(newline.end(), newgroup.begin(), newgroup.end());
                     swapped = true;
@@ -882,11 +882,55 @@ size_t parenthesisMinus(VProgram_t & P) {
             std::clog << "# Replaced " << line << std::endl
                       << "#     with " << newline << std::endl;
 #endif
-            P[i] = newline;
+            line.assign(newline.begin(), newline.end());
         }
     }
     return pm;
 }
+// ============================================================
+
+
+// ============================================================
+// Removes leading minus after parenthesis if possible:
+//         +(-a+b) --> -(a-b) or -(-a+b) --> +(a-b)
+template<typename Iterator>
+std::vector<std::string> swapParenthesisMinus(const Iterator& start,
+                                              const Iterator& endl) {
+    std::vector<std::string> newline;
+    for (auto startl(start); startl != endl;) {
+        auto openp = std::find(startl,endl,"(");
+        newline.insert(newline.end(),startl,openp);
+        if (openp == endl) break;
+        auto closp( endGroup(openp, endl) );
+        std::vector<std::string> newgroup;
+        newgroup.insert(newgroup.end(), openp-1, closp);
+        newline.pop_back();
+std::clog << "## newgroup: " << newgroup << std::endl;
+        if ((openp != startl) && (newgroup[2] == "-")) {
+            bool swap(false);
+            if (newgroup[0] == "+") {
+                newgroup[0]="-"; swap=true;
+            } else if (newgroup[0] == "-") {
+                newgroup[0]="+"; swap=true;
+            }
+            if (swap) {
+                newgroup = negateLine(newgroup);
+            }
+std::clog << "## transform: " << newgroup << std::endl;
+        }
+        newline.insert(newline.end(),newgroup.begin(),newgroup.begin()+2);
+
+        std::vector<std::string> newblock(
+            swapParenthesisMinus(newgroup.begin()+2, newgroup.end()) );
+
+        newline.insert(newline.end(),newblock.begin(), newblock.end());
+
+        startl = closp;
+    }
+std::clog << "## newline: " << newline << std::endl;
+    return newline;
+}
+
 // ============================================================
 
 
@@ -1114,8 +1158,12 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
     P.erase(std::remove_if(P.begin(), P.end(), emptyline), P.end());
 
         // ==================================
-        // [*] Tries to remove minus signs before parenthesis
+        // [*] Tries to remove minus signs after & before parenthesis
+    for(auto& line : P) {
+        line = swapParenthesisMinus(line.begin(), line.end());
+    }
     parenthesisMinus(P);
+
 
         // ==================================
         // [*] Tries to reduce lines starting with a '-'
@@ -1190,6 +1238,10 @@ _Mat& matrixBuilder(_Mat& A, const VProgram_t& P, const char outchar /* ='o'*/) 
             if (std::find_if(word->begin(),word->end(), [](const char&c) { return std::isalpha(c); } ) == word->end()) {
                     // Constant found: should be zero
                 assert(std::stoi(*word)==0);
+                printline(std::clog
+                          << "# \033[1;36mWARNING: non variable,\033[0m "
+                          << *word << "\033[1;36m, in block:\033[0m ", line)
+                          << std::endl;
                 continue;
             }
             if (variables.find(*word) == variables.end()) {
