@@ -862,7 +862,7 @@ size_t parenthesisMinus(VProgram_t & P) {
 // std::clog << "# changing group(" << nosign << ',' << minusign << "): " << newgroup << std::endl;
                 }
                 if (minusign>0) {
-std::clog << "## newgroup modified: " << newgroup << std::endl;
+// std::clog << "## newgroup modified: " << newgroup << std::endl;
 
                     newline.insert(newline.end(), startl, openp-1);
                     newline.insert(newline.end(), newgroup.begin(), newgroup.end());
