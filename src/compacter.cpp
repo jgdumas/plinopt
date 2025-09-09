@@ -75,7 +75,7 @@ std::ostream& Compacter(std::ostream& sout, std::istream& input,
 // ============================================================
 // Main: select between file / std::cin
 int main(int argc, char** argv) {
-    bool simplSingle(false);
+    bool simplSingle(true);
     std::string filename;
     size_t numloops(0);
 
@@ -83,13 +83,14 @@ int main(int argc, char** argv) {
         std::string args(argv[i]);
         if (args == "-h") {
             std::clog << "Usage: " << argv[0]
-                      << "[-s] [-O #] [stdin|file.prg]\n"
-                      << "  -s: also replace singly used variables\n"
+                      << "[-s/-n] [-O #] [stdin|file.prg]\n"
+                      << "  -s/-n: replace/not-replace singly used variables\n"
                       << "  -O #: number of trim loops (default until stable)"
                       << std::endl;
             exit(-1);
         }
         else if (args == "-s") { simplSingle = true; }
+        else if ((args == "-n") || (args == "-ns")) { simplSingle = false; }
         else if (args == "-O") { numloops = atoi(argv[++i]); }
         else { filename = args; }
     }
