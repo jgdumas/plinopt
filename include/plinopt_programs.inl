@@ -578,11 +578,11 @@ VProgram_t& programParser(VProgram_t& ProgramVector, std::stringstream& ssin) {
 
 
 // ============================================================
-// Rotates lines starting with a '-'
+// Rotates full lines starting with a '-'
 bool rotateMinus(std::vector<std::string>& line) {
     if (line[2] == "-") {
         size_t depth(0);
-        for(size_t i=2; i<line.size(); ++i) {
+        for(size_t i(3); i<line.size(); ++i) {
             if (line[i] == "(") ++depth;
             if (line[i] == ")") --depth;
             if ((depth ==0) && (line[i] == "+")) {
@@ -590,6 +590,34 @@ bool rotateMinus(std::vector<std::string>& line) {
                 line.erase(line.begin()+2); // no need for '+' anymore
                 return true;
             }
+        }
+    }
+    return false;
+}
+
+// Rotates parenthesized group starting with a '-'
+bool rotateGroupMinus(std::vector<std::string>& block, const size_t& offset=0) {
+    const size_t startb(offset+1);
+    if ((block[offset] == "(") && (block[startb] == "-")) {
+        std::vector<std::string>::iterator lastplus, closp;
+        int depth(0);
+        bool foundplus(false);
+        for(auto it(block.begin()+startb+1); it != block.end(); ++it) {
+            if (it[0] == "(") ++depth;
+            if (it[0] == ")") --depth;
+            if (depth<0) {
+                closp = it;
+               break;
+            }
+            if ((depth ==0) && (it[0] == "+")) {
+                lastplus = it;
+                foundplus = true;
+            }
+        }
+        if (foundplus) {
+            std::rotate(block.begin()+startb,lastplus,closp);
+            block.erase(block.begin()+startb);
+            return true;
         }
     }
     return false;
@@ -914,13 +942,15 @@ std::vector<std::string> swapParenthesisMinus(const Iterator& start,
         }
         newgroup.insert(newgroup.end(), openp-offset, closp);
         ++offset;
-// std::clog << "## newgroup: " << newgroup << std::endl;
+// std::clog << "## newgroup(" << offset << "): " << newgroup << std::endl;
         if ((openp != startl) && (newgroup[offset] == "-")) {
             bool swap(false);
             if (newgroup[0] == "+") {
                 newgroup[0]="-"; swap=true;
             } else if (newgroup[0] == "-") {
                 newgroup[0]="+"; swap=true;
+            } else {
+                rotateGroupMinus(newgroup,offset-1);
             }
             if (swap) {
                 newgroup = negateLine(newgroup);
