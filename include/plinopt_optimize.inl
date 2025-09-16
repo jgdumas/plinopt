@@ -51,12 +51,13 @@ inline size_t score(const std::vector<std::vector<triple>>& AllPairs,
     return score;
 }
 
+// Removes cse, updating lM (and AllPairs/PairMap if updateAPM)
 template<typename triple, typename _Mat>
 Pair<long> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
                      std::vector<triple>& lmultiples, const triple& cse,
                      std::vector<std::vector<triple>>& AllPairs,
                      std::map<triple,size_t>& PairMap,
-                     const char tev, const char rav) {
+                     const char tev, const char rav, const bool updateAPM) {
     const auto& FF(lM.field());
     size_t lm(lM.coldim());
     long savedadds(0), savedmuls(0);
@@ -104,39 +105,41 @@ Pair<long> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
                 }
             }
 
-                // Update AllPairs[i] and PairMap
-                // Decrease PairMap by old AP[i]
-            for (const auto& iter: AllPairs[i]) {
-                PairMap[iter]--;
-                if (PairMap[iter] == 0) PairMap.erase(iter);
-            }
-
-                // Preserve pairs not involving the change
-            std::vector<triple> newrow;
-            for (const auto& iter: AllPairs[i]) {
-                if ( (std::get<0>(iter) != std::get<0>(lcse)) &&
-                     (std::get<1>(iter) != std::get<0>(lcse)) &&
-                     (std::get<0>(iter) != std::get<1>(lcse)) &&
-                     (std::get<1>(iter) != std::get<1>(lcse))
-                     ) {
-                    newrow.push_back(iter);
+            if (updateAPM) {
+                    // Update AllPairs[i] and PairMap
+                    // Decrease PairMap by old AP[i]
+                for (const auto& iter: AllPairs[i]) {
+                    PairMap[iter]--;
+                    if (PairMap[iter] == 0) PairMap.erase(iter);
                 }
-            }
-                 // Add all pairs with new (last) element
-            typename _Mat::Element tmp; FF.init(tmp);
-            auto endlMi(lM[i].end()); --endlMi;
-            for(auto iter=lM[i].begin(); iter != endlMi; ++iter) {
-                newrow.emplace_back(iter->first, endlMi->first,
-                                    FF.div(tmp, endlMi->second, iter->second));
-            }
 
-                // Increase PairMap by new AP[i]
-            for (const auto& iter: newrow) {
-                PairMap[iter]++;
-            }
+                    // Preserve pairs not involving the change
+                std::vector<triple> newrow;
+                for (const auto& iter: AllPairs[i]) {
+                    if ( (std::get<0>(iter) != std::get<0>(lcse)) &&
+                         (std::get<1>(iter) != std::get<0>(lcse)) &&
+                         (std::get<0>(iter) != std::get<1>(lcse)) &&
+                         (std::get<1>(iter) != std::get<1>(lcse))
+                         ) {
+                        newrow.push_back(iter);
+                    }
+                }
+                     // Add all pairs with new (last) element
+                typename _Mat::Element tmp; FF.init(tmp);
+                auto endlMi(lM[i].end()); --endlMi;
+                for(auto iter=lM[i].begin(); iter != endlMi; ++iter) {
+                    newrow.emplace_back(iter->first, endlMi->first,
+                                        FF.div(tmp, endlMi->second, iter->second));
+                }
 
-                // Update AllPairs[i]
-            AllPairs[i].assign(newrow.begin(),newrow.end());
+                     // Increase PairMap by new AP[i]
+                for (const auto& iter: newrow) {
+                     PairMap[iter]++;
+                }
+
+                    // Update AllPairs[i]
+                AllPairs[i].assign(newrow.begin(),newrow.end());
+            }
         }
     }
 
@@ -184,6 +187,16 @@ Pair<long> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
     lM.resize(lM.rowdim(), lm);
 
     return Pair<long>{savedadds,savedmuls};
+}
+
+template<typename triple, typename _Mat>
+Pair<long> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
+                     std::vector<triple>& lmultiples, const triple& cse,
+                     std::vector<std::vector<triple>>& AllPairs,
+                     const char tev, const char rav) {
+    std::map<triple,size_t> PairMap;
+    return RemOneCSE(ssout, lM, nbmul, lmultiples, cse, AllPairs,
+                     PairMap, tev, rav, false);
 }
 
 
@@ -274,7 +287,7 @@ bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
             // Now factoring out that CSE from the matrix
         ++nbadd;
         auto savings(RemOneCSE(sout, M, nbmul, multiples, cse,
-                               AllPairs, PairMap, tev, rav));
+                               AllPairs, PairMap, tev, rav, true));
 
 #ifdef VERBATIM_PARSING
 #  if VERBATIM_PARSING >= 2
@@ -822,7 +835,6 @@ bool RecSub(std::vector<std::string>& out, _Mat& Mat,
         AllPairs.push_back(listpairs(*iter, FF));
     }
 
-
         // Count occurences of each pair in whole matrix
     std::map<triple,size_t> PairMap;
     for(const auto& rows: AllPairs) {
@@ -868,8 +880,7 @@ bool RecSub(std::vector<std::string>& out, _Mat& Mat,
                     // Factoring out that CSE from the matrix
                 const Pair<long> savings = RemOneCSE(ssout, lM, moremul,
                                                      lmultiples, cse,
-                                                     AllPairs, PairMap,
-                                                     tev, rav);
+                                                     AllPairs, tev, rav);
 
                 size_t ladditions(nbadd-savings.first);
                 size_t lmuls(nbmul-savings.second);
