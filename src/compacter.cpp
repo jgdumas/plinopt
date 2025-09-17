@@ -41,7 +41,8 @@ std::ostream& Compacter(std::ostream& sout, std::istream& input,
     std::clog << std::string(40,'#') << std::endl;
 
         // Semantic line removal
-    size_t prevPRs(0), currPRs(PVs);
+    variablesTrimer(ProgramVector, simplSingle);
+    size_t prevPRs(PVs), currPRs(progSize(ProgramVector));
 
     int iter(numloops); // decreasing 0 will nver be == 0
     do {
