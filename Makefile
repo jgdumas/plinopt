@@ -52,7 +52,7 @@ mmcheck:
 	./bin/MMchecker data/2x2x2_7_DPS-accurate-X_{L,R,P}.sms -P "X^2-3"
 
 slpcheck:
-	./bin/optimizer data/2x2x2_7_DPS-accurate_L.sms -E -N | compacter | SLPchecker -M data/2x2x2_7_DPS-accurate_L.sms
+	./bin/optimizer data/2x2x2_7_DPS-accurate_L.sms -E -N | ./bin/compacter | ./bin/SLPchecker -M data/2x2x2_7_DPS-accurate_L.sms
 	./bin/FDT.sh
 
 largecheck:
