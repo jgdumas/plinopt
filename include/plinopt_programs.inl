@@ -873,80 +873,73 @@ Iterator endGroup(const Iterator& start, const Iterator& end) {
 // ============================================================
 // Removes leading minus from parenthesis if possible:
 //         -(a-b) --> +(b-a)
-size_t parenthesisMinus(VProgram_t & P) {
-    for(auto& line : P) rotateMinus(line);
-    size_t pm( countMinus(P) );
-    if (pm == 0) return 0;
-
-
-    for(auto& line : P) {
-        bool swapped(false);
-        std::vector<std::string> newline;
-        for (auto startl(line.begin()); startl != line.end(); ++startl) {
-            auto openp = std::find(startl,line.end(),"(");
-            if (openp != line.end()) {
-                auto closp( endGroup(openp, line.end()) );
-                size_t minusign(0);
-                std::vector<std::string> newgroup;
-                if (openp[-1]=="-") {
-                    newgroup.insert(newgroup.end(), openp-1, closp);
+std::vector<std::string>& parenthesisMinusLine(std::vector<std::string>& line) {
+    bool swapped(false);
+    std::vector<std::string> newline;
+    for (auto startl(line.begin()); startl != line.end(); ++startl) {
+        auto openp = std::find(startl,line.end(),"(");
+        if (openp != line.end()) {
+            auto closp( endGroup(openp, line.end()) );
+            size_t minusign(0);
+            std::vector<std::string> newgroup;
+            if (openp[-1]=="-") {
+                newgroup.insert(newgroup.end(), openp-1, closp);
 // std::clog << "## Starting minus parenthesis from " << line << ", dealing with: " << newgroup << std::endl;
-                    newgroup[0]="+";
-                    size_t nosign(0);
-                    auto iter(newgroup.begin()+2); // + ( ?
-                    do {
-                        if (iter[0]==")") {
-                            break;
-                        } else if (iter[0]=="-") {
-                            iter[0]="+"; ++iter; ++minusign;
-                        } else if (iter[0]=="+") {
-                            iter[0]="-"; ++iter;
-                        } else {
+                newgroup[0]="+";
+                size_t nosign(0);
+                auto iter(newgroup.begin()+2); // + ( ?
+                do {
+                    if (iter[0]==")") {
+                        break;
+                    } else if (iter[0]=="-") {
+                        iter[0]="+"; ++iter; ++minusign;
+                    } else if (iter[0]=="+") {
+                        iter[0]="-"; ++iter;
+                    } else {
 // std::clog << '\n' << "# nosign: " << iter[0] << std::endl;
-                            ++nosign;
-                        }
-                        auto endg( endGroup(iter, newgroup.end()) );
+                        ++nosign;
+                    }
+                    auto endg( endGroup(iter, newgroup.end()) );
 // if (endg == newgroup.end()) std::clog << "End ";
 // std::clog << '\n' << '|';
 // for(auto it(iter); it != endg; ++it) {
 //     std::clog << *it << ' ';
 // }
 // std::clog  << '|' << std::endl;
-                        iter = endg;
-                    } while(iter != newgroup.end());
-                    if (nosign>0) {
-                        newgroup.insert(newgroup.begin()+2,"-");
-                    }
-                    if (newgroup[2]=="+") {
-                        newgroup.erase(newgroup.begin()+2);
-                    }
-// std::clog << "# changing group(" << nosign << ',' << minusign << "): " << newgroup << std::endl;
+                    iter = endg;
+                } while(iter != newgroup.end());
+                if (nosign>0) {
+                    newgroup.insert(newgroup.begin()+2,"-");
                 }
-                if (minusign>0) {
+                if (newgroup[2]=="+") {
+                    newgroup.erase(newgroup.begin()+2);
+                }
+// std::clog << "# changing group(" << nosign << ',' << minusign << "): " << newgroup << std::endl;
+            }
+            if (minusign>0) {
 // std::clog << "## newgroup modified: " << newgroup << std::endl;
 
-                    newline.insert(newline.end(), startl, openp-1);
-                    newline.insert(newline.end(), newgroup.begin(), newgroup.end());
-                    swapped = true;
-                } else {
-                    newline.insert(newline.end(), startl, closp);
-                }
-                startl = closp-1;
-           } else {
-               newline.insert(newline.end(), startl, line.end());
-               break;
-           }
-        }
-        if (newline[2] == "+") newline.erase(newline.begin()+2);
-        if (swapped) {
-#ifdef VERBATIM_PARSING
-            std::clog << "# Replaced " << line << std::endl
-                      << "#     with " << newline << std::endl;
-#endif
-            line.assign(newline.begin(), newline.end());
+                newline.insert(newline.end(), startl, openp-1);
+                newline.insert(newline.end(), newgroup.begin(), newgroup.end());
+                swapped = true;
+            } else {
+                newline.insert(newline.end(), startl, closp);
+            }
+            startl = closp-1;
+        } else {
+            newline.insert(newline.end(), startl, line.end());
+            break;
         }
     }
-    return pm;
+    if (newline[2] == "+") newline.erase(newline.begin()+2);
+    if (swapped) {
+#ifdef VERBATIM_PARSING
+        std::clog << "# Replaced " << line << std::endl
+                  << "#     with " << newline << std::endl;
+#endif
+        line.assign(newline.begin(), newline.end());
+    }
+    return line;
 }
 // ============================================================
 
@@ -1138,7 +1131,7 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
         }
     }
 
-        // Need to sort map by (front of) values (first occurence of that var)
+       // Need to sort map by (front of) values (first occurence of that var)
         // Thus rewriting is done in the program order
     std::vector<std::pair<std::string, std::vector<size_t>>> ordsUse;
     for (const auto& [variable, occurences] : varsUse)
@@ -1233,14 +1226,23 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
         // [*] Tries to remove minus signs after & before parenthesis
     for(auto& line : P) {
         line = swapParenthesisMinus(line.begin(), line.end());
+        if ((line[1] == ":=") && (line[2] == "(") && (line[3] == "-")) {
+                // after rotations there remains ":=(-"
+                // transform into ":=+(-x-y-...-z)", then ":=-(x+y+...+z)"
+            line.insert(line.begin()+2,"+");
+            line = swapParenthesisMinus(line.begin(), line.end());
+        }
+        rotateMinus(line);
     }
-    parenthesisMinus(P);
-
 
         // ==================================
         // [*] Tries to reduce lines starting with a '-'
-        //     by negating some temporary variables
-    swapMinus(P, outchar);
+        //     First swapping leading minus from parenthesis
+        //     then negating some temporary variables
+    if (countMinus(P)>0) {
+        for(auto& line : P) parenthesisMinusLine(line);
+        swapMinus(P, outchar);
+    }
 
         // ==================================
         // [*] Negate temporary variables so that output do not start with a '-'
