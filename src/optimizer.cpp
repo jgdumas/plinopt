@@ -87,16 +87,18 @@ Pair<size_t>& DKOptimiser(Pair<size_t>& nbops, std::ostringstream& ssout,
                           << lnbops.first << "\tadditions, "
                           << lnbops.second << "\tmultiplications." << std::endl;
 #endif
-                if ( (ssout.tellp() == std::streampos(0))
-                     || cmpOpCount(lnbops,nbops) ) {
-                    std::clog << "# Found D: "
-                              << lnbops.first << '|' << lnbops.second
-                              << " instead of "
-                              << nbops.first << '|' << nbops.second
-                              << std::endl;
+                const bool better(cmpOpCount(lnbops,nbops));
+                if ( (ssout.tellp() == std::streampos(0)) || better ) {
                     ssout.clear(); ssout.str(std::string());
                     ssout << lssout.str();
-                    nbops = lnbops;
+                    if (better) {
+                        std::clog << "# Found D: "
+                                  << lnbops.first << '|' << lnbops.second
+                                  << " instead of "
+                                  << nbops.first << '|' << nbops.second
+                                  << std::endl;
+                        nbops = lnbops;
+                    }
                 }
             }
         }
@@ -119,11 +121,11 @@ Pair<size_t>& DKOptimiser(Pair<size_t>& nbops, std::ostringstream& ssout,
                           << lnbops.first << "\tadditions, "
                           << lnbops.second << "\tmultiplications." << std::endl;
 #endif
-                if ( (ssout.tellp() == std::streampos(0) )
-                     || cmpOpCount(lnbops,nbops) ) {
+                const bool better(cmpOpCount(lnbops,nbops));
+                if ( (ssout.tellp() == std::streampos(0) ) || better ) {
                     ssout.clear(); ssout.str(std::string());
                     ssout << lssout.str();
-                    if (cmpOpCount(lnbops,nbops)) {
+                    if (better) {
                         std::clog << "# Found K: "
                                   << lnbops.first << '|' << lnbops.second
                                   << " instead of "
@@ -171,16 +173,18 @@ Pair<size_t>& DKOptimiser(Pair<size_t>& nbops, std::ostringstream& ssout,
                           << lkops.first << "\tadditions, "
                           << lkops.second << "\tmultiplications." << std::endl;
 #endif
-                if ( (kout.tellp() == std::streampos(0))
-                     || cmpOpCount(lkops,knbops) ) {
-                    std::clog << "# Found E: "
-                              << lkops.first << '|' << lkops.second
-                              << " instead of "
-                              << knbops.first << '|' << knbops.second
-                              << std::endl;
+                const bool better(cmpOpCount(lkops,knbops));
+                if ( (kout.tellp() == std::streampos(0)) || better) {
                     kout.clear(); kout.str(std::string());
                     kout << lkout.str();
-                    knbops = lkops;
+                    if (better) {
+                        std::clog << "# Found E: "
+                                  << lkops.first << '|' << lkops.second
+                                  << " instead of "
+                                  << knbops.first << '|' << knbops.second
+                                  << std::endl;
+                        knbops = lkops;
+                    }
                 }
             }
         }
@@ -260,10 +264,10 @@ Pair<size_t>& DKOptimiser(Pair<size_t>& nbops, std::ostringstream& ssout,
 
 // ============================================================
 // Optimizing a linear program (Gaussian elimination method)
-template<typename outstream, typename Field>
-Pair<size_t>& LUOptimiser(Pair<size_t>& nbops, outstream& gout,
+template<typename Field>
+Pair<size_t>& LUOptimiser(Pair<size_t>& nbops, std::ostringstream& gout,
                           const Field& F, const Matrix& M, const Matrix& T,
-                          const size_t randomloops, const bool mostCSE) {
+                          const size_t randomloops) {
 
         // ============================================================
         // Rebind matrix type over sub field matrix type
@@ -293,9 +297,11 @@ Pair<size_t>& LUOptimiser(Pair<size_t>& nbops, outstream& gout,
     P.write(std::clog << "## P:=Matrix(", FileFormat(8)) << ");" << std::endl;
 #endif
 
-// #pragma omp parallel for shared(Q,L,U,P,gout,nbops)
-//     for(size_t i=0; i<randomloops; ++i) {
+#pragma omp parallel for shared(Q,L,U,P,gout,nbops)
+    for(size_t i=0; i<randomloops; ++i) {
         std::ostringstream luout;
+        FMatrix lU(U, F);
+        FMatrix lL(L, F);
 
             // ============================================
             // Applying permutation P to 'i' variables
@@ -303,11 +309,11 @@ Pair<size_t>& LUOptimiser(Pair<size_t>& nbops, outstream& gout,
 
             // ============================================
             // Applying Upper matrix to 't' variables
-        auto Uops = Optimizer(luout, U, 'v', 't', 'r');
+        auto Uops = Optimizer(luout, lU, 'v', 't', 'r');
 
             // ============================================
             // Applying Lower matrix to 'v' variables
-        auto Lops = Optimizer(luout, L, 'x', 'v', 'g');
+        auto Lops = Optimizer(luout, lL, 'x', 'v', 'g');
             // ============================================
             // Applying permutation Q back into 'o' variables
         input2Temps(luout, Q.rowdim(), 'x', 'o', Q.getStorage());
@@ -315,21 +321,24 @@ Pair<size_t>& LUOptimiser(Pair<size_t>& nbops, outstream& gout,
         Uops.first += Lops.first;
         Uops.second += Lops.second;
 
-// #pragma omp critical
-//         {
-            if ( (gout.tellp() == std::streampos(0))
-                 || cmpOpCount(Uops,nbops) ) {
-                std::clog << "# Found G: "
-                          << Uops.first << '|' << Uops.second
-                          << " instead of "
-                          << nbops.first << '|' << nbops.second
-                          << std::endl;
+#pragma omp critical
+        {
+            const bool better(cmpOpCount(Uops,nbops));
+            if ( (gout.tellp() == std::streampos(0) ) || better ) {
                 gout.clear(); gout.str(std::string());
                 gout.str(luout.str());
-                nbops = Uops;
+                if (better) {
+std::clog << "## LU: " << luout.str() << std::endl;
+                    std::clog << "# Found G: "
+                              << Uops.first << '|' << Uops.second
+                              << " instead of "
+                              << nbops.first << '|' << nbops.second
+                              << std::endl;
+                    nbops = Uops;
+                }
             }
-//         }
-//     }
+        }
+    }
 
     return nbops;
 }
@@ -368,15 +377,15 @@ int FOptimiser(std::istream& input, const size_t randomloops,
         // ============================================================
         // Compute naive number of operations
 
-    std::ostringstream ssout;
     const Pair<size_t> opsinit(naiveOps(M));
-    Pair<size_t> nbops(opsinit);
 
+    std::ostringstream ssout;
+    Pair<size_t> luops(opsinit);
+    LUOptimiser(luops, ssout, F, M, T, randomloops);
+
+    Pair<size_t> nbops(luops);
     DKOptimiser(nbops, ssout, F, M, T, global, randomloops, printMaple,
                 printPretty, tryDirect, tryKernel, mostCSE, allkernels);
-
-    std::ostringstream luout;
-    LUOptimiser(nbops, luout, F, M, T, randomloops, mostCSE);
 
     std::cout << ssout.str() << std::flush;
 
