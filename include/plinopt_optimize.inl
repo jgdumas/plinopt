@@ -510,12 +510,11 @@ template<typename outstream, typename _Mat, typename triple>
 std::ostream& ProgramGen(outstream& sout, _Mat& M,
                          std::vector<triple>& multiples,
                          size_t& addcount, size_t& nbmul,
-                         const char inv, const char ouv,
-                         const char tev, const char rav) {
+                         const char ouv, const char tev, const char rav) {
 
 #ifdef VERBATIM_PARSING
-    std::clog << "# Program Generation:" << inv << ' ' << ouv << ' '
-               << tev << ' ' << rav << ' ' << std::endl;
+    std::clog << "# Program Generation:" << ouv << ' ' << tev << ' ' << rav
+              << std::endl;
     std::clog << std::string(30,'#') << std::endl;
 #endif
 
@@ -612,8 +611,7 @@ std::ostream& ProgramGen(outstream& sout, _Mat& M,
 // Global random optimization function (pairs and factors)
 template<typename outstream, typename _Mat>
 Pair<size_t> Optimizer(outstream& sout, _Mat& M,
-                       const char inv, const char ouv,
-                       const char tev, const char rav) {
+                       const char ouv, const char tev, const char rav) {
 
     using triple=std::tuple<size_t, size_t, typename _Mat::Element>;
     size_t nbadd(0), nbmul(0);
@@ -624,7 +622,7 @@ Pair<size_t> Optimizer(outstream& sout, _Mat& M,
 
         // No more useful CSE, thus
         // generate the rest of the program from the new M
-    ProgramGen(sout, M, multiples, nbadd, nbmul, inv, ouv, tev, rav);
+    ProgramGen(sout, M, multiples, nbadd, nbmul, ouv, tev, rav);
 
     return Pair<size_t>(nbadd,nbmul);
 }
@@ -773,9 +771,9 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
             // o <-- Free . i
         Pair<size_t> Fops;
         if (mostCSE) {
-            Fops = RecOptimizer(sout, FreePart, 'i', 'o', 't', 'r');
+            Fops = RecOptimizer(sout, FreePart, 'o', 't', 'r');
         } else {
-            Fops = Optimizer(sout, FreePart, 'i', 'o', 't', 'r');
+            Fops = Optimizer(sout, FreePart, 'o', 't', 'r');
         }
 
             // ============================================
@@ -794,9 +792,9 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
             // x <-- Tx . o = (- x^T) o
         Pair<size_t> Kops;
         if (mostCSE) {
-            Kops = RecOptimizer(sout, Tx, 'o', 'x', 'v', 'g');
+            Kops = RecOptimizer(sout, Tx, 'x', 'v', 'g');
         } else {
-            Kops = Optimizer(sout, Tx, 'o', 'x', 'v', 'g');
+            Kops = Optimizer(sout, Tx, 'x', 'v', 'g');
         }
 
             // ============================================
@@ -921,8 +919,7 @@ bool RecSub(std::vector<std::string>& out, _Mat& Mat,
 // Global exhaustive greedy CSE optimization function (pairs and factors)
 template<typename outstream, typename _Mat>
 Pair<size_t> RecOptimizer(outstream& sout, _Mat& M,
-                          const char inv, const char ouv,
-                          const char tev, const char rav) {
+                          const char ouv, const char tev, const char rav) {
     using triple=std::tuple<size_t, size_t, typename _Mat::Element>;
     const auto& FF(M.field());
 
@@ -943,7 +940,7 @@ Pair<size_t> RecOptimizer(outstream& sout, _Mat& M,
 
     size_t addcount(0);
 
-    ProgramGen(sout, M, multiples, addcount, alreadymuls, inv, ouv, tev, rav);
+    ProgramGen(sout, M, multiples, addcount, alreadymuls, ouv, tev, rav);
 
     return Pair<size_t>(nbops.first,alreadymuls);
 }

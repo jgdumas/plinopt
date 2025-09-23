@@ -49,44 +49,19 @@ auto cmpOpCount {[](const auto& a, const auto& b) { return (a.first+a.second<b.f
 
 
 namespace PLinOpt {
+
+
 // ============================================================
-// Optimizing a linear program
+// Optimizing a linear program (Direct CSE or Kernel methods)
 template<typename Field>
-int DKOptimiser(std::istream& input, const size_t randomloops,
-                const bool printMaple, const bool printPretty,
-                const bool tryDirect, const bool tryKernel,
-                const bool mostCSE, const bool allkernels, const Field& F) {
+Pair<size_t>& DKOptimiser(Pair<size_t>& nbops, std::ostringstream& ssout,
+                          const Field& F, const Matrix& M, const Matrix& T,
+                          Givaro::Timer& global, const size_t randomloops,
+                          const bool printMaple, const bool printPretty,
+                          const bool tryDirect, const bool tryKernel,
+                          const bool mostCSE, const bool allkernels) {
 
-        // ============================================================
-        // Read Matrix of Linear Transformation
-    QRat QQ;
-    QMstream ms(QQ,input);
-    Matrix M(ms); M.resize(M.rowdim(),M.coldim());
-
-    Givaro::Timer chrono, global;
-    chrono.start();
-
-    Matrix T(QQ,M.coldim(),M.rowdim()); Transpose(T,M);
-
-    if (printPretty) {
-        M.write(std::clog,FileFormat::Pretty) << ';' << std::endl;
-        std::clog << std::string(40,'#') << std::endl;
-    }
-
-    if (printMaple) {
-        M.write(std::clog << "M:=",FileFormat::Maple) << ';' << std::endl;
-        std::clog << std::string(40,'#') << std::endl;
-    }
-
-    std::clog << std::string(40,'#') << std::endl;
-    std::ostringstream ssout;
-
-        // ============================================================
-        // Compute naive number of operations
-
-    const Pair<size_t> opsinit(naiveOps(M));
-    Pair<size_t> nbops(opsinit);
-
+    Givaro::Timer chrono; chrono.start();
         // ============================================================
         // Rebind matrix type over sub field matrix type
     typedef typename Matrix::template rebind<Field>::other FMatrix;
@@ -102,7 +77,7 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
             std::ostringstream lssout;
                 // Cancellation-free optimization
             input2Temps(lssout, lM.coldim(), 'i', 't', lT);
-            auto lnbops( Optimizer(lssout, lM, 'i', 'o', 't', 'r') );
+            auto lnbops( Optimizer(lssout, lM, 'o', 't', 'r') );
 
 
 #pragma omp critical
@@ -154,8 +129,8 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
                                   << " instead of "
                                   << nbops.first << '|' << nbops.second
                                   << std::endl;
+                        nbops = lnbops;
                     }
-                    nbops = lnbops;
                 }
             }
         }
@@ -168,7 +143,7 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
         }
     }
 
-    chrono.stop(); global = chrono;
+    chrono.stop(); global += chrono;
 
         // ============================================================
         // Exhaustive nullspace permutation search (if # is <= 12!)
@@ -213,7 +188,6 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
         chrono.stop(); global += chrono;
 
         if (cmpOpCount(knbops,nbops)) {
-            nbops = knbops;
             std::clog << "# \033[1;36m"
                       << "Exhaustive kernel permutation, found:"
                       << "\033[0m" << std::endl;
@@ -225,13 +199,14 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
             if ((knbops.first !=0 || knbops.second != 0)) {
                 std::clog << std::string(40,'#') << std::endl
                           << "# \033[1;32m" << knbops.first
-                          << "\tadditions\tinstead of " << opsinit.first
+                          << "\tadditions\tinstead of " << nbops.first
                           << "\033[0m \t" << chrono << std::endl
                           << "# \033[1;32m" << knbops.second
-                          << "\tmultiplications\tinstead of " << opsinit.second
+                          << "\tmultiplications\tinstead of " << nbops.second
                           << "\033[0m" << std::endl
                           << std::string(40,'#') << std::endl;
             }
+            nbops = knbops;
         } else {
                 // Optimal was already found
             std::clog << "# \033[1;36m"
@@ -251,7 +226,7 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
         std::ostringstream iout;
             // Cancellation-free optimization
         input2Temps(iout, lM.coldim(), 'i', 't', lT);
-        auto rnbops( RecOptimizer(iout, lM, 'i', 'o', 't', 'r') );
+        auto rnbops( RecOptimizer(iout, lM, 'o', 't', 'r') );
 
         chrono.stop(); global += chrono;
 
@@ -264,10 +239,11 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
 
             if ((rnbops.first !=0 || rnbops.second != 0)) {
                 std::clog << std::string(40,'#') << std::endl;
-                std::clog << "# \033[1;32m" << rnbops.first << "\tadditions\tinstead of " << opsinit.first
+                std::clog << "# \033[1;32m" << rnbops.first << "\tadditions\tinstead of " << nbops.first
                           << "\033[0m \t" << chrono << std::endl;
-                std::clog << "# \033[1;32m" << rnbops.second << "\tmultiplications\tinstead of " << opsinit.second << "\033[0m" << std::endl;
+                std::clog << "# \033[1;32m" << rnbops.second << "\tmultiplications\tinstead of " << nbops.second << "\033[0m" << std::endl;
                 std::clog << std::string(40,'#') << std::endl;
+                nbops = rnbops;
             }
         } else {
                 // Optimal was already found
@@ -277,9 +253,132 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
         }
     }
 
+    return nbops;
+}
+
+#include <linbox/algorithms/gauss.h>
+
+// ============================================================
+// Optimizing a linear program (Gaussian elimination method)
+template<typename outstream, typename Field>
+Pair<size_t>& LUOptimiser(Pair<size_t>& nbops, outstream& gout,
+                          const Field& F, const Matrix& M, const Matrix& T,
+                          const size_t randomloops, const bool mostCSE) {
+
+        // ============================================================
+        // Rebind matrix type over sub field matrix type
+    typedef typename Matrix::template rebind<Field>::other FMatrix;
+
+        // ============================================================
+
+    FMatrix U(M, F);
+
+#ifdef DEBUG
+    U.write(std::clog << "## M:=Matrix(", FileFormat(8)) << ");" << std::endl;
+#endif
+
+
+    typename Field::Element Det;
+    size_t Rank;
+    FMatrix L(F, U.rowdim(), U.rowdim());
+    LinBox::Permutation<Field> Q(F,U.rowdim());
+    LinBox::Permutation<Field> P(F,U.coldim());
+    LinBox::GaussDomain<Field> GD(F);
+    GD.QLUPin(Rank, Det, Q, L, U, P, U.rowdim(), U.coldim() );
+
+#ifdef DEBUG
+    Q.write(std::clog << "## Q:=Matrix(", FileFormat(8)) << ");" << std::endl;
+    L.write(std::clog << "## L:=Matrix(", FileFormat(8)) << ");" << std::endl;
+    U.write(std::clog << "## U:=Matrix(", FileFormat(8)) << ");" << std::endl;
+    P.write(std::clog << "## P:=Matrix(", FileFormat(8)) << ");" << std::endl;
+#endif
+
+// #pragma omp parallel for shared(Q,L,U,P,gout,nbops)
+//     for(size_t i=0; i<randomloops; ++i) {
+        std::ostringstream luout;
+
+            // ============================================
+            // Applying permutation P to 'i' variables
+        input2Temps(luout, P.rowdim(), 'i', 't', P.getStorage());
+
+            // ============================================
+            // Applying Upper matrix to 't' variables
+        auto Uops = Optimizer(luout, U, 'v', 't', 'r');
+
+            // ============================================
+            // Applying Lower matrix to 'v' variables
+        auto Lops = Optimizer(luout, L, 'x', 'v', 'g');
+            // ============================================
+            // Applying permutation Q back into 'o' variables
+        input2Temps(luout, Q.rowdim(), 'x', 'o', Q.getStorage());
+
+        Uops.first += Lops.first;
+        Uops.second += Lops.second;
+
+// #pragma omp critical
+//         {
+            if ( (gout.tellp() == std::streampos(0))
+                 || cmpOpCount(Uops,nbops) ) {
+                std::clog << "# Found G: "
+                          << Uops.first << '|' << Uops.second
+                          << " instead of "
+                          << nbops.first << '|' << nbops.second
+                          << std::endl;
+                gout.clear(); gout.str(std::string());
+                gout.str(luout.str());
+                nbops = Uops;
+            }
+//         }
+//     }
+
+    return nbops;
+}
+
+// ============================================================
+// Optimizing a linear program over a field
+template<typename Field>
+int FOptimiser(std::istream& input, const size_t randomloops,
+               const bool printMaple, const bool printPretty,
+               const bool tryDirect, const bool tryKernel,
+               const bool mostCSE, const bool allkernels, const Field& F) {
+
+        // ============================================================
+        // Read Matrix of Linear Transformation
+    QRat QQ;
+    QMstream ms(QQ,input);
+    Matrix M(ms); M.resize(M.rowdim(),M.coldim());
+
+    Givaro::Timer global; global.start();
+    Matrix T(QQ,M.coldim(),M.rowdim()); Transpose(T,M);
+    global.stop();
+
+    if (printPretty) {
+        M.write(std::clog,FileFormat::Pretty) << ';' << std::endl;
+        std::clog << std::string(40,'#') << std::endl;
+    }
+
+    if (printMaple) {
+        M.write(std::clog << "M:=",FileFormat::Maple) << ';' << std::endl;
+        std::clog << std::string(40,'#') << std::endl;
+    }
+
+    std::clog << std::string(40,'#') << std::endl;
+
+
+        // ============================================================
+        // Compute naive number of operations
+
+    std::ostringstream ssout;
+    const Pair<size_t> opsinit(naiveOps(M));
+    Pair<size_t> nbops(opsinit);
+
+    DKOptimiser(nbops, ssout, F, M, T, global, randomloops, printMaple,
+                printPretty, tryDirect, tryKernel, mostCSE, allkernels);
+
+    std::ostringstream luout;
+    LUOptimiser(nbops, luout, F, M, T, randomloops, mostCSE);
 
     std::cout << ssout.str() << std::flush;
-
 
     if ((nbops.first !=0 || nbops.second != 0)) {
         std::clog << std::string(40,'#') << std::endl;
@@ -311,6 +410,12 @@ int DKOptimiser(std::istream& input, const size_t randomloops,
 }
 
 
+
+
+
+
+
+
 // ============================================================
 // Choice between modular computation or over the rationals
 int Selector(std::istream& input, const size_t randomloops,
@@ -320,12 +425,12 @@ int Selector(std::istream& input, const size_t randomloops,
              const Givaro::Integer& q) {
     if (! Givaro::isZero(q)) {
         Givaro::Modular<Givaro::Integer> FF(q);
-        return DKOptimiser(input, randomloops, printMaple, printPretty,
-                           tryDirect, tryKernel, mostCSE, allkernels, FF);
+        return FOptimiser(input, randomloops, printMaple, printPretty,
+                          tryDirect, tryKernel, mostCSE, allkernels, FF);
     } else {
         QRat QQ;
-        return DKOptimiser(input, randomloops, printMaple, printPretty,
-                           tryDirect, tryKernel, mostCSE, allkernels, QQ);
+        return FOptimiser(input, randomloops, printMaple, printPretty,
+                          tryDirect, tryKernel, mostCSE, allkernels, QQ);
     }
 }
 

@@ -191,11 +191,16 @@ Pair<size_t> naiveOps(const _Mat& M);
 
 // ============================================
 // Sets new temporaries with the input values
-void input2Temps(std::ostream& sout, const size_t N,
-                 const char inv, const char tev);
+std::ostream& input2Temps(std::ostream& sout, const size_t N,
+                          const char inv, const char tev);
+
 template<typename _Mat>
-void input2Temps(std::ostream& sout, const size_t N,
-                 const char inv, const char tev, const _Mat& trsp);
+std::ostream& input2Temps(std::ostream& sout, const size_t N,
+                          const char inv, const char tev, const _Mat& trsp);
+
+std::ostream& input2Temps(std::ostream& sout, const size_t N,
+                          const char inv, const char tev,
+                          const LinBox::LightContainer<long>& perm);
 
 
 // prints c[i] * e, or c[i] / b for rational e=1/b

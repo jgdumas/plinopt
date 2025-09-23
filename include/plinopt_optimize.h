@@ -106,14 +106,12 @@ bool Triangle(std::ostream& sout, _Mat& M, _Mat& T,
 // Global random optimization function (pairs and factors)
 template<typename outstream, typename _Mat>
 Pair<size_t> Optimizer(outstream& sout, _Mat& M,
-                       const char inv, const char ouv,
-                       const char tev, const char rav);
+                       const char ouv, const char tev, const char rav);
 
 // Global exhaustive optimization function (pairs and factors)
 template<typename outstream, typename _Mat>
 Pair<size_t> RecOptimizer(outstream& sout, _Mat& M,
-                          const char inv, const char ouv,
-                          const char tev, const char rav);
+                          const char ouv, const char tev, const char rav);
 
 // Precondition _Matrix A is upper triangular
 template<typename outstream, typename _Mat>
