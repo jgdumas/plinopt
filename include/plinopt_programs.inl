@@ -1203,8 +1203,52 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
                     tobeneg = false;
                 }
 
+                size_t aftervar(3);
+                if (tobemul) {
+                    if (isMulDiv(init[3])) {
+                            // Have to combine multipliers
+                        QRat QQ;
+                        Givaro::Rational coeff(line[varloc+2].c_str());
+                        if (line[varloc+1] == "/") QQ.invin(coeff);
+                        Givaro::Rational src(init[4].c_str());
+                        if (init[3] == "/") {
+                            coeff /= src;
+                        } else {
+                            coeff *= src;
+                        }
+                        aftervar += 2; // ignoring multiplicand in init var
+#ifdef VERBATIM_PARSING
+                        std::clog << "# simplify: " << init[3] << init[4]
+                                  << line[varloc+1] << line[varloc+2]
+                                  << " = *" << coeff << std::endl;
+#endif
+                            // init var multiplicand not needed anymore
+                        init.erase(init.begin()+3,init.begin()+5);
+
+                        if (QQ.isOne(coeff.deno())) {
+                            if (QQ.isOne(coeff.nume())) {
+                                    // line var multiplicand not needed anymore
+                                line.erase(line.begin()+varloc+1,
+                                           line.begin()+varloc+3);
+                            } else {
+                                line[varloc+1] = "*";
+                                line[varloc+2] = std::string(coeff.nume());
+                            }
+                        } else {
+                            if (QQ.isOne(coeff.nume())) {
+                                line[varloc+1] = "/";
+                                line[varloc+2] = std::string(coeff.deno());
+                            } else {
+                                line[varloc+1] = "*";
+                                line[varloc+2] = std::string(coeff);
+                            }
+                        }
+                    }
+                }
+
                 line[varloc] = std::move(init[2]); // replace previous variable
-                line.insert(line.begin()+varloc+1,init.begin()+3,penultimate);
+                line.insert(line.begin()+varloc+1,
+                            init.begin()+aftervar,penultimate);
                 if (multimonomial && (tobemul || tobeneg)) {
                     line.insert(line.begin()+varloc,"(");
                     line.insert(line.begin()+varloc+replength,")");
