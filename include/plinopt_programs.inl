@@ -1160,26 +1160,25 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
             }
             if (varloc<line.size()) {
                     // Whether replacement requires sign-change
-                bool changesign(false), multimonomial(false);
                 if ( (init[2] == "-") && (isAddSub(line[varloc-1])) ) {
                     swapsign(line[varloc-1]);   // Change dest sign
-                    init.erase(init.begin()+2);	// remove src '-'
-                    changesign = true;
+                    init = negateLine(init);    // change var  sign
                 }
 
                     // Whether replacement requires parenthesis
+                bool multimonomial(false);
                 auto penultimate(init.end()-1);
                 size_t depth(0);
                 for(auto iter(init.begin()+3); iter != penultimate; ++iter) {
                     if (*iter == "(") ++depth;
                     else if (*iter == ")") --depth;
-                    else if (isAddSub(*iter)) {
-                        if (changesign && (depth ==0)) swapsign(*iter);
+                    else if (isAddSub(*iter) && (depth==0) ) {
                         multimonomial = true;
+                        break;
                     }
                 }
 
-                    // Replacement expression
+                   // Replacement expression
                 auto replength(init.end()-init.begin()-2);
                 bool tobeneg(line[varloc-1] == "-");
                 const bool tobemul(isMulDiv(line[varloc+1]));
@@ -1214,12 +1213,12 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
                     // Look for constant simplifications
                 QRat QQ;
                 for(size_t pos(0); pos < (line.size()-4); ++pos) {
-// std::clog << "# l[" << pos << "]: " 
-//           << line[pos] << ' ' << line[pos+1] << ' ' 
-//           << line[pos+2] << ' ' << line[pos+3] 
+// std::clog << "# l[" << pos << "]: "
+//           << line[pos] << ' ' << line[pos+1] << ' '
+//           << line[pos+2] << ' ' << line[pos+3]
 //           << ':' << isMulDiv(line[pos]) << '&' << isMulDiv(line[pos+2])
 //           << std::endl;
-                    
+
                     if (isMulDiv(line[pos]) && isMulDiv(line[pos+2])) {
                             // Have to combine multipliers
                         Givaro::Rational lcoeff(line[pos+1].c_str());
@@ -1230,11 +1229,11 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
                         } else {
                             lcoeff *= rmulti;
                         }
-// #ifdef VERBATIM_PARSING
+#ifdef VERBATIM_PARSING
                         std::clog << "# simplify: " << line[pos] << line[pos+1]
                                   << line[pos+2] << line[pos+3]
                                   << " = *" << lcoeff << std::endl;
-// #endif
+#endif
                         if (QQ.isOne(lcoeff.deno())) {
                             if (QQ.isOne(lcoeff.nume())) {
                                     // line var multiplicand not needed anymore
