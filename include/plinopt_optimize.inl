@@ -1299,10 +1299,15 @@ Pair<size_t> OptMethods(const Pair<size_t> opsinit,
     if (cmpOpCount(opsinit,nbops) || (opsinit == nbops)) {
             // Found nothing better than direct matrix expression
         typedef typename Matrix::template rebind<Field>::other FMatrix;
-        FMatrix lM(M, F);
+        FMatrix lM(M, F), lT(T, F);
         size_t nbadd(0), nbmul(0);
         std::vector<Etriple<Field>> multiples;
-        ProgramGen(sout, lM, multiples, nbadd, nbmul, 'o', 'i', 't');
+
+        input2Temps(sout, lM.coldim(), 'i', 't', lT);
+        ProgramGen(sout, lM, multiples, nbadd, nbmul, 'o', 't', 'r');
+
+        nbops.first = nbadd;
+        nbops.second= nbmul;
     }
 
     return nbops;
