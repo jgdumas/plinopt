@@ -1203,55 +1203,61 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
                     tobeneg = false;
                 }
 
-                size_t aftervar(3);
-                if (tobemul && !multimonomial) {
-                    if (isMulDiv(init[3])) {
-                            // Have to combine multipliers
-                        QRat QQ;
-                        Givaro::Rational coeff(line[varloc+2].c_str());
-                        if (line[varloc+1] == "/") QQ.invin(coeff);
-                        Givaro::Rational src(init[4].c_str());
-                        if (init[3] == "/") {
-                            coeff /= src;
-                        } else {
-                            coeff *= src;
-                        }
-                        aftervar += 2; // ignoring multiplicand in init var
-#ifdef VERBATIM_PARSING
-                        std::clog << "# simplify: " << init[3] << init[4]
-                                  << line[varloc+1] << line[varloc+2]
-                                  << " = *" << coeff << std::endl;
-#endif
-                            // init var multiplicand not needed anymore
-                        init.erase(init.begin()+3,init.begin()+5);
-
-                        if (QQ.isOne(coeff.deno())) {
-                            if (QQ.isOne(coeff.nume())) {
-                                    // line var multiplicand not needed anymore
-                                line.erase(line.begin()+varloc+1,
-                                           line.begin()+varloc+3);
-                            } else {
-                                line[varloc+1] = "*";
-                                line[varloc+2] = std::string(coeff.nume());
-                            }
-                        } else {
-                            if (QQ.isOne(coeff.nume())) {
-                                line[varloc+1] = "/";
-                                line[varloc+2] = std::string(coeff.deno());
-                            } else {
-                                line[varloc+1] = "*";
-                                line[varloc+2] = std::string(coeff);
-                            }
-                        }
-                    }
-                }
-
                 line[varloc] = std::move(init[2]); // replace previous variable
                 line.insert(line.begin()+varloc+1,
-                            init.begin()+aftervar,penultimate);
+                            init.begin()+3,penultimate);
                 if (multimonomial && (tobemul || tobeneg)) {
                     line.insert(line.begin()+varloc,"(");
                     line.insert(line.begin()+varloc+replength,")");
+                }
+
+                    // Look for constant simplifications
+                QRat QQ;
+                for(size_t pos(0); pos < (line.size()-4); ++pos) {
+// std::clog << "# l[" << pos << "]: " 
+//           << line[pos] << ' ' << line[pos+1] << ' ' 
+//           << line[pos+2] << ' ' << line[pos+3] 
+//           << ':' << isMulDiv(line[pos]) << '&' << isMulDiv(line[pos+2])
+//           << std::endl;
+                    
+                    if (isMulDiv(line[pos]) && isMulDiv(line[pos+2])) {
+                            // Have to combine multipliers
+                        Givaro::Rational lcoeff(line[pos+1].c_str());
+                        if (line[pos] == "/") QQ.invin(lcoeff);
+                        Givaro::Rational rmulti(line[pos+3].c_str());
+                        if (line[pos+2] == "/") {
+                            lcoeff /= rmulti;
+                        } else {
+                            lcoeff *= rmulti;
+                        }
+// #ifdef VERBATIM_PARSING
+                        std::clog << "# simplify: " << line[pos] << line[pos+1]
+                                  << line[pos+2] << line[pos+3]
+                                  << " = *" << lcoeff << std::endl;
+// #endif
+                        if (QQ.isOne(lcoeff.deno())) {
+                            if (QQ.isOne(lcoeff.nume())) {
+                                    // line var multiplicand not needed anymore
+                                line.erase(line.begin()+pos,
+                                           line.begin()+pos+4);
+                            } else {
+                                line[pos] = "*";
+                                line[pos+1] = std::string(lcoeff.nume());
+                                line.erase(line.begin()+pos+2,
+                                           line.begin()+pos+4);
+                            }
+                        } else {
+                            if (QQ.isOne(lcoeff.nume())) {
+                                line[pos] = "/";
+                                line[pos+1] = std::string(lcoeff.deno());
+                            } else {
+                                line[pos] = "*";
+                                line[pos+1] = std::string(lcoeff);
+                            }
+                            line.erase(line.begin()+pos+2,
+                                       line.begin()+pos+4);
+                        }
+                    }
                 }
 
                 P[i].resize(0); // No need for that variable (& line) anymore
