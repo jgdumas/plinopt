@@ -1204,7 +1204,7 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
                 }
 
                 size_t aftervar(3);
-                if (tobemul) {
+                if (tobemul && !multimonomial) {
                     if (isMulDiv(init[3])) {
                             // Have to combine multipliers
                         QRat QQ;
