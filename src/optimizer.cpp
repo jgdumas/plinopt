@@ -61,7 +61,7 @@ Pair<size_t>& DKOptimiser(Pair<size_t>& nbops, std::ostringstream& ssout,
                           const bool tryDirect, const bool tryKernel,
                           const bool mostCSE, const bool allkernels) {
 
-    Givaro::Timer chrono; chrono.start();
+    Givaro::Timer chrono;
         // ============================================================
         // Rebind matrix type over sub field matrix type
     typedef typename Matrix::template rebind<Field>::other FMatrix;
@@ -69,15 +69,19 @@ Pair<size_t>& DKOptimiser(Pair<size_t>& nbops, std::ostringstream& ssout,
         // ============================================================
         // First try: optimize the whole matrix
     if (tryDirect) {
-#pragma omp parallel for shared(M,T,ssout,nbops)
+        chrono.clear(); chrono.start();
+        std::ostringstream dout;
+        auto dops(nbops);
+
+#pragma omp parallel for shared(M,T,dout,dops)
         for(size_t i=0; i<randomloops; ++i) {
             FMatrix lM(M, F);
             FMatrix lT(T, F);
 
-            std::ostringstream lssout;
+            std::ostringstream ldout;
                 // Cancellation-free optimization
-            input2Temps(lssout, lM.coldim(), 'i', 't', lT);
-            auto lnbops( Optimizer(lssout, lM, 'o', 't', 'r') );
+            input2Temps(ldout, lM.coldim(), 'i', 't', lT);
+            auto lnbops( Optimizer(ldout, lM, 'o', 't', 'r') );
 
 
 #pragma omp critical
@@ -87,32 +91,42 @@ Pair<size_t>& DKOptimiser(Pair<size_t>& nbops, std::ostringstream& ssout,
                           << lnbops.first << "\tadditions, "
                           << lnbops.second << "\tmultiplications." << std::endl;
 #endif
-                const bool better(cmpOpCount(lnbops,nbops));
-                if ( (ssout.tellp() == std::streampos(0)) || better ) {
-                    ssout.clear(); ssout.str(std::string());
-                    ssout << lssout.str();
+                const bool better(cmpOpCount(lnbops,dops));
+                if ( (dout.tellp() == std::streampos(0)) || better ) {
+                    dout.clear(); dout.str(std::string());
+                    dout << ldout.str();
                     if (better) {
                         std::clog << "# Found D: "
                                   << lnbops.first << '|' << lnbops.second
                                   << " instead of "
-                                  << nbops.first << '|' << nbops.second
+                                  << dops.first << '|' << dops.second
                                   << std::endl;
-                        nbops = lnbops;
+                        dops = lnbops;
                     }
                 }
             }
+        }
+
+        chrono.stop(); global += chrono;
+        if (cmpOpCount(dops,nbops)) {
+            nbops = dops;
+            ssout.str(dout.str());
         }
     }
 
         // ============================================================
         // Second try: separate independent and dependent rows
     if (tryKernel) {
-#pragma omp parallel for shared(T,ssout,nbops)
+        chrono.clear(); chrono.start();
+        std::ostringstream kout;
+        auto kops(nbops);
+
+#pragma omp parallel for shared(T,kout,kops)
         for(size_t i=0; i<randomloops; ++i) {
             FMatrix lT(T, F);
-            std::ostringstream lssout;
+            std::ostringstream lkout;
             FMatrix NullSpace(F,lT.coldim(),T.coldim());
-            auto lnbops( nullspacedecomp(lssout, NullSpace, lT) );
+            auto lnbops( nullspacedecomp(lkout, NullSpace, lT) );
 
 #pragma omp critical
             {
@@ -121,50 +135,51 @@ Pair<size_t>& DKOptimiser(Pair<size_t>& nbops, std::ostringstream& ssout,
                           << lnbops.first << "\tadditions, "
                           << lnbops.second << "\tmultiplications." << std::endl;
 #endif
-                const bool better(cmpOpCount(lnbops,nbops));
-                if ( (ssout.tellp() == std::streampos(0) ) || better ) {
-                    ssout.clear(); ssout.str(std::string());
-                    ssout << lssout.str();
+                const bool better(cmpOpCount(lnbops,kops));
+                if ( (kout.tellp() == std::streampos(0) ) || better ) {
+                    kout.clear(); kout.str(std::string());
+                    kout << lkout.str();
                     if (better) {
                         std::clog << "# Found K: "
                                   << lnbops.first << '|' << lnbops.second
                                   << " instead of "
-                                  << nbops.first << '|' << nbops.second
+                                  << kops.first << '|' << kops.second
                                   << std::endl;
-                        nbops = lnbops;
+                        kops = lnbops;
                     }
                 }
             }
         }
 
-        if (nbops == Pair<size_t>{-1,-1}) {
+        chrono.stop(); global += chrono;
+        if (kops == Pair<size_t>{-1,-1}) {
                 // Zero dimensional kernel
             std::cerr << "# \033[1;36mFail: zero dimensional kernel.\033[0m\n"
                       << "# --> try direct or transposing." << std::endl;
-            nbops = Pair<size_t>{0,0};
+        } else if (cmpOpCount(kops,nbops)) {
+            nbops = kops;
+            ssout.str(kout.str());
         }
     }
 
-    chrono.stop(); global += chrono;
+
 
         // ============================================================
         // Exhaustive nullspace permutation search (if # is <= 12!)
     if (allkernels && (M.rowdim() < 13)) {
-        chrono.clear(); chrono.start();
 
         const size_t m(M.rowdim());
         std::vector<size_t> Fm { factorial(m) };
-        std::ostringstream kout;
+        std::ostringstream aout;
+        auto aops(nbops);
 
-        auto knbops(nbops);
-
-#pragma omp parallel for shared(Fm,T,kout,knbops)
+#pragma omp parallel for shared(Fm,T,aout,aops)
         for(size_t i=0; i<Fm.back(); ++i) {
             std::vector<size_t> l{kthpermutation(i,m,Fm)};
             FMatrix lT(T, F);
-            std::ostringstream lkout;
+            std::ostringstream laout;
             FMatrix NullSpace(F,lT.coldim(),T.coldim());
-            auto lkops( nullspacedecomp(lkout, NullSpace, lT, l, mostCSE) );
+            auto lkops( nullspacedecomp(laout, NullSpace, lT, l, mostCSE) );
 
 #pragma omp critical
             {
@@ -173,17 +188,17 @@ Pair<size_t>& DKOptimiser(Pair<size_t>& nbops, std::ostringstream& ssout,
                           << lkops.first << "\tadditions, "
                           << lkops.second << "\tmultiplications." << std::endl;
 #endif
-                const bool better(cmpOpCount(lkops,knbops));
-                if ( (kout.tellp() == std::streampos(0)) || better) {
-                    kout.clear(); kout.str(std::string());
-                    kout << lkout.str();
+                const bool better(cmpOpCount(lkops,aops));
+                if ( (aout.tellp() == std::streampos(0)) || better) {
+                    aout.clear(); aout.str(std::string());
+                    aout << laout.str();
                     if (better) {
                         std::clog << "# Found E: "
                                   << lkops.first << '|' << lkops.second
                                   << " instead of "
-                                  << knbops.first << '|' << knbops.second
+                                  << aops.first << '|' << aops.second
                                   << std::endl;
-                        knbops = lkops;
+                        aops = lkops;
                     }
                 }
             }
@@ -191,26 +206,26 @@ Pair<size_t>& DKOptimiser(Pair<size_t>& nbops, std::ostringstream& ssout,
 
         chrono.stop(); global += chrono;
 
-        if (cmpOpCount(knbops,nbops)) {
+        if (cmpOpCount(aops,nbops)) {
             std::clog << "# \033[1;36m"
                       << "Exhaustive kernel permutation, found:"
                       << "\033[0m" << std::endl;
 
 // std::clog << kout.str() << std::flush;
 
-            ssout.str(kout.str());
+            ssout.str(aout.str());
 
-            if ((knbops.first !=0 || knbops.second != 0)) {
+            if ((aops.first !=0 || aops.second != 0)) {
                 std::clog << std::string(40,'#') << std::endl
-                          << "# \033[1;32m" << knbops.first
+                          << "# \033[1;32m" << aops.first
                           << "\tadditions\tinstead of " << nbops.first
                           << "\033[0m \t" << chrono << std::endl
-                          << "# \033[1;32m" << knbops.second
+                          << "# \033[1;32m" << aops.second
                           << "\tmultiplications\tinstead of " << nbops.second
                           << "\033[0m" << std::endl
                           << std::string(40,'#') << std::endl;
             }
-            nbops = knbops;
+            nbops = aops;
         } else {
                 // Optimal was already found
             std::clog << "# \033[1;36m"
@@ -328,7 +343,6 @@ Pair<size_t>& LUOptimiser(Pair<size_t>& nbops, std::ostringstream& gout,
                 gout.clear(); gout.str(std::string());
                 gout.str(luout.str());
                 if (better) {
-std::clog << "## LU: " << luout.str() << std::endl;
                     std::clog << "# Found G: "
                               << Uops.first << '|' << Uops.second
                               << " instead of "

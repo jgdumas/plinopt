@@ -316,12 +316,13 @@ int Tellegen(std::istream& input,
                 if (variable == "0") continue;
 
                 if (variable[0] == ichar) {
-                    std::string onein(fixvar);
+                    std::string onein(variable);
                     onein[0] = ochar;
                     outSet.push_back( { onein, ":=", fixvar, ";" });
 #ifdef VERBATIM_PARSING
                     std::clog << "# Input found, " << variable
-                              << ", becomes output: " << onein << std::endl;
+                              << ", becomes output: " << onein
+                              << ":=" << fixvar << std::endl;
 #endif
                     continue;
                 }
@@ -480,6 +481,7 @@ int Tellegen(std::istream& input,
                       << " malformed output :" << iter << std::endl;
         }
 #endif
+
         std::cout << iter.front() << ":="
                   << (modSet.find(iter[2]) == modSet.end() ? "0" : iter[2])
                   << ';' << std::endl;
