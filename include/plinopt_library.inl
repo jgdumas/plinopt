@@ -227,26 +227,40 @@ std::vector<size_t> kthpermutation(const size_t k, const size_t n,
 
 // ==================
 // Sets new temporaries with the input values
-void input2Temps(std::ostream& sout, const size_t N,
-                 const char inv, const char tev) {
-    // Inputs to temporaries
+std::ostream& input2Temps(std::ostream& sout, const size_t N,
+                          const char inv, const char tev) {
+        // Inputs to temporaries
     for(size_t i=0; i<N; ++i) {
         sout << tev << i << ":="
-                  << inv << i << ';' << std::endl;
+             << inv << i << ';' << std::endl;
     }
+    return sout;
 }
-// Sets new temporaries with the input values
+// Sets new temporaries with the input values, checking usage
 template<typename _Mat>
-void input2Temps(std::ostream& sout, const size_t N,
-                 const char inv, const char tev,
-                 const _Mat& trsp) {
-    // Inputs to temporaries
+std::ostream& input2Temps(std::ostream& sout, const size_t N,
+                          const char inv, const char tev,
+                          const _Mat& trsp) {
+        // Inputs to temporaries
     for(size_t i=0; i<N; ++i) {
         if (trsp[i].size()) {
             sout << tev << i << ":="
-                      << inv << i << ';' << std::endl;
+                 << inv << i << ';' << std::endl;
         } // otherwise variable is not used
     }
+    return sout;
+}
+// ==================
+// Sets new temporaries with the permuted input values
+std::ostream& input2Temps(std::ostream& sout, const size_t N,
+                          const char inv, const char tev,
+                          const LinBox::LightContainer<long>& P) {
+    // Inputs to temporaries
+    for(size_t i=0; i<N; ++i) {
+        sout << tev << i << ":="
+                  << inv << P[i] << ';' << std::endl;
+    }
+    return sout;
 }
 
 // ==================
@@ -286,7 +300,7 @@ std::ostream& printSCA(std::ostream& out,
                        size_t& nbmul, const QRat& QQ) {
     if (p == '*')
         return printmulorjustdiv(out, c, i, r, nbmul, QQ);
-    else {
+    else { // operation is division --> multiply by the inverse
         Givaro::Rational u; QQ.inv(u,r);
         return printmulorjustdiv(out, c, i, u, nbmul, QQ);
     }

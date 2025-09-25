@@ -316,12 +316,13 @@ int Tellegen(std::istream& input,
                 if (variable == "0") continue;
 
                 if (variable[0] == ichar) {
-                    std::string onein(fixvar);
+                    std::string onein(variable);
                     onein[0] = ochar;
                     outSet.push_back( { onein, ":=", fixvar, ";" });
 #ifdef VERBATIM_PARSING
                     std::clog << "# Input found, " << variable
-                              << ", becomes output: " << onein << std::endl;
+                              << ", becomes output: " << onein
+                              << ":=" << fixvar << std::endl;
 #endif
                     continue;
                 }
@@ -480,6 +481,7 @@ int Tellegen(std::istream& input,
                       << " malformed output :" << iter << std::endl;
         }
 #endif
+
         std::cout << iter.front() << ":="
                   << (modSet.find(iter[2]) == modSet.end() ? "0" : iter[2])
                   << ';' << std::endl;
@@ -1158,26 +1160,25 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
             }
             if (varloc<line.size()) {
                     // Whether replacement requires sign-change
-                bool changesign(false), multimonomial(false);
                 if ( (init[2] == "-") && (isAddSub(line[varloc-1])) ) {
                     swapsign(line[varloc-1]);   // Change dest sign
-                    init.erase(init.begin()+2);	// remove src '-'
-                    changesign = true;
+                    init = negateLine(init);    // change var  sign
                 }
 
                     // Whether replacement requires parenthesis
+                bool multimonomial(false);
                 auto penultimate(init.end()-1);
                 size_t depth(0);
                 for(auto iter(init.begin()+3); iter != penultimate; ++iter) {
                     if (*iter == "(") ++depth;
                     else if (*iter == ")") --depth;
-                    else if (isAddSub(*iter)) {
-                        if (changesign && (depth ==0)) swapsign(*iter);
+                    else if (isAddSub(*iter) && (depth==0) ) {
                         multimonomial = true;
+                        break;
                     }
                 }
 
-                    // Replacement expression
+                   // Replacement expression
                 auto replength(init.end()-init.begin()-2);
                 bool tobeneg(line[varloc-1] == "-");
                 const bool tobemul(isMulDiv(line[varloc+1]));
@@ -1202,10 +1203,60 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
                 }
 
                 line[varloc] = std::move(init[2]); // replace previous variable
-                line.insert(line.begin()+varloc+1,init.begin()+3,penultimate);
+                line.insert(line.begin()+varloc+1,
+                            init.begin()+3,penultimate);
                 if (multimonomial && (tobemul || tobeneg)) {
                     line.insert(line.begin()+varloc,"(");
                     line.insert(line.begin()+varloc+replength,")");
+                }
+
+                    // Look for constant simplifications
+                QRat QQ;
+                for(size_t pos(0); pos < (line.size()-4); ++pos) {
+// std::clog << "# l[" << pos << "]: "
+//           << line[pos] << ' ' << line[pos+1] << ' '
+//           << line[pos+2] << ' ' << line[pos+3]
+//           << ':' << isMulDiv(line[pos]) << '&' << isMulDiv(line[pos+2])
+//           << std::endl;
+
+                    if (isMulDiv(line[pos]) && isMulDiv(line[pos+2])) {
+                            // Have to combine multipliers
+                        Givaro::Rational lcoeff(line[pos+1].c_str());
+                        if (line[pos] == "/") QQ.invin(lcoeff);
+                        Givaro::Rational rmulti(line[pos+3].c_str());
+                        if (line[pos+2] == "/") {
+                            lcoeff /= rmulti;
+                        } else {
+                            lcoeff *= rmulti;
+                        }
+#ifdef VERBATIM_PARSING
+                        std::clog << "# simplify: " << line[pos] << line[pos+1]
+                                  << line[pos+2] << line[pos+3]
+                                  << " = *" << lcoeff << std::endl;
+#endif
+                        if (QQ.isOne(lcoeff.deno())) {
+                            if (QQ.isOne(lcoeff.nume())) {
+                                    // line var multiplicand not needed anymore
+                                line.erase(line.begin()+pos,
+                                           line.begin()+pos+4);
+                            } else {
+                                line[pos] = "*";
+                                line[pos+1] = std::string(lcoeff.nume());
+                                line.erase(line.begin()+pos+2,
+                                           line.begin()+pos+4);
+                            }
+                        } else {
+                            if (QQ.isOne(lcoeff.nume())) {
+                                line[pos] = "/";
+                                line[pos+1] = std::string(lcoeff.deno());
+                            } else {
+                                line[pos] = "*";
+                                line[pos+1] = std::string(lcoeff);
+                            }
+                            line.erase(line.begin()+pos+2,
+                                       line.begin()+pos+4);
+                        }
+                    }
                 }
 
                 P[i].resize(0); // No need for that variable (& line) anymore

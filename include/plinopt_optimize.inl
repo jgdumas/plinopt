@@ -510,12 +510,11 @@ template<typename outstream, typename _Mat, typename triple>
 std::ostream& ProgramGen(outstream& sout, _Mat& M,
                          std::vector<triple>& multiples,
                          size_t& addcount, size_t& nbmul,
-                         const char inv, const char ouv,
-                         const char tev, const char rav) {
+                         const char ouv, const char tev, const char rav) {
 
 #ifdef VERBATIM_PARSING
-    std::clog << "# Program Generation:" << inv << ' ' << ouv << ' '
-               << tev << ' ' << rav << ' ' << std::endl;
+    std::clog << "# Program Generation:" << ouv << ' ' << tev << ' ' << rav
+              << std::endl;
     std::clog << std::string(30,'#') << std::endl;
 #endif
 
@@ -612,8 +611,7 @@ std::ostream& ProgramGen(outstream& sout, _Mat& M,
 // Global random optimization function (pairs and factors)
 template<typename outstream, typename _Mat>
 Pair<size_t> Optimizer(outstream& sout, _Mat& M,
-                       const char inv, const char ouv,
-                       const char tev, const char rav) {
+                       const char ouv, const char tev, const char rav) {
 
     using triple=std::tuple<size_t, size_t, typename _Mat::Element>;
     size_t nbadd(0), nbmul(0);
@@ -624,7 +622,7 @@ Pair<size_t> Optimizer(outstream& sout, _Mat& M,
 
         // No more useful CSE, thus
         // generate the rest of the program from the new M
-    ProgramGen(sout, M, multiples, nbadd, nbmul, inv, ouv, tev, rav);
+    ProgramGen(sout, M, multiples, nbadd, nbmul, ouv, tev, rav);
 
     return Pair<size_t>(nbadd,nbmul);
 }
@@ -773,9 +771,9 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
             // o <-- Free . i
         Pair<size_t> Fops;
         if (mostCSE) {
-            Fops = RecOptimizer(sout, FreePart, 'i', 'o', 't', 'r');
+            Fops = RecOptimizer(sout, FreePart, 'o', 't', 'r');
         } else {
-            Fops = Optimizer(sout, FreePart, 'i', 'o', 't', 'r');
+            Fops = Optimizer(sout, FreePart, 'o', 't', 'r');
         }
 
             // ============================================
@@ -794,9 +792,9 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
             // x <-- Tx . o = (- x^T) o
         Pair<size_t> Kops;
         if (mostCSE) {
-            Kops = RecOptimizer(sout, Tx, 'o', 'x', 'v', 'g');
+            Kops = RecOptimizer(sout, Tx, 'x', 'v', 'g');
         } else {
-            Kops = Optimizer(sout, Tx, 'o', 'x', 'v', 'g');
+            Kops = Optimizer(sout, Tx, 'x', 'v', 'g');
         }
 
             // ============================================
@@ -921,8 +919,7 @@ bool RecSub(std::vector<std::string>& out, _Mat& Mat,
 // Global exhaustive greedy CSE optimization function (pairs and factors)
 template<typename outstream, typename _Mat>
 Pair<size_t> RecOptimizer(outstream& sout, _Mat& M,
-                          const char inv, const char ouv,
-                          const char tev, const char rav) {
+                          const char ouv, const char tev, const char rav) {
     using triple=std::tuple<size_t, size_t, typename _Mat::Element>;
     const auto& FF(M.field());
 
@@ -943,9 +940,377 @@ Pair<size_t> RecOptimizer(outstream& sout, _Mat& M,
 
     size_t addcount(0);
 
-    ProgramGen(sout, M, multiples, addcount, alreadymuls, inv, ouv, tev, rav);
+    ProgramGen(sout, M, multiples, addcount, alreadymuls, ouv, tev, rav);
 
     return Pair<size_t>(nbops.first,alreadymuls);
+}
+
+
+
+
+// ============================================================
+// Optimizing a linear program (Gaussian elimination method)
+template<typename Field>
+Pair<size_t>& LUOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
+                          const Field& F, const Matrix& M, const Matrix& T,
+                          Givaro::Timer& global, const size_t randomloops) {
+
+        // ============================================================
+        // Rebind matrix type over sub field matrix type
+    typedef typename Matrix::template rebind<Field>::other FMatrix;
+    Givaro::Timer chrono; chrono.start();
+
+        // ============================================================
+
+    FMatrix U(M, F);
+
+#ifdef DEBUG
+    U.write(std::clog << "## M:=Matrix(", FileFormat(8)) << ");" << std::endl;
+#endif
+
+    typename Field::Element Det;
+    size_t Rank;
+    FMatrix L(F, U.rowdim(), U.rowdim());
+    LinBox::Permutation<Field> Q(F,U.rowdim());
+    LinBox::Permutation<Field> P(F,U.coldim());
+    LinBox::GaussDomain<Field> GD(F);
+    GD.QLUPin(Rank, Det, Q, L, U, P, U.rowdim(), U.coldim() );
+
+#ifdef DEBUG
+    Q.write(std::clog << "## Q:=Matrix(", FileFormat(8)) << ");" << std::endl;
+    L.write(std::clog << "## L:=Matrix(", FileFormat(8)) << ");" << std::endl;
+    U.write(std::clog << "## U:=Matrix(", FileFormat(8)) << ");" << std::endl;
+    P.write(std::clog << "## P:=Matrix(", FileFormat(8)) << ");" << std::endl;
+#endif
+
+    std::ostringstream gout;
+    auto gops(nbops);
+
+#pragma omp parallel for shared(Q,L,U,P,gout,nbops)
+    for(size_t i=0; i<randomloops; ++i) {
+        std::ostringstream luout;
+        FMatrix lU(U, F);
+        FMatrix lL(L, F);
+
+            // ============================================
+            // Applying permutation P to 'i' variables
+        input2Temps(luout, P.rowdim(), 'i', 't', P.getStorage());
+
+            // ============================================
+            // Applying Upper matrix to 't' variables
+        auto Uops = Optimizer(luout, lU, 'v', 't', 'r');
+
+            // ============================================
+            // Applying Lower matrix to 'v' variables
+        auto Lops = Optimizer(luout, lL, 'x', 'v', 'g');
+
+            // ============================================
+            // Applying permutation Q back into 'o' variables
+        input2Temps(luout, Q.rowdim(), 'x', 'o', Q.getStorage());
+
+        Uops.first += Lops.first;
+        Uops.second += Lops.second;
+
+#pragma omp critical
+        {
+            const bool better(cmpOpCount(Uops,gops));
+            if ( (gout.tellp() == std::streampos(0) ) || better ) {
+                gout.clear(); gout.str(std::string());
+                gout.str(luout.str());
+                if (better) {
+                    std::clog << "# Found G: "
+                              << Uops.first << '|' << Uops.second
+                              << " instead of "
+                              << gops.first << '|' << gops.second
+                              << std::endl;
+                    gops = Uops;
+                }
+            }
+        }
+    }
+
+    chrono.stop(); global += chrono;
+    if (cmpOpCount(gops,nbops)) {
+        nbops = gops;
+        sout.str(gout.str());
+    }
+    return nbops;
+}
+
+
+
+// ============================================================
+// Optimizing a linear program (Common Subexpressions Elimination)
+template<typename Field>
+Pair<size_t>& CSEOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
+                           const Field& F, const Matrix& M, const Matrix& T,
+                           Givaro::Timer& global, const size_t randomloops) {
+        // ============================================================
+        // Rebind matrix type over sub field matrix type
+    typedef typename Matrix::template rebind<Field>::other FMatrix;
+
+    Givaro::Timer chrono; chrono.start();
+    std::ostringstream dout;
+    auto dops(nbops);
+
+#pragma omp parallel for shared(M,T,dout,dops)
+    for(size_t i=0; i<randomloops; ++i) {
+        FMatrix lM(M, F);
+        FMatrix lT(T, F);
+
+        std::ostringstream ldout;
+            // Cancellation-free optimization
+        input2Temps(ldout, lM.coldim(), 'i', 't', lT);
+        auto lnbops( Optimizer(ldout, lM, 'o', 't', 'r') );
+
+
+#pragma omp critical
+        {
+#ifdef VERBATIM_PARSING
+            std::clog << "# Found, direct: "
+                      << lnbops.first << "\tadditions, "
+                      << lnbops.second << "\tmultiplications." << std::endl;
+#endif
+            const bool better(cmpOpCount(lnbops,dops));
+            if ( (dout.tellp() == std::streampos(0)) || better ) {
+                dout.clear(); dout.str(std::string());
+                dout << ldout.str();
+                    if (better) {
+                        std::clog << "# Found D: "
+                                  << lnbops.first << '|' << lnbops.second
+                                  << " instead of "
+                                  << dops.first << '|' << dops.second
+                                  << std::endl;
+                        dops = lnbops;
+                    }
+            }
+        }
+    }
+
+    chrono.stop(); global += chrono;
+    if (cmpOpCount(dops,nbops)) {
+        nbops = dops;
+        sout.str(dout.str());
+    }
+    return nbops;
+}
+
+// ============================================================
+// Optimizing a linear program (whole CSE tree)
+template<typename Field>
+Pair<size_t>& AllCSEOpt(Pair<size_t>& nbops, std::ostringstream& sout,
+                        const Field& F, const Matrix& M, const Matrix& T,
+                        Givaro::Timer& global) {
+        // ============================================================
+        // Rebind matrix type over sub field matrix type
+    typedef typename Matrix::template rebind<Field>::other FMatrix;
+
+    Givaro::Timer chrono; chrono.start();
+    FMatrix lM(M, F);
+    FMatrix lT(T, F);
+
+    std::ostringstream iout;
+        // Cancellation-free optimization
+    input2Temps(iout, lM.coldim(), 'i', 't', lT);
+    auto rnbops( RecOptimizer(iout, lM, 'o', 't', 'r') );
+
+    chrono.stop(); global += chrono;
+
+    if (cmpOpCount(rnbops, nbops)) {
+        sout.str(iout.str());
+        nbops = rnbops;
+    } else {
+            // Optimal was already found
+        std::clog << "# \033[1;36m"
+                  << "No greedy CSE schedule has less additions.\033[0m \t"
+                  << chrono << std::endl;
+    }
+    return nbops;
+}
+
+
+
+// ============================================================
+// Optimizing a linear program (kernel method)
+template<typename Field>
+Pair<size_t>& KernelOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
+                              const Field& F, const Matrix& T,
+                              Givaro::Timer& global, const size_t randomloops) {
+        // ============================================================
+        // Rebind matrix type over sub field matrix type
+    typedef typename Matrix::template rebind<Field>::other FMatrix;
+    Givaro::Timer chrono; chrono.start();
+    std::ostringstream kout;
+    auto kops(nbops);
+    bool nonzerokernel(true);
+
+#pragma omp parallel for shared(T,kout,kops)
+    for(size_t i=0; i<randomloops; ++i) {
+        if (nonzerokernel) {
+            FMatrix lT(T, F);
+            std::ostringstream lkout;
+            FMatrix NullSpace(F,lT.coldim(),lT.coldim());
+            auto lnbops( nullspacedecomp(lkout, NullSpace, lT) );
+
+#pragma omp critical
+            {
+#ifdef VERBATIM_PARSING
+                std::clog << "# Found, kernel: "
+                          << lnbops.first << "\tadditions, "
+                          << lnbops.second << "\tmultiplications." << std::endl;
+#endif
+                if (lnbops == Pair<size_t>{-1,-1}) {
+                    nonzerokernel = false;
+                }
+                const bool better(cmpOpCount(lnbops,kops));
+                if ( (kout.tellp() == std::streampos(0) ) || better ) {
+                    kout.clear(); kout.str(std::string());
+                    kout << lkout.str();
+                    if (better) {
+                        std::clog << "# Found K: "
+                                  << lnbops.first << '|' << lnbops.second
+                                  << " instead of "
+                                  << kops.first << '|' << kops.second
+                                  << std::endl;
+                        kops = lnbops;
+                    }
+                }
+            }
+        }
+    }
+
+    chrono.stop(); global += chrono;
+    if (! nonzerokernel) {
+            // Zero dimensional kernel
+        std::clog << "# \033[1;36mZero dimensional kernel.\033[0m"
+                  << std::endl;
+    } else if (cmpOpCount(kops,nbops)) {
+        nbops = kops;
+        sout.str(kout.str());
+    }
+    return nbops;
+}
+
+// ============================================================
+// Optimizing a linear program (kernel method)
+template<typename Field>
+Pair<size_t>& AllKernelOpt(Pair<size_t>& nbops, std::ostringstream& sout,
+                           const Field& F, const Matrix& T, const bool mostCSE,
+                           Givaro::Timer& global, const size_t randomloops) {
+        // ============================================================
+        // Rebind matrix type over sub field matrix type
+    typedef typename Matrix::template rebind<Field>::other FMatrix;
+    Givaro::Timer chrono; chrono.start();
+    const size_t m(T.coldim());
+    std::vector<size_t> Fm { factorial(m) };
+    std::ostringstream aout;
+    auto aops(nbops);
+
+#pragma omp parallel for shared(Fm,T,aout,aops)
+    for(size_t i=0; i<Fm.back(); ++i) {
+        std::vector<size_t> l{kthpermutation(i,m,Fm)};
+        FMatrix lT(T, F);
+        std::ostringstream laout;
+        FMatrix NullSpace(F,lT.coldim(),T.coldim());
+        auto lkops( nullspacedecomp(laout, NullSpace, lT, l, mostCSE) );
+
+#pragma omp critical
+        {
+#ifdef VERBATIM_PARSING
+            std::clog << "# Found, kernel: "
+                      << lkops.first << "\tadditions, "
+                      << lkops.second << "\tmultiplications." << std::endl;
+#endif
+            const bool better(cmpOpCount(lkops,aops));
+            if ( (aout.tellp() == std::streampos(0)) || better) {
+                aout.clear(); aout.str(std::string());
+                aout << laout.str();
+                if (better) {
+                    std::clog << "# Found E: "
+                              << lkops.first << '|' << lkops.second
+                              << " instead of "
+                              << aops.first << '|' << aops.second
+                              << std::endl;
+                    aops = lkops;
+                }
+            }
+        }
+    }
+
+    chrono.stop(); global += chrono;
+
+    if (cmpOpCount(aops,nbops)) {
+        sout.str(aout.str());
+        nbops = aops;
+    } else {
+            // Optimal was already found
+        std::clog << "# \033[1;36m"
+                  << "No kernel permutation has less additions.\033[0m \t"
+                  << chrono << std::endl;
+    }
+    return nbops;
+}
+
+
+// ============================================================
+// Optimizing a linear program (Direct CSE or Kernel methods)
+template<typename Field>
+Pair<size_t> OptMethods(const Pair<size_t> opsinit,
+                         std::ostringstream& sout, const Field& F,
+                         const Matrix& M, const Matrix& T,
+                         Givaro::Timer& global, const size_t randomloops,
+                         const bool printMaple, const bool printPretty,
+                         const bool tryDirect, const bool tryKernel,
+                         const bool tryLU,
+                         const bool mostCSE, const bool allkernels) {
+
+    Pair<size_t> nbops(opsinit);
+
+        // ============================================================
+        // Otimize the whole matrix
+    if (tryDirect) {
+        CSEOptimiser(nbops, sout, F, M, T, global, randomloops);
+    }
+
+        // ============================================================
+        // Optimize the factorized matrix
+    if (tryLU) {
+        LUOptimiser(nbops, sout, F, M, T, global, randomloops);
+    }
+
+        // ============================================================
+        // Separate independent and dependent rows
+    if (tryKernel) {
+        KernelOptimiser(nbops, sout, F, T, global, randomloops);
+    }
+
+        // ============================================================
+        // Exhaustive nullspace permutation search (if # is <= 12!)
+    if (allkernels && (M.rowdim() < 13)) {
+        AllKernelOpt(nbops, sout, F, T, mostCSE, global, randomloops);
+    }
+
+        // ============================================================
+        // Greedy CSE search
+    if (mostCSE) {
+        AllCSEOpt(nbops, sout, F, M, T, global);
+    }
+
+    if (cmpOpCount(opsinit,nbops) || (opsinit == nbops)) {
+            // Found nothing better than direct matrix expression
+        typedef typename Matrix::template rebind<Field>::other FMatrix;
+        FMatrix lM(M, F), lT(T, F);
+        size_t nbadd(0), nbmul(0);
+        std::vector<Etriple<Field>> multiples;
+
+        input2Temps(sout, lM.coldim(), 'i', 't', lT);
+        ProgramGen(sout, lM, multiples, nbadd, nbmul, 'o', 't', 'r');
+
+        nbops.first = nbadd;
+        nbops.second= nbmul;
+    }
+
+    return nbops;
 }
 
 
