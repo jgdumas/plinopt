@@ -178,7 +178,8 @@ int main(int argc, char** argv) {
                 << "  -k #: inner dimension (default is column dimension)\n"
                 << "  -M/-P/-S/-L: selects the ouput format\n"
                 << "  -q #: search modulo (default is Rationals)\n"
-                << "  -O #: search for reduced randomized sparsity\n";
+                << "  -O #: search for reduced randomized sparsity (default "
+                << randomloops << " loops)\n";
 
             exit(-1);
         }
