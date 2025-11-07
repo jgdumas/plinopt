@@ -25,8 +25,10 @@
 namespace PLinOpt {
 // ============================================================
 template<typename _Mat>
-int Factorizer(const _Mat& M, const FileFormat& matformat,
-               const size_t selectinnerdim, const size_t randomloops) {
+int TFactorizer(const _Mat& M, const FileFormat& matformat,
+                const size_t selectinnerdim, const size_t randomloops) {
+
+
 
     using FMatrix = _Mat;
     using Field = typename _Mat::Field;
@@ -36,67 +38,11 @@ int Factorizer(const _Mat& M, const FileFormat& matformat,
     densityProfile(std::clog << "# Initial profile: ", sc, M)
                              << std::endl;
 
-#ifdef VERBATIM_PARSING
-    M.write(std::clog,FileFormat::Pretty) << std::endl;
-#endif
-    size_t innerdim(selectinnerdim == 0 ? M.coldim() : selectinnerdim);
-    if ( (innerdim > M.rowdim()) ||
-         (innerdim < M.coldim()) ) {
-        std::cerr << "# \033[1;36mFail: inner dimension has to be between " << M.coldim() << " and " << M.rowdim() << ".\033[0m\n";
-        return -1;
-    }
+    FMatrix Alt(F, M.rowdim(), selectinnerdim);
+    FMatrix CoB(F, selectinnerdim, M.coldim());
 
-    FMatrix Res(F, M.rowdim(), innerdim);
-
-    if (M.rowdim() == M.coldim()) {
-            // Res can be identity and CoB=M
-        M.write(std::cout, matformat) << std::endl;
-
-        std::clog <<"# Identity\n";
-        for(size_t i(0); i<Res.rowdim(); ++i) Res.setEntry(i, i, F.one);
-        Res.write(std::clog, matformat)<< std::endl;
-
-        std::clog << std::string(30,'#') << std::endl;
-        std::clog <<"# \033[1;32mSUCCESS: identity factorization\033[0m\n";
-
-        return 0;
-    }
-
-
-    Givaro::Timer elapsed;
-
-    sparse2sparse(Res, M);
-    FMatrix CoB(F, innerdim, M.coldim());
-    for(size_t i(0); i<CoB.rowdim(); ++i) CoB.setEntry(i, i, F.one);
-    Pair<size_t> nbops{sc,M.coldim()}; // Start with M and Identity
-
-
-    elapsed.start();
-#pragma omp parallel for shared(Res,CoB,M,F,nbops,innerdim)
-    for(size_t i=0; i<randomloops; ++i) {
-        FMatrix lCoB(F, innerdim, M.coldim());
-        FMatrix lRes(F, M.rowdim(), innerdim);
-        auto bSops{backSolver(lCoB, lRes, M)};
-
-
-#pragma omp critical
-        {
-#ifdef VERBATIM_PARSING
-            std::clog << "# Res/CoB profile[" << i << "]: "
-                      << bSops << std::endl;
-#endif
-            if ( (bSops.first<nbops.first) ||
-                 ( (bSops.first==nbops.first)
-                   && (bSops.second<nbops.second) ) ) {
-                nbops = bSops;
-                sparse2sparse(CoB, lCoB);
-                sparse2sparse(Res, lRes);
-
-                std::clog << "# Found [" << i << "], R/CB profile: "
-                          << bSops << std::endl;
-            }
-        }
-    }
+    Givaro::Timer elapsed; elapsed.start();
+    Factorizer(Alt, CoB, M, randomloops, selectinnerdim);
     elapsed.stop();
 
         // ============================================================
@@ -107,19 +53,19 @@ int Factorizer(const _Mat& M, const FileFormat& matformat,
                    sb, CoB) << "\033[0m" << std::endl;
     CoB.write(std::cout, matformat) << std::endl;
 
-
         // residuum sparse matrix to stdlog
     densityProfile(std::clog << "# Sparse residuum profile: \033[1;36m",
-                   sr, Res) << "\033[0m" << std::endl;
-    Res.write(std::clog, matformat)<< std::endl;
+                   sr, Alt) << "\033[0m" << std::endl;
+    Alt.write(std::clog, matformat)<< std::endl;
 
-        // Final check that we computed a factorization M=Res.CoB
+        // Final check that we computed a factorization M=Alt.CoB
     std::clog << std::string(30,'#') << std::endl;
-    consistency(std::clog, M, Res, CoB)
-        << " \033[1;36m" << Res.rowdim() << 'x' << Res.coldim()
+    consistency(std::clog, M, Alt, CoB)
+        << " \033[1;36m" << Alt.rowdim() << 'x' << Alt.coldim()
         << " by " << CoB.rowdim() << 'x' << CoB.coldim() << " with "
         << sr << " non-zeroes (" << sb << " alt.) instead of " << sc
         << "\033[0m:" << ' ' << elapsed << std::endl;
+
     return 0;
 }
 
@@ -148,9 +94,9 @@ int Fmain(std::istream& input, const Givaro::Integer& q,
 
         const Field FF(q);
         FMatrix fM(rM, FF);
-        return PLinOpt::Factorizer(fM, mformat, innerdim, loops);
+        return PLinOpt::TFactorizer(fM, mformat, innerdim, loops);
     } else {
-        return PLinOpt::Factorizer(rM, mformat, innerdim, loops);
+        return PLinOpt::TFactorizer(rM, mformat, innerdim, loops);
     }
 }
 

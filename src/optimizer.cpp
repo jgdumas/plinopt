@@ -49,7 +49,8 @@ template<typename Field>
 int FOptimiser(std::istream& input, const size_t randomloops,
                const bool printMaple, const bool printPretty,
                const bool tryDirect, const bool tryKernel, const bool tryLU,
-               const bool mostCSE, const bool allkernels, const Field& F) {
+               const bool tryAB, const bool mostCSE, const bool allkernels,
+               const Field& F) {
 
         // ============================================================
         // Read Matrix of Linear Transformation
@@ -80,7 +81,7 @@ int FOptimiser(std::istream& input, const size_t randomloops,
         // Try the different optimization methods
     Pair<size_t> nbops( OptMethods(opsinit, ssout, F, M, T, global, randomloops,
                                    printMaple, printPretty,
-                                   tryDirect, tryKernel, tryLU,
+                                   tryDirect, tryKernel, tryLU, tryAB,
                                    mostCSE, allkernels) );
 
     std::cout << ssout.str() << std::flush;
@@ -124,16 +125,16 @@ int FOptimiser(std::istream& input, const size_t randomloops,
 int Selector(std::istream& input, const size_t randomloops,
              const bool printMaple, const bool printPretty,
              const bool tryDirect, const bool tryKernel, const bool tryLU,
-             const bool mostCSE, const bool allkernels,
+             const bool tryAB, const bool mostCSE, const bool allkernels,
              const Givaro::Integer& q) {
     if (! Givaro::isZero(q)) {
         Givaro::Modular<Givaro::Integer> FF(q);
-        return FOptimiser(input, randomloops, printMaple, printPretty,
-                          tryDirect, tryKernel, tryLU, mostCSE, allkernels, FF);
+        return FOptimiser(input, randomloops, printMaple, printPretty, tryDirect,
+                          tryKernel, tryLU, tryAB, mostCSE, allkernels, FF);
     } else {
         QRat QQ;
-        return FOptimiser(input, randomloops, printMaple, printPretty,
-                          tryDirect, tryKernel, tryLU, mostCSE, allkernels, QQ);
+        return FOptimiser(input, randomloops, printMaple, printPretty, tryDirect,
+                          tryKernel, tryLU, tryAB, mostCSE, allkernels, QQ);
     }
 }
 
@@ -156,7 +157,8 @@ int main(int argc, char** argv) {
         // ============================================================
         // Linear Transformation
     bool printMaple(false), printPretty(false), mostCSE(false),
-        tryKernel(false), tryLU(false), tryDirect(false), allkernels(false);
+        tryKernel(false), tryLU(false), tryAB(false),
+        tryDirect(false), allkernels(false);
 
     size_t randomloops(DORANDOMSEARCH?DEFAULT_RANDOM_LOOPS:1);
     Givaro::Integer prime(0u);
@@ -171,6 +173,7 @@ int main(int argc, char** argv) {
 
             std::clog
                 << "  -D/-K/-G: direct/kernel/LU methods (default is all)\n"
+                << "  -A: factoring method (default is not)\n"
                 << "  -E: exhaustive greedy CSE search (default is not)\n"
                 << "  -N: exhaustive nullspace permutations (default is not)\n"
                 << "  -P/-M: choose the printing format\n"
@@ -182,6 +185,7 @@ int main(int argc, char** argv) {
         else if (args == "-M") { printMaple = true; }
         else if (args == "-P") { printPretty = true; }
         else if (args == "-G") { tryLU = true; }
+        else if (args == "-A") { tryAB = true; }
         else if (args == "-D") { tryDirect = true; }
         else if (args == "-K") { tryKernel = true; }
         else if (args == "-E") { mostCSE = true; }
@@ -206,13 +210,13 @@ int main(int argc, char** argv) {
     if (filename == "") {
         return PLinOpt::Selector(std::cin, randomloops, printMaple,
                                  printPretty, tryDirect, tryKernel, tryLU,
-                                 mostCSE, allkernels, prime);
+                                 tryAB, mostCSE, allkernels, prime);
     } else {
         std::ifstream inputmatrix(filename);
         if ( inputmatrix ) {
             int s=PLinOpt::Selector(inputmatrix, randomloops, printMaple,
                                     printPretty, tryDirect, tryKernel, tryLU,
-                                    mostCSE, allkernels, prime);
+                                    tryAB, mostCSE, allkernels, prime);
             inputmatrix.close();
             return s;
         }
