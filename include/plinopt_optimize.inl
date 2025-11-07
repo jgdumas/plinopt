@@ -1059,10 +1059,12 @@ Pair<size_t>& ABOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
 
     Factorizer(Alt, CoB, FM, randomloops, selectinnerdim, false);
 
+    const size_t sa(density(Alt)), sc(density(CoB));
+
     std::ostringstream gout;
     auto gops(nbops);
 
-#pragma omp parallel for shared(Alt,CoB,gout,nbops)
+#pragma omp parallel for shared(Alt,CoB,sa,sc,gout,nbops)
     for(size_t i=0; i<randomloops; ++i) {
         FMatrix lC(CoB, F);
         FMatrix lA(Alt, F);
@@ -1089,7 +1091,8 @@ Pair<size_t>& ABOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
                 if (better) {
                     std::clog << "# Found A: ("
                               << Alt.rowdim() << 'x' << Alt.coldim() << 'x'
-                              << CoB.coldim() << ')' << '\t'
+                              << CoB.coldim() << ' ' << sa << '/' << sc
+                              << ')' << '\t'
                               << ABops.first << '|' << ABops.second
                               << " instead of "
                               << gops.first << '|' << gops.second
