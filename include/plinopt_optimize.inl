@@ -1057,7 +1057,8 @@ Pair<size_t>& ABOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
     FMatrix Alt(F, FM.rowdim(), selectinnerdim);
     FMatrix CoB(F, selectinnerdim, FM.coldim());
 
-    Factorizer(Alt, CoB, FM, randomloops, selectinnerdim, false);
+    const size_t factoloops(1+randomloops>>3);
+    Factorizer(Alt, CoB, FM, factoloops, selectinnerdim, false);
 
     const size_t sa(density(Alt)), sc(density(CoB));
 
@@ -1341,6 +1342,15 @@ Pair<size_t> OptMethods(const Pair<size_t> opsinit,
     Pair<size_t> nbops(opsinit);
 
         // ============================================================
+        // Optimize the Alternative factorization
+    if (tryAB) {
+//        for(int id(M.rowdim()-1); id >= M.coldim(); --id)
+        for(size_t id(M.coldim()); id < M.rowdim(); ++id)
+            ABOptimiser(nbops, sout, F, M, T, id, global, randomloops);
+    }
+
+
+        // ============================================================
         // Otimize the whole matrix
     if (tryDirect) {
         CSEOptimiser(nbops, sout, F, M, T, global, randomloops);
@@ -1356,14 +1366,6 @@ Pair<size_t> OptMethods(const Pair<size_t> opsinit,
         // Optimize the factorized matrix
     if (tryLU) {
         LUOptimiser(nbops, sout, F, M, T, global, randomloops);
-    }
-
-        // ============================================================
-        // Optimize the Alternative factorization
-    if (tryAB) {
-//         for(size_t id(M.coldim()); id < M.rowdim(); ++id)
-        for(int id(M.rowdim()-1); id >= M.coldim(); --id)
-            ABOptimiser(nbops, sout, F, M, T, id, global, randomloops);
     }
 
         // ============================================================
