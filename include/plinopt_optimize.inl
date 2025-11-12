@@ -8,6 +8,8 @@
  ****************************************************************/
 
 #include "plinopt_optimize.h"
+#include "plinopt_sparsify.h"
+
 
 
 namespace PLinOpt {
@@ -986,7 +988,7 @@ Pair<size_t>& LUOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
     std::ostringstream gout;
     auto gops(nbops);
 
-#pragma omp parallel for shared(Q,L,U,P,gout,nbops)
+#pragma omp parallel for shared(Q,L,U,P,gout,gops)
     for(size_t i=0; i<randomloops; ++i) {
         std::ostringstream luout;
         FMatrix lU(U, F);
@@ -1032,7 +1034,82 @@ Pair<size_t>& LUOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
     chrono.stop(); global += chrono;
     if (cmpOpCount(gops,nbops)) {
         nbops = gops;
-        sout.str(gout.str());
+        sout.clear(); sout.str(std::string());
+        sout << gout.str();
+    }
+    return nbops;
+}
+
+// ============================================================
+// Optimizing a linear program (Alternative Factrization method)
+template<typename Field>
+Pair<size_t>& ABOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
+                          const Field& F, const Matrix& M, const Matrix& T,
+                          const size_t selectinnerdim,
+                          Givaro::Timer& global, const size_t randomloops) {
+
+        // ============================================================
+        // Rebind matrix type over sub field matrix type
+    typedef typename Matrix::template rebind<Field>::other FMatrix;
+    Givaro::Timer chrono; chrono.start();
+
+    FMatrix FM(M, F);
+
+    FMatrix Alt(F, FM.rowdim(), selectinnerdim);
+    FMatrix CoB(F, selectinnerdim, FM.coldim());
+
+    const size_t factoloops(1+randomloops>>3);
+    Factorizer(Alt, CoB, FM, factoloops, selectinnerdim, false);
+
+    const size_t sa(density(Alt)), sc(density(CoB));
+
+    std::ostringstream gout;
+    auto gops(nbops);
+
+#pragma omp parallel for shared(Alt,CoB,sa,sc,gout,gops)
+    for(size_t i=0; i<randomloops; ++i) {
+        FMatrix lC(CoB, F);
+        FMatrix lA(Alt, F);
+
+        std::ostringstream about;
+        input2Temps(about, lC.coldim(), 'i', 't');
+
+            // ============================================
+            // Applying CoB matrix from 't' to 'v' variables
+        auto Bops = Optimizer(about, lC, 'v', 't', 'r');
+            // ============================================
+            // Applying Alt matrix from 'v' to 'o' variables
+        auto Aops = Optimizer(about, lA, 'o', 'v', 'g');
+
+        Pair<size_t> ABops(Bops.first + Aops.first,
+			   Bops.second + Aops.second);
+
+#pragma omp critical
+        {
+            const bool better(cmpOpCount(ABops,gops));
+            if ( better || (gout.tellp() == std::streampos(0) ) ) {
+                gout.clear(); gout.str(std::string());
+                gout << about.str();
+                if (better) {
+                    std::clog << "# Found A: ("
+                              << Alt.rowdim() << 'x' << Alt.coldim() << 'x'
+                              << CoB.coldim() << ' ' << sa << '/' << sc
+                              << ')' << '\t' << Bops.first << '+' << Aops.first
+			      << '|' << Bops.second << '+' << Aops.second
+                              << " instead of "
+                              << gops.first << '|' << gops.second
+                              << std::endl;
+                    gops = ABops;
+                }
+            }
+        }
+    }
+
+    chrono.stop(); global += chrono;
+    if (cmpOpCount(gops,nbops)) {
+        nbops = gops;
+        sout.clear(); sout.str(std::string());
+        sout << gout.str();
     }
     return nbops;
 }
@@ -1090,7 +1167,8 @@ Pair<size_t>& CSEOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
     chrono.stop(); global += chrono;
     if (cmpOpCount(dops,nbops)) {
         nbops = dops;
-        sout.str(dout.str());
+        sout.clear(); sout.str(std::string());
+        sout << dout.str();
     }
     return nbops;
 }
@@ -1117,7 +1195,8 @@ Pair<size_t>& AllCSEOpt(Pair<size_t>& nbops, std::ostringstream& sout,
     chrono.stop(); global += chrono;
 
     if (cmpOpCount(rnbops, nbops)) {
-        sout.str(iout.str());
+        sout.clear(); sout.str(std::string());
+        sout << iout.str();
         nbops = rnbops;
     } else {
             // Optimal was already found
@@ -1186,7 +1265,8 @@ Pair<size_t>& KernelOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
                   << std::endl;
     } else if (cmpOpCount(kops,nbops)) {
         nbops = kops;
-        sout.str(kout.str());
+        sout.clear(); sout.str(std::string());
+        sout << kout.str();
     }
     return nbops;
 }
@@ -1240,7 +1320,8 @@ Pair<size_t>& AllKernelOpt(Pair<size_t>& nbops, std::ostringstream& sout,
     chrono.stop(); global += chrono;
 
     if (cmpOpCount(aops,nbops)) {
-        sout.str(aout.str());
+        sout.clear(); sout.str(std::string());
+        sout << aout.str();
         nbops = aops;
     } else {
             // Optimal was already found
@@ -1256,15 +1337,24 @@ Pair<size_t>& AllKernelOpt(Pair<size_t>& nbops, std::ostringstream& sout,
 // Optimizing a linear program (Direct CSE or Kernel methods)
 template<typename Field>
 Pair<size_t> OptMethods(const Pair<size_t> opsinit,
-                         std::ostringstream& sout, const Field& F,
-                         const Matrix& M, const Matrix& T,
-                         Givaro::Timer& global, const size_t randomloops,
-                         const bool printMaple, const bool printPretty,
-                         const bool tryDirect, const bool tryKernel,
-                         const bool tryLU,
-                         const bool mostCSE, const bool allkernels) {
+                        std::ostringstream& sout, const Field& F,
+                        const Matrix& M, const Matrix& T,
+                        Givaro::Timer& global, const size_t randomloops,
+                        const bool printMaple, const bool printPretty,
+                        const bool tryDirect, const bool tryKernel,
+                        const bool tryLU, bool tryAB,
+                        const bool mostCSE, const bool allkernels) {
 
     Pair<size_t> nbops(opsinit);
+
+        // ============================================================
+        // Optimize the Alternative factorization
+    if (tryAB) {
+//         for(int id(M.rowdim()-1); id >= M.coldim(); --id)
+        for(size_t id(M.coldim()); id < M.rowdim(); ++id)
+            ABOptimiser(nbops, sout, F, M, T, id, global, randomloops);
+    }
+
 
         // ============================================================
         // Otimize the whole matrix
@@ -1273,15 +1363,15 @@ Pair<size_t> OptMethods(const Pair<size_t> opsinit,
     }
 
         // ============================================================
-        // Optimize the factorized matrix
-    if (tryLU) {
-        LUOptimiser(nbops, sout, F, M, T, global, randomloops);
-    }
-
-        // ============================================================
         // Separate independent and dependent rows
     if (tryKernel) {
         KernelOptimiser(nbops, sout, F, T, global, randomloops);
+    }
+
+        // ============================================================
+        // Optimize the factorized matrix
+    if (tryLU) {
+        LUOptimiser(nbops, sout, F, M, T, global, randomloops);
     }
 
         // ============================================================

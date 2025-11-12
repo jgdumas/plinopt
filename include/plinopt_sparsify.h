@@ -42,6 +42,16 @@
 #include <linbox/algorithms/gauss.h>
 
 namespace PLinOpt {
+
+// ============================================================
+// Factorizing into an Alternate basis time a CoB
+template<typename _Mat>
+int Factorizer(_Mat& Alt, _Mat& CoB, const _Mat& M,
+               const size_t randomloops, const size_t selectinnerdim=0,
+               const bool progressreport=true);
+// ============================================================
+
+
 // ============================================================
 // Sparsifying a Matrix M, in-place
 //   uses a limited number of coefficients for the linear comb.

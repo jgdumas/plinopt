@@ -804,5 +804,84 @@ std::ostream& consistency(std::ostream& out, const _Mat1& M,
     return out;
 }
 
+
+// ============================================================
+// Factorizing into an Alternate basis time a CoB
+template<typename _Mat>
+int Factorizer(_Mat& Alt, _Mat& CoB, const _Mat& M,
+               const size_t randomloops, const size_t selectinnerdim,
+               const bool progressreport) {
+    using FMatrix = _Mat;
+    using Field = typename _Mat::Field;
+    const Field& F(M.field());
+
+
+#ifdef VERBATIM_PARSING
+    M.write(std::clog,FileFormat::Pretty) << std::endl;
+#endif
+    const size_t innerdim(selectinnerdim == 0 ? M.coldim() : selectinnerdim);
+    if ( (innerdim > M.rowdim()) ||
+         (innerdim < M.coldim()) ) {
+        std::cerr << "# \033[1;36mFail: inner dimension has to be between " << M.coldim() << " and " << M.rowdim() << ".\033[0m\n";
+        return -1;
+    }
+
+    Alt.resize(M.rowdim(), innerdim);
+    if (M.rowdim() == M.coldim()) {
+        matrixCopy(CoB, M);
+        for(size_t i(0); i<Alt.rowdim(); ++i) Alt.setEntry(i, i, F.one);
+        std::clog << std::string(30,'#') << std::endl;
+        std::clog <<"# \033[1;36mWARNING: identity factorization\033[0m\n";
+        return 0;
+    }
+
+    const size_t sc(density(M));
+
+    sparse2sparse(Alt, M);
+    CoB.resize(innerdim, M.coldim());
+    for(size_t i(0); i<CoB.coldim(); ++i) CoB.setEntry(i, i, F.one);
+    Pair<size_t> nbops{sc,M.coldim()}; // Start with M and Identity
+
+#pragma omp parallel for shared(Alt,CoB,M,F,nbops,innerdim,progressreport)
+    for(size_t i=0; i<randomloops; ++i) {
+        FMatrix lCoB(F, innerdim, M.coldim());
+        FMatrix lAlt(F, M.rowdim(), innerdim);
+        auto bSops{backSolver(lCoB, lAlt, M)};
+
+
+#pragma omp critical
+        {
+#ifdef VERBATIM_PARSING
+            std::clog << "# Alt/CoB profile[" << i << "]: "
+                      << bSops << std::endl;
+#endif
+            if ( (bSops.first<nbops.first) ||
+                 ( (bSops.first==nbops.first)
+                   && (bSops.second<nbops.second) ) ) {
+                nbops = bSops;
+                sparse2sparse(CoB, lCoB);
+                sparse2sparse(Alt, lAlt);
+
+                if (progressreport)
+                    std::clog << "# Found [" << i << "], R/CB profile: "
+                              << bSops << std::endl;
+            }
+        }
+    }
+
+
+    return 0;
+
+
+}
+
+// ============================================================
+
+
+
+
+
+
+
 } // End of namespace PLinOpt
 // ============================================
