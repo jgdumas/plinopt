@@ -159,6 +159,17 @@ size_t density(const _Mat& M) {
     return ss;
 }
 
+template<typename _Mat>
+Pair<size_t> nonzeroes(const _Mat& M) {
+    const auto& F(M.field());
+    size_t nnz(0), nno(0);
+    for(auto it=M.IndexedBegin();it!=M.IndexedEnd();++it) {
+        if (! F.isZero(it.value()) ) ++nnz;
+        if (! isAbsOne(F, it.value())) ++nno;
+    }
+    return Pair<size_t>{nnz,nno};
+}
+
     // Prints out density profile of M
     // returns total density
 template<typename _Mat>
@@ -656,7 +667,7 @@ int blockSparsifier(Givaro::Timer& elapsed, Matrix& CoB, Matrix& Res,
 //   with prescribed inner dimension
 // precondition: upper part is full-rank
 template<typename _Mat>
-Pair<size_t> backSolver(_Mat& CoB, _Mat& Res, const _Mat& iM) {
+Tricounter backSolver(_Mat& CoB, _Mat& Res, const _Mat& iM) {
     using Field = typename _Mat::Field;
     using FMatrix = _Mat;
     using DenseFMatrix = LinBox::DenseMatrix<Field>;
@@ -761,7 +772,9 @@ Pair<size_t> backSolver(_Mat& CoB, _Mat& Res, const _Mat& iM) {
 #else
     dense2sparse(Res, R);
 #endif
-    return Pair<size_t>{density(Res),density(CoB)};
+
+    const auto rops {nonzeroes(Res) };
+    return Tricounter { rops.first, rops.second, density(CoB) };
 }
 
 // ============================================================
@@ -807,6 +820,18 @@ std::ostream& consistency(std::ostream& out, const _Mat1& M,
 
 // ============================================================
 // Factorizing into an Alternate basis time a CoB
+
+// Optimizing for non-zeroes of Alt, then non-ones, then nnz of CoB
+auto tricOpCount {[](const auto& a, const auto& b) {
+    return (std::get<0>(a) < std::get<0>(b))
+        || ( (std::get<0>(a) == std::get<0>(b))
+             && (std::get<1>(a) < std::get<1>(b)) )
+        || ( (std::get<0>(a) == std::get<0>(b))
+             && (std::get<1>(a) == std::get<1>(b))
+             && (std::get<2>(a) < std::get<2>(b)) )
+; } };
+
+
 template<typename _Mat>
 int Factorizer(_Mat& Alt, _Mat& CoB, const _Mat& M,
                const size_t randomloops, const size_t selectinnerdim,
@@ -835,12 +860,14 @@ int Factorizer(_Mat& Alt, _Mat& CoB, const _Mat& M,
         return 0;
     }
 
-    const size_t sc(density(M));
-
     sparse2sparse(Alt, M);
     CoB.resize(innerdim, M.coldim());
     for(size_t i(0); i<CoB.coldim(); ++i) CoB.setEntry(i, i, F.one);
-    Pair<size_t> nbops{sc,M.coldim()}; // Start with M and Identity
+
+    const auto sc(nonzeroes(M));
+
+	// Start with M and Identity
+    Tricounter nbops{ sc.first, sc.second, M.coldim()};
 
 #pragma omp parallel for shared(Alt,CoB,M,F,nbops,innerdim,progressreport)
     for(size_t i=0; i<randomloops; ++i) {
@@ -855,9 +882,7 @@ int Factorizer(_Mat& Alt, _Mat& CoB, const _Mat& M,
             std::clog << "# Alt/CoB profile[" << i << "]: "
                       << bSops << std::endl;
 #endif
-            if ( (bSops.first<nbops.first) ||
-                 ( (bSops.first==nbops.first)
-                   && (bSops.second<nbops.second) ) ) {
+            if (tricOpCount(bSops, nbops)) {
                 nbops = bSops;
                 sparse2sparse(CoB, lCoB);
                 sparse2sparse(Alt, lAlt);

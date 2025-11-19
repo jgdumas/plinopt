@@ -99,7 +99,7 @@ int blockSparsifier(Givaro::Timer& elapsed, Matrix& CoB, Matrix& Res,
 //   (Res=[identity,lower part])*(CoB=[upperpart])
 //   with prescribed inner dimension
 template<typename _Mat>
-Pair<size_t> backSolver(_Mat& Res, _Mat& CoB, const _Mat& iM);
+Tricounter backSolver(_Mat& Res, _Mat& CoB, const _Mat& iM);
 
 
 // ============================================================
