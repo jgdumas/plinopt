@@ -301,8 +301,10 @@ bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
         for (const auto& [element, frequency] : PairMap) {
             if ( (frequency == maxfrq) && (element != cse)) {
                 printEtriple(std::clog << "# tied : ", FF, element)
-                                       << '=' << maxfrq << ','
-                                       << score(AllPairs,Density,element)
+                                       << '=' << maxfrq
+#if !defined(RANDOM_TIES) || defined(DENSITY_OPTIMIZATION)
+                                       << ',' << score(AllPairs,Density,element)
+#endif
                                        << std::endl;
             }
         }
