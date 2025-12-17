@@ -258,9 +258,22 @@ bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
         if (MaxCSE.size()>1) {
                 // Tie breaking heuristics
 #if defined(RANDOM_TIES) && !defined(DENSITY_OPTIMIZATION)
-            static thread_local Givaro::GivRandom
-                generator(Givaro::BaseTimer::seed());
-            cse = MaxCSE[ generator() % MaxCSE.size() ];
+
+            double apcount(0.);
+            for(const auto& rows: AllPairs) apcount += rows.size();
+            std::vector<triple> PairVector; PairVector.reserve(PairMap.size());
+            std::vector<double> v; v.reserve(PairMap.size());
+            for (const auto& [element, frequency] : PairMap) {
+                PairVector.push_back(element);
+                v.push_back(double(frequency)/apcount); // get weights
+            }
+            std::discrete_distribution<int> dd{v.begin(), v.end()};
+            static std::random_device rd;
+            cse = PairVector[dd(rd)];
+
+//             static thread_local Givaro::GivRandom
+//                 generator(Givaro::BaseTimer::seed());
+//             cse = MaxCSE[ generator() % MaxCSE.size() ];
 #else
                 // Compute density in a row
             std::vector<size_t> Density;
