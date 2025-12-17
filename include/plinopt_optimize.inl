@@ -258,40 +258,23 @@ bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
         if (MaxCSE.size()>1) {
                 // Tie breaking heuristics
 #if defined(RANDOM_TIES) && !defined(DENSITY_OPTIMIZATION)
-
-//             for (const auto& [element, frequency] : PairMap) {
-//                 std::clog << '<' << element << ',' << frequency << '>' << ' ';
-//             }
-
+#define OPT_EXPAN 13
             double apcount(0.);
             for(const auto& rows: AllPairs) apcount += rows.size();
-            apcount += (maxfrq * 3)*MaxCSE.size();
+            apcount += (maxfrq * ((1<<OPT_EXPAN)-1))*MaxCSE.size();
 
             std::vector<triple> PairVector; PairVector.reserve(PairMap.size());
             std::vector<double> v; v.reserve(PairMap.size());
             for (const auto& [element, frequency] : PairMap) {
                 PairVector.push_back(element);
                 if (frequency == maxfrq)
-                    v.push_back(double(frequency<<2)/apcount); // get weights
+                    v.push_back(double(frequency<<OPT_EXPAN)/apcount);
                 else
-                    v.push_back(double(frequency)/apcount); // get weights
+                    v.push_back(double(frequency)/apcount);
             }
-
-
-//             std::clog << '[';
-//             for (const auto& elts: PairVector) std::clog << elts << ' ';
-//             std::clog << ']' << std::endl;
-//             std::clog << '(';
-//             for (const auto& freqs: v) std::clog << freqs << ' ';
-//             std::clog << ')' << std::endl;
-
-
-                std::discrete_distribution<int> dd{v.begin(), v.end()};
+            std::discrete_distribution<int> dd{v.begin(), v.end()};
             static std::random_device rd;
             cse = PairVector[dd(rd)];
-
- //            std::clog << " --> " << cse << std::endl;
-
 
 //             static thread_local Givaro::GivRandom
 //                 generator(Givaro::BaseTimer::seed());
