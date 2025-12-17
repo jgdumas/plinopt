@@ -196,10 +196,12 @@ Matrix::Row::const_iterator orientindex(const size_t preci,
         }
         if (vnext.size()>0) {
 #ifdef RANDOM_TIES
-            std::shuffle (vnext.begin(), vnext.end(),
-                          std::default_random_engine(Givaro::BaseTimer::seed()));
-#endif
+            static thread_local Givaro::GivRandom
+                generator(Givaro::BaseTimer::seed());
+            nexti = vnext[ generator() % vnext.size() ];
+#else
             nexti = vnext.front();
+#endif
         }
     }
 

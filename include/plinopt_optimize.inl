@@ -258,9 +258,9 @@ bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
         if (MaxCSE.size()>1) {
                 // Tie breaking heuristics
 #if defined(RANDOM_TIES) && !defined(DENSITY_OPTIMIZATION)
-            std::shuffle ( MaxCSE.begin(), MaxCSE.end(),
-                           std::default_random_engine(Givaro::BaseTimer::seed()) );
-            cse = MaxCSE.front();
+            static thread_local Givaro::GivRandom
+                generator(Givaro::BaseTimer::seed());
+            cse = MaxCSE[ generator() % MaxCSE.size() ];
 #else
                 // Compute density in a row
             std::vector<size_t> Density;
