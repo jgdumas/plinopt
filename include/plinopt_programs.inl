@@ -392,6 +392,7 @@ int Tellegen(std::istream& input,
 
         const auto varposvec =
             std::find(varVector.begin(), varVector.end(), variable);
+        bool firstremoved(false);
 
         if ( varposvec != varVector.end()) {
 #ifdef VERBATIM_PARSING
@@ -415,6 +416,7 @@ int Tellegen(std::istream& input,
                 line.erase(accupos, 1);
             }
             varVector.erase(varposvec);
+            firstremoved = true;
         }
 
             // ==================================
@@ -449,11 +451,12 @@ int Tellegen(std::istream& input,
                               << ", will be simplified in RHS: " << line
                               << std::endl;
 #endif
-                    pos = line.find_first_of("+-;", prev);	// ignore 0 mul/div by constant
-                    line.erase(prev, pos-prev);			// erase group of value 0
+                    pos = line.find_first_of("+-;", prev); // ignore 0 mul/div by constant
+                    line.erase(prev, pos-prev);            // erase group of value 0
                     if (line[prev] == ';') {
                         noopline = true;
-                        varVector.push_back(variable);		// variable is in fact still unmodified
+                        if (firstremoved)
+                            varVector.push_back(variable);     // variable is in fact still unmodified
                     }
                 }
             }
