@@ -636,36 +636,32 @@ template<typename outstream, typename _Mat>
 Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
                              const bool mostCSE) {
 	std::vector<size_t> l;
-    return nullspacedecomp(sout, x, A, l, mostCSE);
+//     return nullspacedecomp(sout, x, A, l, 'o', 'i', mostCSE);
 
     const auto& FF(A.field());
     const size_t Nj(A.coldim());
-        // Add identity
 
+        // Add identity to goals
     x.resize(x.rowdim()+A.rowdim(),x.coldim());
     A.resize(A.rowdim(),Nj+A.rowdim());
     for(size_t i=0; i<A.rowdim(); ++i)
         A.setEntry(i,Nj+i,FF.one);
 
+    const auto P = nullspacedecomp(sout, x, A, l, 'q', 'i', mostCSE);
 
+        // out all goals, except the added identity
+        // Warning: the identity goals could now use unnecessary ops
+    for(size_t j=0; j<Nj; ++j)
+        sout << 'o' << j << ":=" << 'q' << j << ';' << std::endl;
 
-//     std::clog << std::string(20,'#') << std::endl;
-//     A.write(std::clog << "# Aug:\n", FileFormat::Pretty) << std::endl;
-//     std::clog << std::string(20,'#') << std::endl;
-
-    const auto P = nullspacedecomp(sout, x, A, l, mostCSE);
-
-//     std::clog << sout.str() << std::flush;
-//     std::clog << std::string(20,'#') << std::endl;
-
-
-    return P;
+    return std::move(P);
 }
 
 	// Postcondition _Matrix A is nullified
 template<typename outstream, typename _Mat>
 Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
-                             std::vector<size_t>& l, const bool mostCSE) {
+                             std::vector<size_t>& l, const char ouv,
+                             const char inv, const bool mostCSE) {
     const auto& FF(A.field());
     typename _Mat::Element Det;
     size_t Rank;
@@ -796,13 +792,13 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
 
             // ============================================
             // Optimize the set of independent rows
-        input2Temps(sout, FreePart.coldim(), 'i', 't');
+        input2Temps(sout, FreePart.coldim(), inv, 't');
             // o <-- Free . i
         Pair<size_t> Fops;
         if (mostCSE) {
-            Fops = RecOptimizer(sout, FreePart, 'o', 't', 'r');
+            Fops = RecOptimizer(sout, FreePart, ouv, 't', 'r');
         } else {
-            Fops = Optimizer(sout, FreePart, 'o', 't', 'r');
+            Fops = Optimizer(sout, FreePart, ouv, 't', 'r');
         }
 
             // ============================================
@@ -819,7 +815,7 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
 #endif
 
         Transpose(x, Tx);  // Remove the NotIndep columns of x for i2T checks
-        input2Temps(sout, Tx.coldim(), 'o', 'v', x);
+        input2Temps(sout, Tx.coldim(), ouv, 'v', x);
             // x <-- Tx . o = (- x^T) o
         Pair<size_t> Kops;
         if (mostCSE) {
@@ -833,7 +829,7 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
             // Applying both permutations, P then Q
             // back into 'o' variables
         for(size_t i=0; i+NotIndep<nullity; ++i) {
-            sout << 'o' << Q[ P.getStorage()[ Rank+i ] ] << ":="
+            sout << ouv << Q[ P.getStorage()[ Rank+i ] ] << ":="
                  << 'x' << i << ';' << std::endl;
         }
 
@@ -1321,7 +1317,7 @@ Pair<size_t>& AllKernelOpt(Pair<size_t>& nbops, std::ostringstream& sout,
         FMatrix lT(T, F);
         std::ostringstream laout;
         FMatrix NullSpace(F,lT.coldim(),T.coldim());
-        auto lkops( nullspacedecomp(laout, NullSpace, lT, l, mostCSE) );
+        auto lkops( nullspacedecomp(laout, NullSpace, lT, l, 'o', 'i', mostCSE) );
 
 #pragma omp critical
         {
