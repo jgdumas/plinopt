@@ -313,6 +313,7 @@ int Tellegen(std::istream& input,
 
                     // input variables are transposed into output
                 const std::string variable(*iter); ++iter;
+
                 if (variable == "0") continue;
 
                 if (variable[0] == ichar) {
@@ -395,7 +396,7 @@ int Tellegen(std::istream& input,
         if ( varposvec != varVector.end()) {
 #ifdef VERBATIM_PARSING
             std::clog << "# First temporary, accumulation with " << variable
-                      << "=0 is simplified in: " << line << std::endl;
+                      << "=0 will be simplified in: " << line << std::endl;
 #endif
             const auto accupos = line.find(variable, varlen);
 
@@ -420,39 +421,60 @@ int Tellegen(std::istream& input,
             // Instead of "o1:=i1; t1:=o1 + ...;"
             //     directly write "t1:=i1 + ...;"
             //     parsing the RHS with successive monomials
-        const auto lhslen = line.find(":=",0);
-        for(size_t prev(lhslen+2), pos(0);
+
+        bool noopline(false);
+        const auto lhslen(line.find(":=",0)+2);
+        for(size_t prev(lhslen), pos(0);
             (pos = line.find_first_of("+-*/;", prev)) != std::string::npos;
             prev = pos+1) {
+            if (! std::isalpha(line[prev])) continue;
+            const std::string param(line.substr(prev, pos-prev));
             if (line[prev] == ochar) {
-                if (modSet.find(line.substr(prev, pos-prev)) == modSet.end()){
+                if (modSet.find(param) == modSet.end()) {
 #ifdef VERBATIM_PARSING
                     std::clog << "# Unmodified input usage of: "
                               << line.substr(prev, pos-prev)
-                              << ", is simplified in RHS: " << line
+                              << ", will be simplified in RHS: " << line
                               << std::endl;
 #endif
                     line[prev]=ichar;
                 } else {
                     line[prev]=zchar; // 'o' is replaced by 'z' in computations
                 }
+            } else if (line[prev] != ichar) {
+                if (modSet.find(param) == modSet.end()) {
+#ifdef VERBATIM_PARSING
+                    std::clog << "# Useless usage of uninitalized: "
+                              << param
+                              << ", will be simplified in RHS: " << line
+                              << std::endl;
+#endif
+                    pos = line.find_first_of("+-;", prev);	// ignore 0 mul/div by constant
+                    line.erase(prev, pos-prev);			// erase group of value 0
+                    if (line[prev] == ';') {
+                        noopline = true;
+                        varVector.push_back(variable);		// variable is in fact still unmodified
+                    }
+                }
             }
         }
 
-            // ==================================
-            // Now variable has been modified
-            // --> will not be simplified anymore
-        modSet.insert(variable);
+        if (! noopline) {
+                // ==================================
+                // Now variable has been modified
+                // --> will not be simplified anymore
+            modSet.insert(variable);
 
-            // ==================================
-            // Just output the line
+                // ==================================
+                // Just output the line
 
-        if (line.find_first_of("+-", 0) != std::string::npos)
-            ++(Nops.first);
-        if (line.find("=-", 0) != std::string::npos)
-            --(Nops.first);
+            if (line.find_first_of("+-", 0) != std::string::npos)
+                ++(Nops.first);
+            if (line.find("=-", 0) != std::string::npos)
+                --(Nops.first);
 
-        std::cout << line << std::flush;
+            std::cout << line << std::flush;
+        }
     }
 
 #if DEBUG
