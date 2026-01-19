@@ -522,7 +522,7 @@ std::ostream& ProgramGen(outstream& sout, _Mat& M,
 
     const auto& FF(M.field());
 
-        // Factoring multiplier by colums
+        // Factoring multiplier by columns
     _Mat T(FF, M.coldim(), M.rowdim()); Transpose(T, M);
     for(size_t j=0; j<M.coldim(); ++j) {
         FactorOutColumns(sout, T, multiples, nbmul, tev, rav,
@@ -637,6 +637,29 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
                              const bool mostCSE) {
 	std::vector<size_t> l;
     return nullspacedecomp(sout, x, A, l, mostCSE);
+
+    const auto& FF(A.field());
+    const size_t Nj(A.coldim());
+        // Add identity
+
+    x.resize(x.rowdim()+A.rowdim(),x.coldim());
+    A.resize(A.rowdim(),Nj+A.rowdim());
+    for(size_t i=0; i<A.rowdim(); ++i)
+        A.setEntry(i,Nj+i,FF.one);
+
+
+
+//     std::clog << std::string(20,'#') << std::endl;
+//     A.write(std::clog << "# Aug:\n", FileFormat::Pretty) << std::endl;
+//     std::clog << std::string(20,'#') << std::endl;
+
+    const auto P = nullspacedecomp(sout, x, A, l, mostCSE);
+
+//     std::clog << sout.str() << std::flush;
+//     std::clog << std::string(20,'#') << std::endl;
+
+
+    return P;
 }
 
 	// Postcondition _Matrix A is nullified
@@ -744,7 +767,10 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
 
             // ============================================
             // Remove dependent rows from FreePart
-        for(size_t i=0; i<nullity; ++i) {
+        Givaro::GivRandom generator;
+        const size_t NotIndep(generator() % nullity);
+
+        for(size_t i=0; i+NotIndep<nullity; ++i) {
             FreePart[P.getStorage()[ Rank+i ]].resize(0);
         }
 
@@ -762,7 +788,8 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
 
 
 #ifdef VERBATIM_PARSING
-        std::clog << "# FreePart dimensions:\t" << Rank
+        std::clog << "# FreePart dimensions:\t(" << Rank
+                  << '+' << NotIndep << ')'
                   << 'x' << FreePart.coldim() << std::endl;
         std::clog << std::string(30,'#') << std::endl;
 #endif
@@ -783,13 +810,15 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
             // [ Free^T | Dep^T ] . [ x^T | I ]^T = 0
             // So Dep . i = (- x^T) Free . i = (- x^T) o
          _Mat Tx(x.field(), x.coldim(), x.rowdim()); NegTranspose(Tx, x);
+         Tx.resize(Tx.rowdim()-NotIndep,Tx.coldim());
 
 #ifdef VERBATIM_PARSING
         std::clog << std::string(30,'#') << std::endl;
-        std::clog << "# Dependent dimensions:\t" << Tx.rowdim()
-                  << 'x' << Tx.coldim() << std::endl;
+        std::clog << "# Dependent dimensions (" << x.coldim() << '-' << NotIndep
+                  << "):\t" << Tx.rowdim() << 'x' << Tx.coldim() << std::endl;
 #endif
 
+        Transpose(x, Tx);  // Remove the NotIndep columns of x for i2T checks
         input2Temps(sout, Tx.coldim(), 'o', 'v', x);
             // x <-- Tx . o = (- x^T) o
         Pair<size_t> Kops;
@@ -803,7 +832,7 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
             // Recover final output of NullSpace
             // Applying both permutations, P then Q
             // back into 'o' variables
-        for(size_t i=0; i<nullity; ++i) {
+        for(size_t i=0; i+NotIndep<nullity; ++i) {
             sout << 'o' << Q[ P.getStorage()[ Rank+i ] ] << ":="
                  << 'x' << i << ';' << std::endl;
         }
