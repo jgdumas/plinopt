@@ -84,7 +84,8 @@ _Mat& matrixBuilder(_Mat& A, const VProgram_t& P, const char outchar = 'o');
 
 // ============================================================
 // Transform program by creating temporaries for parenthesis blocks
-VProgram_t& parenthesisExpand(VProgram_t& P);
+// nextfree is next unused char for variable names
+VProgram_t& parenthesisExpand(VProgram_t& P, char& nextfree);
 // ============================================================
 
 
@@ -99,8 +100,18 @@ std::ostream& printline(std::ostream& sout,
 // ===============================================================
 
 // ===============================================================
-size_t progSize(const VProgram_t& P) ;
+// Counting arithmetic operations
+Pair<size_t> lineOperations(const VProgram_t::value_type& L) ;
 Pair<size_t> progOperations(const VProgram_t& P) ;
+
+// Counting all elements
+size_t progSize(const VProgram_t& P) ;
+
+// Detection of operations to produce iVars in progV
+bool OpOnVars(const VProgram_t& progV, const std::vector<std::string>& iVars);
+// Removing operations that produce iVars in P
+VProgram_t& RemoveVars(VProgram_t& progV, Pair<size_t>& Pops,
+                       const std::vector<std::string>& iVars);
 // ===============================================================
 
 // ===============================================================
