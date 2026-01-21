@@ -43,13 +43,20 @@ clean:
 
 
 SHELL=/bin/bash
-check: ${BIN} mmcheck slpcheck
+check: ${BIN} pmcheck mmcheck slpcheck
 
 mmcheck:
 	./bin/MMchecker data/2x2x2_7_Strassen_{L,R,P}.sms
 	./bin/MMchecker data/2x2x2_7_DPS-accurate_{L,R,P}.sms -m 513083
 	./bin/MMchecker data/2x2x2_7_DPS-accurate_{L,R,P}.sms -r 1013 2 3
 	./bin/MMchecker data/2x2x2_7_DPS-accurate-X_{L,R,P}.sms -P "X^2-3"
+
+pmcheck:
+	./bin/PMchecker data/4o4o8_Toom5_{L,R,P}.sms
+	./bin/PMchecker data/4o4o8_Montgomery-13-58_{L,R,P}.sms
+	./bin/PMchecker data/4o4o4_F243-11-45_{L,R,P}.sms -q 3 -P "1-X+X^5"
+	./bin/PMchecker data/4o4o4_F243-Montgomery-13-42_{L,R,P}.sms -q 3 -P "X^5+X^4-X^3-X^2-1"
+
 
 slpcheck:
 	./bin/optimizer data/2x2x2_7_DPS-accurate_L.sms -E -N | ./bin/compacter | ./bin/SLPchecker -M data/2x2x2_7_DPS-accurate_L.sms

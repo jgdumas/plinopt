@@ -1,4 +1,4 @@
-# Montgomery deg 4 Polynomial mult. https://doi.org/10.1109/TC.2005.49
+# F243 Montgomery mod -1-X^2-X^3+X^4+X^5
 13 5 R
 1 1 1
 1 2 1

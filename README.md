@@ -52,6 +52,7 @@
 |`bin/sms2pretty` | pretty prints a matrix from a file |
 |`bin/SLPchecker` | asserts correctness of program, with respect to a matrix |
 |`bin/MMchecker` | asserts correctness of trilinear program for matrix-multiplication |
+|`bin/PMchecker` | asserts correctness of trilinear program for polynomial-multiplication |
 |  |  |
 
 
@@ -84,6 +85,7 @@
 - `./bin/sms2pretty data/2x2x2_7_Winograd_{L,R,P}.sms`: pretty print HM representation of Strassen-Winograd's fast 2x2 multiplication algorithm
 - `./bin/matrix-transpose data/2x2x2_7_Winograd_P.sms`: the transposed matrix
 - `./bin/MMchecker data/2x2x2_7_Winograd_{L,R,P}.sms`: probabilistically checking Strassen-Winograd's matrix-multiplication algorithm
+- `./bin/PMchecker data/4o4o4_F243-Montgomery-13-42_{L,R,P}.sms -q 3 -P "X^5 + X^4 - X^3 - X^2 - 1"`: checking F243 multiplication algorithm
 - `./bin/MMchecker data/2x2x2_7_DPS-accurate_{L,R,P}.sms -b 32 -m 1026166`: probabilistically checking matrix-multiplication algorithm using 32 bits random elements and 1013 as a placeholder for sqrt(3) (1026166=1013^2-3)
 - `./bin/optimizer data/cyclic.sms`: a program computing that matrix-vector product
 - `./bin/optimizer data/2x2x2_7_DPS-smallrat-12.2034_R.sms -q 3`: a program computing that matrix-vector product modulo 3

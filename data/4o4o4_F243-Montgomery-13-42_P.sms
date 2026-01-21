@@ -1,4 +1,4 @@
-# F243 Montgomery mod -1-y^2-y^3+y^4+y^5
+# F243 Montgomery mod -1-X^2-X^3+X^4+X^5
 5 13 M
 1 1 1
 1 3 -1
