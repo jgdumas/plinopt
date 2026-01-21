@@ -72,6 +72,14 @@ typedef std::vector<Givaro::Rational> QArray;
 typedef LinBox::DenseVector<QRat> QVector;
 
 template<typename _T> using Pair = std::pair<_T,_T>;
+inline Pair<size_t>& operator +=(Pair<size_t>& x, const Pair<size_t>& y) {
+    x.first += y.first; x.second += y.second;
+    return x;
+}
+inline Pair<size_t>& operator -=(Pair<size_t>& x, const Pair<size_t>& y) {
+    x.first -= y.first; x.second -= y.second;
+    return x;
+}
 
 // ============================================
 
