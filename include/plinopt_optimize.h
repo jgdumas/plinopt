@@ -134,8 +134,8 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
 
 template<typename outstream, typename _Mat>
 Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
-                             std::vector<size_t>& l,
-                             const bool mostCSE=false);
+                             std::vector<size_t>& l, const char ouv,
+                             const char inv, const bool mostCSE=false);
 
 
 // ============================================================

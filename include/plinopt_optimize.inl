@@ -9,6 +9,8 @@
 
 #include "plinopt_optimize.h"
 #include "plinopt_sparsify.h"
+#include "plinopt_programs.h"
+
 
 
 
@@ -291,13 +293,12 @@ bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
         auto savings(RemOneCSE(sout, M, nbmul, multiples, cse,
                                AllPairs, PairMap, tev, rav, true));
 
-#ifdef VERBATIM_PARSING
-#  if VERBATIM_PARSING >= 2
+#if VERBATIM_PARSING > 1
+#  if defined(RANDOM_TIES) && !defined(DENSITY_OPTIMIZATION)
         printEtriple(std::clog << "# Found: ", FF, cse) << '=' << maxfrq
                                << ", Saved: " << savings.first << "+|"
                                << savings.second << 'x' << std::endl;
-#  endif
-#  if VERBATIM_PARSING >= 3
+#  else
         for (const auto& [element, frequency] : PairMap) {
             if ( (frequency == maxfrq) && (element != cse)) {
                 printEtriple(std::clog << "# tied : ", FF, element)
@@ -522,7 +523,7 @@ std::ostream& ProgramGen(outstream& sout, _Mat& M,
 
     const auto& FF(M.field());
 
-        // Factoring multiplier by colums
+        // Factoring multiplier by columns
     _Mat T(FF, M.coldim(), M.rowdim()); Transpose(T, M);
     for(size_t j=0; j<M.coldim(); ++j) {
         FactorOutColumns(sout, T, multiples, nbmul, tev, rav,
@@ -636,13 +637,54 @@ template<typename outstream, typename _Mat>
 Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
                              const bool mostCSE) {
 	std::vector<size_t> l;
-    return nullspacedecomp(sout, x, A, l, mostCSE);
+//     return nullspacedecomp(sout, x, A, l, 'o', 'i', mostCSE);
+
+    const auto& FF(A.field());
+    const size_t Nj(A.coldim());
+
+        // Add identity to goals
+    x.resize(x.rowdim()+A.rowdim(),x.coldim());
+    A.resize(A.rowdim(),Nj+A.rowdim());
+    for(size_t i=0; i<A.rowdim(); ++i)
+        A.setEntry(i,Nj+i,FF.one);
+
+    auto Pops = nullspacedecomp(sout, x, A, l, 'q', 'i', mostCSE);
+
+    std::vector<std::string> iVars(A.rowdim());
+    for(size_t i=0; i<A.rowdim(); ++i) {
+        iVars[i]="q"+std::to_string(Nj+i);
+    }
+
+    std::stringstream ssin; ssin << sout.str();
+    VProgram_t progV; programParser(progV, ssin);
+    bool isreduced(false);
+    while( OpOnVars(progV, iVars) ) {
+        isreduced = true;
+        RemoveVars(progV, Pops, iVars);
+    }
+
+    if (isreduced) {
+        sout.clear(); sout.str(std::string());
+        char next; parenthesisExpand(progV, next);
+            // Make output suitable for potential transpose
+        input2Temps(sout, A.coldim(), 'i', next);
+        for(auto& line: progV) for(auto& word: line)
+            if (word[0]=='i') word[0]=next;
+        sout << progV;
+    }
+        // out all goals, except the added identity
+        // Warning: the identity goals could now use unnecessary ops
+    for(size_t j=0; j<Nj; ++j)
+        sout << 'o' << j << ":=" << 'q' << j << ';' << std::endl;
+
+    return Pops;
 }
 
 	// Postcondition _Matrix A is nullified
 template<typename outstream, typename _Mat>
 Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
-                             std::vector<size_t>& l, const bool mostCSE) {
+                             std::vector<size_t>& l, const char ouv,
+                             const char inv, const bool mostCSE) {
     const auto& FF(A.field());
     typename _Mat::Element Det;
     size_t Rank;
@@ -744,7 +786,10 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
 
             // ============================================
             // Remove dependent rows from FreePart
-        for(size_t i=0; i<nullity; ++i) {
+        Givaro::GivRandom generator;
+        const size_t NotIndep(generator() % nullity);
+
+        for(size_t i=0; i+NotIndep<nullity; ++i) {
             FreePart[P.getStorage()[ Rank+i ]].resize(0);
         }
 
@@ -762,20 +807,21 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
 
 
 #ifdef VERBATIM_PARSING
-        std::clog << "# FreePart dimensions:\t" << Rank
+        std::clog << "# FreePart dimensions:\t(" << Rank
+                  << '+' << NotIndep << ')'
                   << 'x' << FreePart.coldim() << std::endl;
         std::clog << std::string(30,'#') << std::endl;
 #endif
 
             // ============================================
             // Optimize the set of independent rows
-        input2Temps(sout, FreePart.coldim(), 'i', 't');
+        input2Temps(sout, FreePart.coldim(), inv, 't');
             // o <-- Free . i
         Pair<size_t> Fops;
         if (mostCSE) {
-            Fops = RecOptimizer(sout, FreePart, 'o', 't', 'r');
+            Fops = RecOptimizer(sout, FreePart, ouv, 't', 'r');
         } else {
-            Fops = Optimizer(sout, FreePart, 'o', 't', 'r');
+            Fops = Optimizer(sout, FreePart, ouv, 't', 'r');
         }
 
             // ============================================
@@ -783,14 +829,16 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
             // [ Free^T | Dep^T ] . [ x^T | I ]^T = 0
             // So Dep . i = (- x^T) Free . i = (- x^T) o
          _Mat Tx(x.field(), x.coldim(), x.rowdim()); NegTranspose(Tx, x);
+         Tx.resize(Tx.rowdim()-NotIndep,Tx.coldim());
 
 #ifdef VERBATIM_PARSING
         std::clog << std::string(30,'#') << std::endl;
-        std::clog << "# Dependent dimensions:\t" << Tx.rowdim()
-                  << 'x' << Tx.coldim() << std::endl;
+        std::clog << "# Dependent dimensions (" << x.coldim() << '-' << NotIndep
+                  << "):\t" << Tx.rowdim() << 'x' << Tx.coldim() << std::endl;
 #endif
 
-        input2Temps(sout, Tx.coldim(), 'o', 'v', x);
+        Transpose(x, Tx);  // Remove the NotIndep columns of x for i2T checks
+        input2Temps(sout, Tx.coldim(), ouv, 'v', x);
             // x <-- Tx . o = (- x^T) o
         Pair<size_t> Kops;
         if (mostCSE) {
@@ -803,8 +851,8 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
             // Recover final output of NullSpace
             // Applying both permutations, P then Q
             // back into 'o' variables
-        for(size_t i=0; i<nullity; ++i) {
-            sout << 'o' << Q[ P.getStorage()[ Rank+i ] ] << ":="
+        for(size_t i=0; i+NotIndep<nullity; ++i) {
+            sout << ouv << Q[ P.getStorage()[ Rank+i ] ] << ":="
                  << 'x' << i << ';' << std::endl;
         }
 
@@ -1292,7 +1340,7 @@ Pair<size_t>& AllKernelOpt(Pair<size_t>& nbops, std::ostringstream& sout,
         FMatrix lT(T, F);
         std::ostringstream laout;
         FMatrix NullSpace(F,lT.coldim(),T.coldim());
-        auto lkops( nullspacedecomp(laout, NullSpace, lT, l, mostCSE) );
+        auto lkops( nullspacedecomp(laout, NullSpace, lT, l, 'o', 'i', mostCSE) );
 
 #pragma omp critical
         {

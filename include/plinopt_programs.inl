@@ -106,7 +106,6 @@ void swapsign(std::string& s) {
 }
 // ============================================================
 
-
 // ============================================================
 inline size_t progSize(const VProgram_t& P) {
     size_t PVs(0);
@@ -114,30 +113,105 @@ inline size_t progSize(const VProgram_t& P) {
     return PVs-(P.size()<<1); // do not count ':=', nor ';'
 }
 
+inline Pair<size_t> lineOperations(const VProgram_t::value_type& line) {
+    Pair<size_t> prgops{0,0};
+    bool negator=false;
+    for(const auto& word: line) {
+        if (isAddSub(word) && (!negator)) {
+            ++prgops.first;
+        } else if (isMulDiv(word)) {
+            ++prgops.second;
+        }
+            // Negation is not counted as an arithmetic operation
+        if (isParAff(word)) {
+            negator=true;
+        } else {
+            negator=false;
+        }
+    }
+    return prgops;
+}
+
 inline Pair<size_t> progOperations(const VProgram_t& P) {
     Pair<size_t> prgops{0,0};
-    size_t size(0);
     for(const auto& line: P) {
-        size += (line.size()-4)/2;
-        bool negator=false;
-        for(const auto& word: line) {
-            if (isAddSub(word) && (!negator)) {
-                ++prgops.first;
-            } else if (isMulDiv(word)) {
-                ++prgops.second;
-            }
+        prgops += lineOperations(line);
+    }
+    return prgops;
+}
 
-                // Negation is not counted as an arithmetic operation
-            if (isParAff(word)) {
-                negator=true;
-            } else {
-                negator=false;
+// Detection of operations to produce iVars in progV
+inline bool OpOnVars(const VProgram_t& progV,
+                     const std::vector<std::string>& iVars) {
+    std::vector<std::string> lVars; lVars.assign(iVars.begin(), iVars.end());
+    for(auto line(progV.rbegin()); line != progV.rend(); ++line) {
+        const auto& variable(line->front());
+        if( std::find(lVars.begin(), lVars.end(), variable) != lVars.end() ) {
+            const auto& affect((*line)[2][0]);
+            if ( ( (affect != '0') && (affect != 't') ) // comput. var.
+                 ||
+                 ( line->size() > 4 ) ) {               // computation
+#if VERBATIM_PARSING > 2
+                std::clog << "# \033[1;36mWARNING, OP on " << line->front()
+                          << ":\033[0m " << *line << std::endl;
+#endif
+                return true;
+            }
+        }
+        for(const auto& word:*line) {
+            if (isVariable(word)) {
+                const auto w(std::find(lVars.begin(),lVars.end(),word));
+                if (w != lVars.end()) {
+                        // final variable is used, remove it from useless set
+//                     std::clog << "# " << word << " is used in: "
+//                               << *line << std::endl;
+                    lVars.erase(w);
+                }
             }
         }
     }
-
-    return prgops;
+    return false;
 }
+
+// Removing operations that produce iVars in P
+VProgram_t& RemoveVars(VProgram_t& progV, Pair<size_t>& Pops,
+                       const std::vector<std::string>& iVars) {
+    std::vector<std::string> lVars; lVars.assign(iVars.begin(), iVars.end());
+    variablesTrimer(progV, true, 'i', 'q');
+    for(auto line(progV.rbegin()); line != progV.rend(); ++line) {
+        const auto& variable(line->front());
+        const auto where(std::find(lVars.begin(),lVars.end(),variable));
+        if( where != lVars.end() ) { // asignement of useless variable
+
+            Pops -= lineOperations(*line);
+#if VERBATIM_PARSING > 1
+            std::clog << "# Removing (new ops=" << Pops.first << '|'
+                      << Pops.second << "): " << *line << std::endl;
+#endif
+            line->resize(0);         // empty line
+            continue;
+        }
+        for(const auto& word:*line) {
+            if (isVariable(word)) {
+                const auto w(std::find(lVars.begin(),lVars.end(),word));
+                if (w != lVars.end()) {
+                        // final variable is used, remove it from useless set
+//                     std::clog << "# " << word << " is usefull in: "
+//                               << *line << std::endl;
+                    lVars.erase(w);
+                }
+            }
+        }
+    }
+    progV.erase(std::remove_if(progV.begin(), progV.end(), emptyline),
+                progV.end());
+
+    return progV;
+}
+
+
+
+
 // ============================================================
 
 
@@ -313,6 +387,7 @@ int Tellegen(std::istream& input,
 
                     // input variables are transposed into output
                 const std::string variable(*iter); ++iter;
+
                 if (variable == "0") continue;
 
                 if (variable[0] == ichar) {
@@ -391,11 +466,12 @@ int Tellegen(std::istream& input,
 
         const auto varposvec =
             std::find(varVector.begin(), varVector.end(), variable);
+        bool firstremoved(false);
 
         if ( varposvec != varVector.end()) {
 #ifdef VERBATIM_PARSING
             std::clog << "# First temporary, accumulation with " << variable
-                      << "=0 is simplified in: " << line << std::endl;
+                      << "=0 will be simplified in: " << line << std::endl;
 #endif
             const auto accupos = line.find(variable, varlen);
 
@@ -414,45 +490,68 @@ int Tellegen(std::istream& input,
                 line.erase(accupos, 1);
             }
             varVector.erase(varposvec);
+            firstremoved = true;
         }
 
             // ==================================
             // Instead of "o1:=i1; t1:=o1 + ...;"
             //     directly write "t1:=i1 + ...;"
             //     parsing the RHS with successive monomials
-        const auto lhslen = line.find(":=",0);
-        for(size_t prev(lhslen+2), pos(0);
+
+        bool noopline(false);
+        const auto lhslen(line.find(":=",0)+2);
+        for(size_t prev(lhslen), pos(0);
             (pos = line.find_first_of("+-*/;", prev)) != std::string::npos;
             prev = pos+1) {
+            if (! std::isalpha(line[prev])) continue;
+            const std::string param(line.substr(prev, pos-prev));
             if (line[prev] == ochar) {
-                if (modSet.find(line.substr(prev, pos-prev)) == modSet.end()){
+                if (modSet.find(param) == modSet.end()) {
 #ifdef VERBATIM_PARSING
                     std::clog << "# Unmodified input usage of: "
                               << line.substr(prev, pos-prev)
-                              << ", is simplified in RHS: " << line
+                              << ", will be simplified in RHS: " << line
                               << std::endl;
 #endif
                     line[prev]=ichar;
                 } else {
                     line[prev]=zchar; // 'o' is replaced by 'z' in computations
                 }
+            } else if (line[prev] != ichar) {
+                if (modSet.find(param) == modSet.end()) {
+#ifdef VERBATIM_PARSING
+                    std::clog << "# Useless usage of uninitalized: "
+                              << param
+                              << ", will be simplified in RHS: " << line
+                              << std::endl;
+#endif
+                    pos = line.find_first_of("+-;", prev); // ignore 0 mul/div by constant
+                    line.erase(prev, pos-prev);            // erase group of value 0
+                    if (line[prev] == ';') {
+                        noopline = true;
+                        if (firstremoved)
+                            varVector.push_back(variable);     // variable is in fact still unmodified
+                    }
+                }
             }
         }
 
-            // ==================================
-            // Now variable has been modified
-            // --> will not be simplified anymore
-        modSet.insert(variable);
+        if (! noopline) {
+                // ==================================
+                // Now variable has been modified
+                // --> will not be simplified anymore
+            modSet.insert(variable);
 
-            // ==================================
-            // Just output the line
+                // ==================================
+                // Just output the line
 
-        if (line.find_first_of("+-", 0) != std::string::npos)
-            ++(Nops.first);
-        if (line.find("=-", 0) != std::string::npos)
-            --(Nops.first);
+            if (line.find_first_of("+-", 0) != std::string::npos)
+                ++(Nops.first);
+            if (line.find("=-", 0) != std::string::npos)
+                --(Nops.first);
 
-        std::cout << line << std::flush;
+            std::cout << line << std::flush;
+        }
     }
 
 #if DEBUG
@@ -1512,13 +1611,14 @@ size_t extractParenthesis(VProgram_t& newP, std::vector<std::string>& line,
 
 // ============================================================
 // Transform program by creating temporaries for parenthesis blocks
-VProgram_t& parenthesisExpand(VProgram_t& P) {
+VProgram_t& parenthesisExpand(VProgram_t& P, char& nextfree) {
         // ==================================
         // Find two unused variable names
     std::set<char> varsChar;
     for(const auto& line: P) for(const auto& word: line)
         varsChar.insert(word[0]);
     char freechar(unusedChar(varsChar));
+    nextfree = unusedChar(varsChar,freechar);
     size_t tmpnum(0);
 
     VProgram_t nProgram;
