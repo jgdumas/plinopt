@@ -9,6 +9,8 @@
 
 #include "plinopt_optimize.h"
 #include "plinopt_sparsify.h"
+#include "plinopt_programs.h"
+
 
 
 
@@ -291,13 +293,12 @@ bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
         auto savings(RemOneCSE(sout, M, nbmul, multiples, cse,
                                AllPairs, PairMap, tev, rav, true));
 
-#ifdef VERBATIM_PARSING
-#  if VERBATIM_PARSING >= 2
+#if VERBATIM_PARSING > 1
+#  if defined(RANDOM_TIES) && !defined(DENSITY_OPTIMIZATION)
         printEtriple(std::clog << "# Found: ", FF, cse) << '=' << maxfrq
                                << ", Saved: " << savings.first << "+|"
                                << savings.second << 'x' << std::endl;
-#  endif
-#  if VERBATIM_PARSING >= 3
+#  else
         for (const auto& [element, frequency] : PairMap) {
             if ( (frequency == maxfrq) && (element != cse)) {
                 printEtriple(std::clog << "# tied : ", FF, element)
@@ -647,14 +648,36 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
     for(size_t i=0; i<A.rowdim(); ++i)
         A.setEntry(i,Nj+i,FF.one);
 
-    const auto P = nullspacedecomp(sout, x, A, l, 'q', 'i', mostCSE);
+    auto Pops = nullspacedecomp(sout, x, A, l, 'q', 'i', mostCSE);
 
+    std::vector<std::string> iVars(A.rowdim());
+    for(size_t i=0; i<A.rowdim(); ++i) {
+        iVars[i]="q"+std::to_string(Nj+i);
+    }
+
+    std::stringstream ssin; ssin << sout.str();
+    VProgram_t progV; programParser(progV, ssin);
+    bool isreduced(false);
+    while( OpOnVars(progV, iVars) ) {
+        isreduced = true;
+        RemoveVars(progV, Pops, iVars);
+    }
+
+    if (isreduced) {
+        sout.clear(); sout.str(std::string());
+        char next; parenthesisExpand(progV, next);
+            // Make output suitable for potential transpose
+        input2Temps(sout, A.coldim(), 'i', next);
+        for(auto& line: progV) for(auto& word: line)
+            if (word[0]=='i') word[0]=next;
+        sout << progV;
+    }
         // out all goals, except the added identity
         // Warning: the identity goals could now use unnecessary ops
     for(size_t j=0; j<Nj; ++j)
         sout << 'o' << j << ":=" << 'q' << j << ';' << std::endl;
 
-    return std::move(P);
+    return Pops;
 }
 
 	// Postcondition _Matrix A is nullified
