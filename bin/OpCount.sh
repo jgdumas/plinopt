@@ -11,7 +11,8 @@
 
 file=$*
 
-operations=`sed -E 's/:=-/:=/g;s/[*/][0-9]*[*/]/*/g;s/([^-+*/]*)([-+*/]*)/\2/g' ${file} | tr -d '\n'`
+operations=`sed -E 's/:=-/:=/g;s/[*/][0-9]*[*/]/*/g;s/([^-+*/&]*)([-+*/&]*)/\2/g' ${file} | tr -d '\n'`
 
-echo -e "`echo -n ${operations} | sed -E 's/[*/]//g'| wc -m`\tadditions/subtractions"
-echo -e "`echo -n ${operations} | sed -E 's/[+-]//g'| wc -m`\tmultiplications/divisions"
+echo -e "`echo -n ${operations} | sed -E 's/[*/&]//g'| wc -m`\tadditions/subtractions"
+echo -e "`echo -n ${operations} | sed -E 's/[&+-]//g'| wc -m`\tmultiplications/divisions"
+echo -e "`echo -n ${operations} | sed -E 's/[*/+-]//g'| wc -m`\tbutterflies"
