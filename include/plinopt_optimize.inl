@@ -640,6 +640,7 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
 //     return nullspacedecomp(sout, x, A, l, 'o', 'i', mostCSE);
 
     const auto& FF(A.field());
+    const size_t Ni(A.rowdim());
     const size_t Nj(A.coldim());
 
         // Add identity to goals
@@ -667,11 +668,12 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
         sout.clear(); sout.str(std::string());
         char next; parenthesisExpand(progV, next);
             // Make output suitable for potential transpose
-        input2Temps(sout, A.coldim(), 'i', next);
+        input2Temps(sout, Ni, 'i', next);
         for(auto& line: progV) for(auto& word: line)
             if (word[0]=='i') word[0]=next;
         sout << progV;
     }
+
         // out all goals, except the added identity
         // Warning: the identity goals could now use unnecessary ops
     for(size_t j=0; j<Nj; ++j)
