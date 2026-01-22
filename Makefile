@@ -54,7 +54,7 @@ mmcheck:
 pmcheck:
 	./bin/PMchecker data/4o4o8_Toom5_{L,R,P}.sms
 	./bin/PMchecker data/4o4o8_Montgomery-13-58_{L,R,P}.sms
-	./bin/PMchecker data/4o4o4_F243-11-45_{L,R,P}.sms -q 3 -P "1-X+X^5"
+	./bin/PMchecker data/4o4o4_F243-11-44_{L,R,P}.sms -q 3 -P "1-X+X^5"
 	./bin/PMchecker data/4o4o4_F243-Montgomery-13-42_{L,R,P}.sms -q 3 -P "X^5+X^4-X^3-X^2-1"
 
 
