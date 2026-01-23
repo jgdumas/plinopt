@@ -1,0 +1,10 @@
+# F32 via Montgomery mod 1+X+X^2+X^4+X^5
+v18:=i0+i3;
+q9:=v18+i9;
+q10:=v18+i10;
+o2:=q10+i5+i6;
+o3:=q9+i12+i4;
+o1:=q9+i2+i11+i8;
+c9:=q10+i2+i1+i12;
+o0:=c9+i4+i7;
+o4:=i0+i11+i5+c9;
