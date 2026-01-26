@@ -431,6 +431,14 @@ int Tellegen(std::istream& input,
         // End line by line parsing
         // ============================================================
 
+        // ============================================================
+        // Initializing input variables
+    for(const auto& variable: varSet) {
+        if (variable[0] == freechar) { // Found input variable
+            std::cout << variable << ":=" << 0 << ';' << std::endl;
+        }
+    }
+
     std::clog << std::string(40,'#') << std::endl;
 
         // ============================================================
@@ -554,14 +562,16 @@ int Tellegen(std::istream& input,
         }
     }
 
-#if DEBUG
     if (varVector.size() > 0) {
-        std::cerr << "\033[1;31m**** ERROR ****\033[0m"
-                  << " First accumulation of temporaries failed: ";
-        for(const auto& iter:varVector) std::cerr << iter << ' ';
-        std::cerr << std::endl;
+        std::clog << "\033[1;36mWARNING useless:\033[0m";
+        for(const auto& iter:varVector) {
+            std::clog << ' ' << iter;
+            modSet.insert(iter); // modSet U varVector for next check
+        }
+        std::clog << std::endl;
     }
 
+#if DEBUG
     if (varSet != modSet) {
         std::cerr << "\033[1;31m**** ERROR ****\033[0m"
                   << " found varSet differ from modSet : \n"
@@ -572,11 +582,12 @@ int Tellegen(std::istream& input,
 
     std::clog << std::string(40,'#') << std::endl;
 
+        // ============================================================
+        // Produce output results "oi:=xi;"
+        // input variables are transposed into output
 
     int dimOffset(inSet.size());
 
-        // Produce output results "oi:=xi;"
-        // input variables are transposed into output
     for(const auto& variable: varSet) {
         if (variable[0] == freechar) { // Found input variable
             --dimOffset;
