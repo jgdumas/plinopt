@@ -245,7 +245,7 @@ private:
 
 
 // ============================================================
-// Find unused variable name
+// Find unused variable name ('c' banned, reserved for constants)
 char unusedChar(const std::set<char>& C, const char cstart /* = 'a'-1 */) {
     if (C.size() > 50) {
         std::cerr << "\033[1;31m**** ERROR ****\033[0m"
@@ -253,7 +253,7 @@ char unusedChar(const std::set<char>& C, const char cstart /* = 'a'-1 */) {
         exit(-1);
     }
     char tmpchar(cstart);
-    for(; C.find(++tmpchar) != C.end();){}
+    for(; (C.find(++tmpchar) != C.end()) || (tmpchar == 'c');){}
     if (tmpchar > 'z') {
         for(tmpchar='A'; C.find(tmpchar)!=C.end();++tmpchar){}
     }
@@ -286,11 +286,19 @@ int Tellegen(std::istream& input,
 
         // Sets of variables
     std::set<std::string> varSet;   // List of found variables
-    VProgram_t outSet;              // Final program with outputs
-    std::set<std::string> inSet;    // List of input variables
+    std::set<std::string> inSet;    // List of (transpozed) input variables
 
     std::pair<size_t,size_t> Nops(0,0);
 
+        // One pass to find a freechar
+    std::string ssstr; std::set<char> varsChar;
+    for(std::string word{ichar}; !ssin.eof(); ssin>>word) {
+        varsChar.insert(word[0]);
+    }
+    const char freechar(unusedChar(varsChar));
+
+        // Roll back the stringstream
+    ssin.clear(); ssin.seekg(0);
     std::clog << std::string(40,'#') << std::endl;
 
         // ============================================================
@@ -385,23 +393,15 @@ int Tellegen(std::istream& input,
                 if (*iter == "-") { ++iter; neg=true; }
                 if (*iter == "+") { ++iter; }
 
-                    // input variables are transposed into output
-                const std::string variable(*iter); ++iter;
+                std::string& variable(*iter); ++iter;
 
                 if (variable == "0") continue;
 
+                    // input variables are transposed into output at the end
+                    // replaced for now with the freechar
                 if (variable[0] == ichar) {
-                    std::string onein(variable);
-                    onein[0] = ochar;
-                    outSet.push_back( { onein, ":=", fixvar, ";" });
-#ifdef VERBATIM_PARSING
-                    std::clog << "# Input found, " << variable
-                              << ", becomes output: " << onein
-                              << ":=" << fixvar << std::endl;
-#endif
-                    continue;
+                    variable[0] = freechar;
                 }
-
                     // Monomial indeterminate
                 varSet.insert(variable);
 
@@ -572,23 +572,18 @@ int Tellegen(std::istream& input,
 
     std::clog << std::string(40,'#') << std::endl;
 
+
+    int dimOffset(inSet.size());
+
         // Produce output results "oi:=xi;"
-    for(const auto& iter: outSet) {
-#if DEBUG
-        if ((iter[1] != ":=") || (iter[3] != ";")) {
-            std::cerr << "\033[1;31m**** ERROR ****\033[0m"
-                      << " malformed output :" << iter << std::endl;
+        // input variables are transposed into output
+    for(const auto& variable: varSet) {
+        if (variable[0] == freechar) { // Found input variable
+            --dimOffset;
+            std::string outvar(variable); outvar[0]=ochar;
+            std::cout << outvar << ":=" << variable << ';' << std::endl;
         }
-#endif
-
-        std::cout << iter.front() << ":="
-                  << (modSet.find(iter[2]) == modSet.end() ? "0" : iter[2])
-                  << ';' << std::endl;
     }
-
-
-    const int dimOffset(inSet.size()-outSet.size());
-
 
     std::clog << std::string(40,'#') << std::endl;
     std::clog << "# \033[1;32m" << Nops.first << "\tadditions ("
