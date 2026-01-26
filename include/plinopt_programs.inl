@@ -1267,6 +1267,11 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
                     // Whether replacement requires sign-change
                 if ( (init[2] == "-") && (isAddSub(line[varloc-1])) ) {
                     swapsign(line[varloc-1]);   // Change dest sign
+                    if (line[2] == "+") { // x:=+y --> x:=y...
+// std::clog << "# swapsign: " << line << std::endl;
+                        line.erase(line.begin()+2);
+                        --varloc;
+                    }
                     init = negateLine(init);    // change var  sign
                 }
 
