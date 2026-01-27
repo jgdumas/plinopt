@@ -821,7 +821,6 @@ bool negatingVariable(std::vector<std::string>& line,
 
 // ============================================================
 // Negate temporaries for output lines starting with a '-'
-
 bool minLine(std::vector<std::string>& varline, const size_t index,
              VProgram_t & vP, const char inchar, const char outchar,
              const bool force=false){
@@ -897,7 +896,16 @@ size_t endingMinus(VProgram_t & vP, const char inchar, const char outchar,
 // ============================================================
 
 
-
+// ============================================================
+// Remove :=+
+inline bool uselessPlus(std::vector<std::string>& line) {
+    if ( (line.size()>2) && (line[1] == ":=") && (line[2] == "+") ) {
+        line.erase(line.begin()+2);
+        return true;
+    }
+    return false;
+}
+// ============================================================
 
 
 // ============================================================
@@ -1002,7 +1010,7 @@ std::vector<std::string>& parenthesisMinusLine(std::vector<std::string>& line) {
                     } else if (iter[0]=="+") {
                         iter[0]="-"; ++iter;
                     } else {
-// std::clog << '\n' << "# nosign: " << iter[0] << std::endl;
+// std::clog << '\n' << "#### nosign: " << iter[0] << std::endl;
                         ++nosign;
                     }
                     auto endg( endGroup(iter, newgroup.end()) );
@@ -1020,11 +1028,15 @@ std::vector<std::string>& parenthesisMinusLine(std::vector<std::string>& line) {
                 if (newgroup[2]=="+") {
                     newgroup.erase(newgroup.begin()+2);
                 }
-// std::clog << "# changing group(" << nosign << ',' << minusign << "): " << newgroup << std::endl;
+// std::clog << "### BEF rotGroup: " << newgroup << std::endl;
+                rotateGroupMinus(newgroup); // (-x ...)
+                rotateGroupMinus(newgroup,1); // +/-(-x ...)
+
+
+// std::clog << "### changing group(" << nosign << ',' << minusign << "): " << newgroup << std::endl;
             }
             if (minusign>0) {
 // std::clog << "## newgroup modified: " << newgroup << std::endl;
-
                 newline.insert(newline.end(), startl, openp-1);
                 newline.insert(newline.end(), newgroup.begin(), newgroup.end());
                 swapped = true;
@@ -1037,7 +1049,7 @@ std::vector<std::string>& parenthesisMinusLine(std::vector<std::string>& line) {
             break;
         }
     }
-    if (newline[2] == "+") newline.erase(newline.begin()+2);
+    uselessPlus(newline); // remove :=+
     if (swapped) {
 #ifdef VERBATIM_PARSING
         std::clog << "# Replaced " << line << std::endl
@@ -1099,7 +1111,7 @@ std::vector<std::string> swapParenthesisMinus(const Iterator& start,
         startl = closp;
     }
 
-    if (newline[2] == "+") newline.erase(newline.begin()+2);
+    uselessPlus(newline); // remove :=+
 // std::clog << "## AFT sPM: " << newline << std::endl;
     return newline;
 }
@@ -1268,10 +1280,7 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
                     // Whether replacement requires sign-change
                 if ( (init[2] == "-") && (isAddSub(line[varloc-1])) ) {
                     swapsign(line[varloc-1]);   // Change dest sign
-                    if (line[2] == "+") { // x:=+y --> x:=y...
-                        line.erase(line.begin()+2);
-                        --varloc;
-                    }
+                    if (uselessPlus(line)) --varloc; // remove :=+
                     init = negateLine(init);    // change var  sign
                 }
 
@@ -1308,10 +1317,7 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
                     } else {
                             // Otherwise transform it into a plus sign
                         line[varloc-1] = "+";
-                        if (line[2] == "+") { // x:=+y --> x:=y...
-                            line.erase(line.begin()+2);
-                            --varloc;
-                        }
+                        if (uselessPlus(line)) --varloc; // x:=+y --> x:=y...
                     }
                     tobeneg = false;
                 }
