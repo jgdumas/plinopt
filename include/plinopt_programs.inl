@@ -891,7 +891,6 @@ size_t endingMinus(VProgram_t & vP, const char inchar, const char outchar,
         } else if (force) {
             minLine(varline, i, vP, inchar, outchar, true);
         }
-// std::clog << "# endingMinus: " << varline << std::endl;
     }
     return rm;
 }
@@ -1057,7 +1056,7 @@ std::vector<std::string>& parenthesisMinusLine(std::vector<std::string>& line) {
 template<typename Iterator>
 std::vector<std::string> swapParenthesisMinus(const Iterator& start,
                                               const Iterator& endl) {
-// std::clog << "## sPM: ";
+// std::clog << "## BEF sPM: ";
 // for(auto it(start); it != endl; ++it) std::clog << *it << ' ';
 // std::clog << std::endl;
 
@@ -1099,7 +1098,9 @@ std::vector<std::string> swapParenthesisMinus(const Iterator& start,
 
         startl = closp;
     }
-// std::clog << "## newline: " << newline << std::endl;
+
+    if (newline[2] == "+") newline.erase(newline.begin()+2);
+// std::clog << "## AFT sPM: " << newline << std::endl;
     return newline;
 }
 
@@ -1268,7 +1269,6 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
                 if ( (init[2] == "-") && (isAddSub(line[varloc-1])) ) {
                     swapsign(line[varloc-1]);   // Change dest sign
                     if (line[2] == "+") { // x:=+y --> x:=y...
-// std::clog << "# swapsign: " << line << std::endl;
                         line.erase(line.begin()+2);
                         --varloc;
                     }
@@ -1308,6 +1308,10 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
                     } else {
                             // Otherwise transform it into a plus sign
                         line[varloc-1] = "+";
+                        if (line[2] == "+") { // x:=+y --> x:=y...
+                            line.erase(line.begin()+2);
+                            --varloc;
+                        }
                     }
                     tobeneg = false;
                 }
