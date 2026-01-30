@@ -9,6 +9,7 @@
 
 tmpfile=/tmp/fdt_plinopt.$$
 numopt=10
+#optflg="-K"
 modulus=7
 coeffs=5
 
@@ -52,11 +53,11 @@ do
     n=${mdims[1]}
     echo "${fic} ${m}x${n}:"
 
-    ((${OPTIM} -O ${numopt} $fic | ${CMPCT} -s | ${SLPCK} -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
+    ((${OPTIM} -O ${numopt} ${optflg} $fic | ${CMPCT} -s | ${SLPCK} -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
 
-    ((${MTRSP} $fic | ${OPTIM} -q ${modulus} -O ${numopt} | ${TELLG} | ${CMPCT} -s | ${SLPCK}  -q ${modulus} -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
+    ((${MTRSP} $fic | ${OPTIM} -q ${modulus} -O ${numopt} ${optflg} | ${TELLG} | ${CMPCT} -s | ${SLPCK}  -q ${modulus} -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
 
-    ((${MTRSP} $fic | ${OPTIM} -O ${numopt} | ${TELLG} | ${CMPCT} -s | ${SLPCK} -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
+    ((${MTRSP} $fic | ${OPTIM} -O ${numopt} ${optflg} | ${TELLG} | ${CMPCT} -s | ${SLPCK} -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
 
     ((OMP_NUM_THREADS=1 ${SPSFR} -c ${coeffs} $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
 
