@@ -5,14 +5,25 @@
 # ==========================================================================
 # ==========================================================================
 # Counting addition/subtraction and multiplication/division signs in an SLP
-#   (not including leading negations, like 'a:=-t')
+#   (not including leading negations/additions, like 'a:=-t')
 # ==========================================================================
 
 
 file=$*
 
-operations=`sed 's/\#.*//' ${file} | sed -E 's/:=-/:=/g;s/[*/][0-9]*[*/]/*/g;s/([^-+*/&]*)([-+*/&]*)/\2/g'| tr -d '\n'`
+operations=`sed 's/\#.*//' ${file} | sed -E 's/:=-/:=/g;s/:=+/:=/g;s/[*/]([^1-9])/.\1/;s/[*/][0-9]*[*/]/*/g;s/([^-+*/&.]*)([-+*/&.]*)/\2/g' | tr -d '\n'`
 
-echo -e "`echo -n ${operations} | sed -E 's/[*/&]//g'| wc -m`\tadditions/subtractions"
-echo -e "`echo -n ${operations} | sed -E 's/[&+-]//g'| wc -m`\tmultiplications/divisions"
-echo -e "`echo -n ${operations} | sed -E 's/[*/+-]//g'| wc -m`\tbutterflies"
+
+btf=`echo -n ${operations} | sed -E 's/[^&]//g'| wc -m`
+add=`echo -n ${operations} | sed -E 's/[^+-]//g'| wc -m`
+sca=`echo -n ${operations} | sed -E 's/[^*/]//g'| wc -m`
+trk=`echo -n ${operations} | sed -E 's/[^\.]//g'| wc -m`
+
+if [[ $((trk)) -gt 0 ]]; then
+    echo -e "${trk}\trank"
+fi
+echo -e "${add}\tadditions/subtractions"
+echo -e "${sca}\tscalings (mul/div)"
+if [[ $((btf)) -gt 0 ]]; then
+    echo -e "${btf}\tbutterflies"
+fi
