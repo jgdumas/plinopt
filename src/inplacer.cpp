@@ -24,9 +24,11 @@
 
 
 void usage(int argc, char ** argv) {
+    const size_t randomloops(DORANDOMSEARCH?DEFAULT_RANDOM_LOOPS:1);
     std::clog << "Usage: " << argv[0] << " L.sms [-O #] [-t] \n"
               << "  -t  : produces an in-place program for the transposed matrix\n"
-              << "  -O #: randomized search with that many loops\n";
+              << "  -O #: randomized search with that many loops (default "
+              << randomloops << " loops)\n";
     exit(-1);
 }
 

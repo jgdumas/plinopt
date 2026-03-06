@@ -178,7 +178,8 @@ int main(int argc, char** argv) {
                 << "  -N: exhaustive nullspace permutations (default is not)\n"
                 << "  -P/-M: choose the printing format\n"
                 << "  -q #: search modulo (default is Rationals)\n"
-                << "  -O #: search for reduced number of additions and/then multiplications\n";
+                << "  -O #: randomized search with that many loops (default "
+                << randomloops << " loops)\n";
 
             exit(-1);
         }

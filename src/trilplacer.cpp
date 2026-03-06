@@ -47,11 +47,13 @@
 
 
 void usage(char ** argv) {
+    const size_t randomloops(DORANDOMSEARCH?DEFAULT_RANDOM_LOOPS:1);
     std::clog << "Usage: " << argv[0] << " L.sms R.sms P.sms [-e|-m] [-O #]\n";
 
     std::clog << "  -m: check for a matrix multiplication\n"
               << "  -e: double expands the intermediate result\n"
-              << "  -O #: randomized search with that many loops\n";
+              << "  -O #: randomized search with that many loops (default "
+              << randomloops << " loops)\n";
     exit(-1);
 }
 
