@@ -10,9 +10,10 @@ OPTFLAGS = -O3 -ffast-math
 # OPTFLAGS += -D DEFAULT_RANDOM_LOOPS=30u	# Default # of loops
 # OPTFLAGS += -D COEFFICIENT_SEARCH=20u		# Default # sparsifier coeffs
 # OPTFLAGS += -D DENSITY_OPTIMIZATION	# Non-random optimizer
+# OPTFLAGS += -D KERNEL_FREEONLY	# No identity goals in kernel method
 #######
 
-RNDFLAGS = -D RANDOM_TIES			# Default randomized search
+RNDFLAGS = -D RANDOM_TIES	# Default randomized search
 
 #######
 CXXFLAGS += ${OPTFLAGS} ${RNDFLAGS} -I`pwd`/include/ `pkg-config linbox --cflags`

@@ -27,6 +27,12 @@
 //     with DEFAULT_RANDOM_LOOPS for the default random loops
 // ============================================================
 
+// ============================================================
+// Kernel method:
+//   deactivate inclusion of identity to kernel goals
+//#define KERNEL_FREEONLY
+// ============================================================
+
 
 #ifndef _PLINOPT_LIBRARY_OPTIMIZE_H_
 #define _PLINOPT_LIBRARY_OPTIMIZE_H_
