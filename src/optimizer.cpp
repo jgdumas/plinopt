@@ -169,7 +169,7 @@ int main(int argc, char** argv) {
         std::string args(argv[i]);
         if (args == "-h") {
             std::clog << "Usage: " << argv[0]
-                      << " [-h|-M|-P|-K|-D|-G|-E|-N|-q #|-O #] [stdin|matrixfile.sms]\n";
+                      << " [-h|-M|-P|-K|-D|-G|-E|-N|-A|-q #|-O #] [stdin|matrixfile.sms]\n";
 
             std::clog
                 << "  -D/-K/-G: direct/kernel/LU methods (default is all)\n"

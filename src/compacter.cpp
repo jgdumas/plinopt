@@ -44,7 +44,7 @@ std::ostream& Compacter(std::ostream& sout, std::istream& input,
     variablesTrimer(ProgramVector, simplSingle);
     size_t prevPRs(PVs), currPRs(progSize(ProgramVector));
 
-    int iter(numloops); // decreasing 0 will nver be == 0
+    int iter(numloops); // decreasing 0 will never be == 0
     do {
         prevPRs = currPRs;
         variablesTrimer(ProgramVector, simplSingle);
