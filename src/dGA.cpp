@@ -34,14 +34,17 @@
 #include "plinopt_sparsify.h"
 
 // ===============================================================
-void usage(const char* prgname) {
+void usage(const char* prgname, const size_t randomloops) {
     std::clog << "Usage:" << prgname
               << "  [-h|-b #|-m/-q #|-r # # #|-I x|-P P(x)] L.sms R.sms P.sms\n"
               << "  [-b b]: random check with values of size 'bitsize'\n"
               << "  [-m/-q m]: check is modulo (mod) or (mod/2^k) (default no)\n"
               << "  [-r r e s]: check is modulo (r^e-s) or ((r^e-s)/2^k) (default no)\n"
               << "  [-I x]: indeterminate (default is X)\n"
-              << "  [-P P(x)]: modular polynomial (default is none)\n";
+              << "  [-P P(x)]: modular polynomial (default is none)\n"
+              << "  [-O #]: randomized search with that many loops (default "
+              << randomloops << " loops)\n";
+
 
     exit(-1);
 }
@@ -327,7 +330,7 @@ int main(int argc, char ** argv) {
     for(int i=1; i<argc; ++i) {
         std::string args(argv[i]);
         if (args[0] == '-') {
-            if (args[1] == 'h') { usage(argv[0]); }
+            if (args[1] == 'h') { usage(argv[0],randomloops); }
             else if (args[1] == 'b') { bitsize = atoi(argv[++i]); }
             else if ((args[1] == 'm') || (args[1] == 'q')) { modulus = Givaro::Integer(argv[++i]); }
             else if (args[1] == 'r') {
@@ -348,7 +351,7 @@ int main(int argc, char ** argv) {
             }
         } else { filenames.push_back(args); }
     }
-    if (filenames.size() < 3) { usage(argv[0]); }
+    if (filenames.size() < 3) { usage(argv[0],randomloops); }
 
 
         // Select verification
