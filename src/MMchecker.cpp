@@ -26,11 +26,8 @@
  *     (https://hal.science/hal-04167499) ]
  ****************************************************************/
 
-#include <givaro/modular.h>
-#include <givaro/givquotientdomain.h>
 #include "plinopt_library.h"
 #include "plinopt_polynomial.h"
-
 
 // ===============================================================
 void usage(const char* prgname) {

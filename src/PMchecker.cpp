@@ -44,27 +44,6 @@ void usage(const char* prgname) {
     exit(-1);
 }
 
-
-// ===============================================================
-// Generic random element with bitsize
-template<typename Domain>
-typename Domain::Element& RandomElt(typename Domain::Element& e,
-				    const Domain& D,
-				    Givaro::GivRandom& generator,
-				    const size_t bitsize) {
-    return D.random(generator, e, bitsize);
-}
-
-// Specialization for Modular, as bitsize is meanigless for its random
-template<>
-typename Givaro::Integer& RandomElt(Givaro::Integer& e,
-				    const Givaro::Modular<Givaro::Integer>& D,
-				    Givaro::GivRandom& generator,
-				    const size_t bitsize) {
-    return D.random(generator, e);
-}
-// ===============================================================
-
 using QPol = PLinOpt::PRing<PLinOpt::QRat>;
 
 // ===============================================================

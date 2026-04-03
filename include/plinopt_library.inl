@@ -311,6 +311,9 @@ std::ostream& printSCA(std::ostream& out,
 // ============================================
 
 
+#include <givaro/modular.h>
+#include <givaro/givquotientdomain.h>
+
 // ===============================================================
 // Generic random element with bitsize
 template<typename Domain>
@@ -362,7 +365,6 @@ private:
     const Target& _target;
 }; // end Hom
 // ===============================================================
-
 
 namespace PLinOpt {
 // ===============================================================
