@@ -26,7 +26,7 @@ EXE += sparsifier factorizer
 EXE += inplacer trilplacer
 EXE += transpozer compacter SLPchecker
 EXE += sms2pretty MMchecker PMchecker
-EXE += matrix-transpose columns-swap negater
+EXE += matrix-transpose columns-swap negater dGA
 
 SRC=${EXE:%=src/%.cpp}
 
