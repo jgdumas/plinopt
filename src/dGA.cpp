@@ -194,8 +194,9 @@ int deGrooteAction(const Base& BB, const Field& FF, const size_t bitsize,
 
 
     size_t bestnnz(nnzl+nnzr+nnzp);
-    std::clog << "Non-Zero: " << nnzl << '+' << nnzr << '+' << nnzp << '='
-              << bestnnz << std::endl;
+    const size_t initnnz(bestnnz);
+    std::clog << "# Init. nnz: " << bestnnz << '=' << nnzl << '+' 
+              << nnzr << '+' << nnzp << std::endl;
 
     FMatrix bestLj(FF,L.rowdim(), L.coldim()),
         bestRg(FF, R.rowdim(), R.coldim()),
@@ -275,25 +276,28 @@ int deGrooteAction(const Base& BB, const Field& FF, const size_t bitsize,
     }
 
 
-        // =============================================
-        // Writing matrices
-	std::ofstream
-        oleft(std::filesystem::path(filenames[0]).replace_extension(".nnz.sms")),
-        oright(std::filesystem::path(filenames[1]).replace_extension(".nnz.sms")),
-        opost(std::filesystem::path(filenames[2]).replace_extension(".nnz.sms"));
+    if (bestnnz<initnnz) {
+            // =============================================
+            // Writing matrices
+        std::ofstream
+            oleft(std::filesystem::path(filenames[0])
+                  .replace_extension(".nnz.sms")),
+            oright(std::filesystem::path(filenames[1])
+                   .replace_extension(".nnz.sms")),
+            opost(std::filesystem::path(filenames[2])
+              .replace_extension(".nnz.sms"));
 
-    bestLj.write(oleft,FileFormat(5));
-    bestRg.write(oright,FileFormat(5));
-    besthP.write(opost,FileFormat(5));
-
+        bestLj.write(oleft,FileFormat(5));
+        bestRg.write(oright,FileFormat(5));
+        besthP.write(opost,FileFormat(5));
+        
 #ifdef VERBATIM_PARSING
-    bestLj.write(std::clog << "Lj:=",FileFormat::Maple) << ';' << std::endl;
-    bestRg.write(std::clog << "Rg:=",FileFormat::Maple) << ';' << std::endl;
-    besthP.write(std::clog << "hP:=",FileFormat::Maple) << ';' << std::endl;
+        bestLj.write(std::clog << "Lj:=",FileFormat::Maple) << ';' << std::endl;
+        bestRg.write(std::clog << "Rg:=",FileFormat::Maple) << ';' << std::endl;
+        besthP.write(std::clog << "hP:=",FileFormat::Maple) << ';' << std::endl;
 #endif
-
-
-    PLinOpt::MMchecker(FF, bitsize, bestLj, bestRg, besthP);
+        PLinOpt::MMchecker(FF, bitsize, bestLj, bestRg, besthP);
+    }
 
     return 0;
 }
