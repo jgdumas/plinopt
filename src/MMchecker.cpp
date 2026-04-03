@@ -35,97 +35,42 @@
 // ===============================================================
 void usage(const char* prgname) {
     std::clog << "Usage:" << prgname
-	      << "  [-h|-b #|-m/-q #|-r # # #|-I x|-P P(x)] L.sms R.sms P.sms\n"
-	      << "  [-b b]: random check with values of size 'bitsize'\n"
-	      << "  [-m/-q m]: check is modulo (mod) or (mod/2^k) (default no)\n"
-	      << "  [-r r e s]: check is modulo (r^e-s) or ((r^e-s)/2^k) (default no)\n"
-	      << "  [-I x]: indeterminate (default is X)\n"
-	      << "  [-P P(x)]: modular polynomial (default is none)\n";
+              << "  [-h|-b #|-m/-q #|-r # # #|-I x|-P P(x)] L.sms R.sms P.sms\n"
+              << "  [-b b]: random check with values of size 'bitsize'\n"
+              << "  [-m/-q m]: check is modulo (mod) or (mod/2^k) (default no)\n"
+              << "  [-r r e s]: check is modulo (r^e-s) or ((r^e-s)/2^k) (default no)\n"
+              << "  [-I x]: indeterminate (default is X)\n"
+              << "  [-P P(x)]: modular polynomial (default is none)\n";
 
     exit(-1);
 }
 
 
 // ===============================================================
-// Generic random element with bitsize
-template<typename Domain>
-typename Domain::Element& RandomElt(typename Domain::Element& e,
-				    const Domain& D,
-				    Givaro::GivRandom& generator,
-				    const size_t bitsize) {
-    return D.random(generator, e, bitsize);
-}
-
-// Specialization for Modular, as bitsize is meanigless for its random
-template<>
-typename Givaro::Integer& RandomElt(Givaro::Integer& e,
-				    const Givaro::Modular<Givaro::Integer>& D,
-				    Givaro::GivRandom& generator,
-				    const size_t bitsize) {
-    return D.random(generator, e);
-}
-// ===============================================================
-
-
-// ===============================================================
-// Missing LinBox specialization of quotient homomorphism
-template <class Field>
-class LinBox::Hom<Field, Givaro::QuotientDom<Field> > {
-public:
-    typedef Field Source;
-    typedef typename Givaro::QuotientDom<Field> Target;
-    typedef typename Source::Element SrcElt;
-    typedef typename Target::Element Elt;
-
-    Hom(const Source& S, const Target& T) : _source(S), _target(T) {}
-
-    Elt& image(Elt& t, const SrcElt& s) {
-	_target.assign (t, s); // this will compute the modular image
-	return t;
-    }
-
-    SrcElt& preimage(SrcElt& s, const Elt& t) {
-	_source.assign (s, t); // this will just copy
-	return s;
-    }
-
-    const Source& source() { return _source;}
-    const Target& target() { return _target;}
-
-private:
-    const Source& _source;
-    const Target& _target;
-}; // end Hom
-// ===============================================================
-
-
-// ===============================================================
-// Generic verification, within Field, of matrices over Base
+// Reading matrices over Base
 template<typename Base, typename Field>
-int MMchecker(const Base& BB, const Field& FF, const size_t bitsize,
-	      const std::vector<std::string>& filenames) {
+int fMMchecker(const Base& BB, const Field& FF, const size_t bitsize,
+              const std::vector<std::string>& filenames) {
     typedef LinBox::MatrixStream<Base> BMstream;
     typedef LinBox::SparseMatrix<Base,
-	LinBox::SparseMatrixFormat::SparseSeq > BMatrix;
+        LinBox::SparseMatrixFormat::SparseSeq > BMatrix;
     using FMatrix=typename BMatrix::template rebind<Field>::other;
-    typedef LinBox::DenseVector<Field> FVector;
-
-	// =============================================
-	// Reading matrices
-	std::ifstream left (filenames[0]), right (filenames[1]), post(filenames[2]);
-
     using PLinOpt::FileFormat;
+
+        // =============================================
+        // Reading matrices
+	std::ifstream left (filenames[0]), right (filenames[1]), post(filenames[2]);
 
     BMstream ls(BB, left), rs(BB, right), ss(BB, post);
     BMatrix BL(ls), BR(rs), BP(ss);
     FMatrix L(BL,FF), R(BR,FF), P(BP,FF);
 
     if ( (L.rowdim() != R.rowdim()) || (L.rowdim() != P.coldim()) ) {
-	 std::cerr << "# \033[1;31m****** ERROR, inner dimension mismatch: "
-		   << L.rowdim() << "(.)" << R.rowdim() << '|' << P.coldim()
-		  << " ******\033[0m"
-		  << std::endl;
-	 return 2;
+        std::cerr << "# \033[1;31m****** ERROR, inner dimension mismatch: "
+                  << L.rowdim() << "(.)" << R.rowdim() << '|' << P.coldim()
+                  << " ******\033[0m"
+                  << std::endl;
+        return 2;
     }
 
 #ifdef VERBATIM_PARSING
@@ -135,86 +80,9 @@ int MMchecker(const Base& BB, const Field& FF, const size_t bitsize,
     std::clog << std::string(30,'#') << std::endl;
 #endif
 
-    PLinOpt::Tricounter mkn(PLinOpt::LRP2MM(L,R,P));
-    const size_t& m(std::get<0>(mkn)), k(std::get<1>(mkn)), n(std::get<2>(mkn));
-
-	// =============================================
-	// Random inputs
-    FVector va(FF,L.rowdim()), ua(FF,L.coldim());
-    FVector vb(FF,R.rowdim()), ub(FF,R.coldim());
-    FVector wc(FF,P.rowdim()), vc(FF,P.coldim());
-
-    if ( (ua.size()!=(m*k)) || (ub.size()!=(k*n)) || (wc.size()!=(m*n)) ) {
-	std::cerr << "# \033[1;31m****** ERROR, outer dimension mismatch: "
-		  << L.coldim() << ':' << m << 'x' << k << ' '
-		  << R.coldim() << ':' << k << 'x' << n << ' '
-		  << P.rowdim() << ':' << m << 'x' << n
-		  << " ******\033[0m"
-		  << std::endl;
-	return 3;
-    }
-
-    Givaro::GivRandom generator;
-    Givaro::Integer::seeding(generator.seed());
-    for(auto &iter:ua) RandomElt(iter, FF, generator, bitsize);
-    for(auto &iter:ub) RandomElt(iter, FF, generator, bitsize);
-
-	// =============================================
-	// Compute matrix product via the HM algorithm
-    L.apply(va,ua);
-    R.apply(vb,ub);
-
-    for(size_t i=0; i<vc.size(); ++i) FF.mul(vc[i],va[i],vb[i]);
-
-    P.apply(wc,vc);
-
-	// =============================================
-	// Compute the matrix product directly
-    LinBox::DenseMatrix<Field> Ma(FF,m,k), Mb(FF,k,n), Delta(FF,m,n);
-
-	// row-major vectorization
-    for(size_t i=0; i<ua.size(); ++i) Ma.setEntry(i/k,i%k,ua[i]);
-    for(size_t i=0; i<ub.size(); ++i) Mb.setEntry(i/n,i%n,ub[i]);
-    for(size_t i=0; i<wc.size(); ++i) Delta.setEntry(i/n,i%n,wc[i]);
-
-    LinBox::MatrixDomain<Field> BMD(FF);
-    LinBox::DenseMatrix<Field> Mc(FF,m,n);
-    BMD.mul(Mc,Ma,Mb); // Direct matrix multiplication
-
-    BMD.subin(Delta, Mc);
-
-	// =============================================
-	// Both computations should agree
-    if (BMD.isZero (Delta))
-	FF.write(std::clog <<"# \033[1;32mSUCCESS: correct "
-		 << m << 'x' << k << 'x' << n
-		 << " Matrix-Multiplication \033[0m") << std::endl;
-    else{
-	FF.write(std::cerr << "# \033[1;31m****** ERROR, not a "
-		 << m << 'x' << k << 'x' << n
-		 << " MM algorithm******\033[0m") << std::endl;
-
-	ua.write(std::clog << "Ua:=", FileFormat::Maple ) << ';' << std::endl;
-	va.write(std::clog << "Va:=", FileFormat::Maple ) << ';' << std::endl;
-	ub.write(std::clog << "Ub:=", FileFormat::Maple ) << ';' << std::endl;
-	vb.write(std::clog << "Vb:=", FileFormat::Maple ) << ';' << std::endl;
-	vc.write(std::clog << "Vc:=", FileFormat::Maple ) << ';' << std::endl;
-	wc.write(std::clog << "wc:=", FileFormat::Maple ) << ';' << std::endl;
-
-	Ma.write(std::clog << "Ma:=", FileFormat::Maple) << ';' << std::endl;
-	Mb.write(std::clog << "Mb:=", FileFormat::Maple) << ';' << std::endl;
-	    // Correct value
-	Mc.write(std::clog << "Mc:=", FileFormat::Maple) << ';' << std::endl;
-	    // Difference with computed value
-	Delta.write(std::clog << "Df:=", FileFormat::Maple) << ';' << std::endl;
-	BMD.addin(Delta, Mc);
-	    // Computed value
-	Delta.write(std::clog << "Rc:=", FileFormat::Maple) << ';' << std::endl;
-
-	return 1;
-    }
-    return 0;
+    return PLinOpt::MMchecker(FF, bitsize, L, R, P);
 }
+
 
 // ===============================================================
 int main(int argc, char ** argv) {
@@ -228,47 +96,46 @@ int main(int argc, char ** argv) {
     QPol::Element QP;
     std::vector<std::string> filenames;
 
-	// Parse arguments
+        // Parse arguments
 
     for(int i=1; i<argc; ++i) {
-	std::string args(argv[i]);
-	if (args[0] == '-') {
-	    if (args[1] == 'h') { usage(argv[0]); }
-	    else if (args[1] == 'b') { bitsize = atoi(argv[++i]); }
-	    else if ((args[1] == 'm') || (args[1] == 'q')) { modulus = Givaro::Integer(argv[++i]); }
-	    else if (args[1] == 'r') {
-		Givaro::Integer r(argv[++i]);
-		size_t e(atoi(argv[++i]));
-		Givaro::Integer s(argv[++i]);
-		modulus = pow(r,e)-s;
-	    }
-	    else if (args[1] == 'I') {
-		QQX.setIndeter(Givaro::Indeter(argv[++i][0]));
-	    }
-	    else if (args[1] == 'P') {
-		std::stringstream sargs( argv[++i] );
-		QQX.read(sargs, QP);
-	    }
-	} else { filenames.push_back(args); }
+        std::string args(argv[i]);
+        if (args[0] == '-') {
+            if (args[1] == 'h') { usage(argv[0]); }
+            else if (args[1] == 'b') { bitsize = atoi(argv[++i]); }
+            else if ((args[1] == 'm') || (args[1] == 'q')) {
+                modulus = Givaro::Integer(argv[++i]);
+            } else if (args[1] == 'r') {
+                Givaro::Integer r(argv[++i]);
+                size_t e(atoi(argv[++i]));
+                Givaro::Integer s(argv[++i]);
+                modulus = pow(r,e)-s;
+            } else if (args[1] == 'I') {
+                QQX.setIndeter(Givaro::Indeter(argv[++i][0]));
+            } else if (args[1] == 'P') {
+                std::stringstream sargs( argv[++i] );
+                QQX.read(sargs, QP);
+            }
+        } else { filenames.push_back(args); }
     }
     if (filenames.size() < 3) { usage(argv[0]); }
 
 
-	// Select verification
+        // Select verification
 
     if (modulus>0) {
-	    // Remove powers of 2 for better probabilities
-	while( (modulus % 2) == 0 ) { modulus >>=1; };
-	if (modulus == 1) modulus = 2;
-	    // Compute modular verification of rational matrices
-	Givaro::Modular<Givaro::Integer> F(modulus);
-	return MMchecker(QQ, F, bitsize, filenames);
+            // Remove powers of 2 for better probabilities
+        while( (modulus % 2) == 0 ) { modulus >>=1; };
+        if (modulus == 1) modulus = 2;
+            // Compute modular verification of rational matrices
+        Givaro::Modular<Givaro::Integer> F(modulus);
+        return fMMchecker(QQ, F, bitsize, filenames);
     }
     else if (QP.size()>0) {
-	    // Compute modular verification of polynomial matrices
-	QQuo QQXm(QQX, QP);
-	return MMchecker(QQX, QQXm, bitsize, filenames);
+            // Compute modular verification of polynomial matrices
+        QQuo QQXm(QQX, QP);
+        return fMMchecker(QQX, QQXm, bitsize, filenames);
     } else
-	    // Compute rational verification of rational matrices
-	return MMchecker(QQ, QQ, bitsize, filenames);
+            // Compute rational verification of rational matrices
+        return fMMchecker(QQ, QQ, bitsize, filenames);
 }

@@ -233,6 +233,14 @@ std::vector<size_t> factorial(const size_t n) {
 std::vector<size_t> kthpermutation(const size_t k, const size_t n,
                                    const std::vector<long>& Fn );
 
+// ============================================
+// Generic verification, within Field, of matrices over Base
+template<typename Field, typename _Matrix>
+int MMchecker(const Field& FF, const size_t bitsize,
+              const _Matrix& L, const _Matrix& R, const _Matrix& P);
+// ============================================
+
+
 } // End of namespace PLinOpt
 // ============================================
 
