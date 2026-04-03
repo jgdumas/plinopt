@@ -195,7 +195,7 @@ int deGrooteAction(const Base& BB, const Field& FF, const size_t bitsize,
 
     size_t bestnnz(nnzl+nnzr+nnzp);
     const size_t initnnz(bestnnz);
-    std::clog << "# Init. nnz: " << bestnnz << '=' << nnzl << '+' 
+    std::clog << "# Init. nnz: " << bestnnz << '=' << nnzl << '+'
               << nnzr << '+' << nnzp << std::endl;
 
     FMatrix bestLj(FF,L.rowdim(), L.coldim()),
@@ -204,7 +204,7 @@ int deGrooteAction(const Base& BB, const Field& FF, const size_t bitsize,
     PLinOpt::sparse2sparse(bestLj,L);
     PLinOpt::sparse2sparse(bestRg,R);
     PLinOpt::sparse2sparse(besthP,P);
-
+    Givaro::Timer chrono; chrono.start();
 
 #pragma omp parallel for shared(L,R,P,m,k,n,bestnnz)
     for(size_t i=0; i<randomloops; ++i) {
@@ -275,8 +275,14 @@ int deGrooteAction(const Base& BB, const Field& FF, const size_t bitsize,
         }
     }
 
+    chrono.stop();
+
+    std::clog << "# Search(" << randomloops <<"): " << chrono << std::endl;
 
     if (bestnnz<initnnz) {
+        std::clog << "# \033[1;36mRdcd. nnz: " << bestnnz <<
+            '<' << initnnz << "\033[0m" << std::endl;
+
             // =============================================
             // Writing matrices
         std::ofstream
@@ -290,7 +296,7 @@ int deGrooteAction(const Base& BB, const Field& FF, const size_t bitsize,
         bestLj.write(oleft,FileFormat(5));
         bestRg.write(oright,FileFormat(5));
         besthP.write(opost,FileFormat(5));
-        
+
 #ifdef VERBATIM_PARSING
         bestLj.write(std::clog << "Lj:=",FileFormat::Maple) << ';' << std::endl;
         bestRg.write(std::clog << "Rg:=",FileFormat::Maple) << ';' << std::endl;
