@@ -177,12 +177,6 @@ inline _Mat& zoiRandomMatrix(_Mat& M, const size_t bitsize) {
         setRow(M, P[i], Row);
     }
 
-#pragma omp critical
-        {
-    size_t r; std::clog << "## M " << M.rowdim() << 'x' << M.coldim()
-                        <<" rank:" << rank(r, M) << std::endl;
-        }
-
     return M;
 }
 
