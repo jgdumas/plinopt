@@ -144,7 +144,47 @@ inline _Mat1& inverse(_Mat1& T, const _Mat2& A) {
     return T;
 }
 
+// PLUQ random {-1,0,1}, det=1, matrices
+template<typename _Mat>
+inline _Mat& zoiRandomMatrix(_Mat& M, const size_t bitsize) {
+    static thread_local Givaro::GivRandom
+        generator(Givaro::BaseTimer::seed());
+    const auto& FF(M.field());
+    using Field = typename _Mat::Field;
+    using Element=typename Field::Element;
+    typedef LinBox::DenseVector<Field> FVector;
+    _Mat L(FF,M.rowdim(),M.coldim());
+    for(size_t i=0; i<L.rowdim(); ++i) L.setEntry(i,i,FF.one);
+    Element tmp; FF.init(tmp);
+    for(size_t i=0;i<L.rowdim();++i) {
+        for(size_t j=0;j<i;++j) {
+            L.setEntry(i,j, zoRandomElt(tmp, FF, generator, bitsize));
+        }
+    }
+    FVector U(FF,M.coldim(),FF.zero), Row(FF,M.rowdim());
+    std::vector<size_t> P(M.rowdim()),Q(M.coldim());
+    std::iota(P.begin(), P.end(), 0); // Select a random permutation
+    std::iota(Q.begin(), Q.end(), 0); // Select a random permutation
+    std::shuffle(P.begin(), P.end(),
+                 std::default_random_engine(generator()));
+    std::shuffle(Q.begin(), Q.end(),
+                 std::default_random_engine(generator()));
+    for(size_t i=0;i<L.rowdim();++i) {
+        FF.assign(U[Q[i]],FF.one);
+        for(size_t j=0;j<Q[i];++j) zoRandomElt(U[j], FF, generator, bitsize);
+        for(size_t j=Q[i]+1;j<U.size(); ++j) FF.assign(U[j], FF.zero);
+        L.apply(Row,U);
+        setRow(M, P[i], Row);
+    }
 
+#pragma omp critical
+        {
+    size_t r; std::clog << "## M " << M.rowdim() << 'x' << M.coldim()
+                        <<" rank:" << rank(r, M) << std::endl;
+        }
+
+    return M;
+}
 
 }
 
@@ -212,27 +252,9 @@ int deGrooteAction(const Base& BB, const Field& FF, const size_t bitsize,
 #pragma omp parallel for shared(L,R,P,m,k,n,bestnnz)
     for(size_t i=0; i<randomloops; ++i) {
         FMatrix U(FF,m,m), V(FF,k,k), W(FF,n,n);
-        for(size_t i=0; i<m; ++i) U.setEntry(i,i,FF.one);
-        for(size_t i=0; i<k; ++i) V.setEntry(i,i,FF.one);
-        for(size_t i=0; i<n; ++i) W.setEntry(i,i,FF.one);
-        Givaro::GivRandom generator;
-        Givaro::Integer::seeding(generator.seed());
-        Element tmp; FF.init(tmp);
-        for(size_t i=0;i<m;++i) {
-            for(size_t j=i+1;j<m;++j) {
-                U.setEntry(i,j, zoRandomElt(tmp, FF, generator, bitsize));
-            }
-        }
-        for(size_t i=0;i<k;++i) {
-            for(size_t j=i+1;j<k;++j) {
-                V.setEntry(i,j, zoRandomElt(tmp, FF, generator, bitsize));
-            }
-        }
-        for(size_t i=0;i<n;++i) {
-            for(size_t j=i+1;j<n;++j) {
-                W.setEntry(i,j, zoRandomElt(tmp, FF, generator, bitsize));
-            }
-        }
+        PLinOpt::zoiRandomMatrix(U, bitsize);
+        PLinOpt::zoiRandomMatrix(V, bitsize);
+        PLinOpt::zoiRandomMatrix(W, bitsize);
 
         FMatrix J(FF,mk,mk), G(FF,kn,kn), H(FF,mn,mn);
         FMatrix iVT(FF,k,k); PLinOpt::inverseTranspose(iVT, V);
