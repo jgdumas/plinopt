@@ -11,6 +11,7 @@ OPTFLAGS = -O3 -ffast-math
 # OPTFLAGS += -D COEFFICIENT_SEARCH=20u		# Default # sparsifier coeffs
 # OPTFLAGS += -D DENSITY_OPTIMIZATION	# Non-random optimizer
 # OPTFLAGS += -D KERNEL_FREEONLY	# No identity goals in kernel method
+# OPTFLAGS += -D ACTION_FULL_PLUQ	# Random PLUQ action
 #######
 
 RNDFLAGS = -D RANDOM_TIES	# Default randomized search

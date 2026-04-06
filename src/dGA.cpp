@@ -144,7 +144,7 @@ inline _Mat1& inverse(_Mat1& T, const _Mat2& A) {
     return T;
 }
 
-// PLUQ random {-1,0,1}, det=1, matrices
+// Random {-1,0,1}, det=1, matrices
 template<typename _Mat>
 inline _Mat& zoiRandomMatrix(_Mat& M, const size_t bitsize) {
     static thread_local Givaro::GivRandom
@@ -153,12 +153,14 @@ inline _Mat& zoiRandomMatrix(_Mat& M, const size_t bitsize) {
     using Field = typename _Mat::Field;
     using Element=typename Field::Element;
     typedef LinBox::DenseVector<Field> FVector;
+#ifdef ACTION_FULL_PLUQ
     _Mat L(FF,M.rowdim(),M.coldim());
     for(size_t i=0; i<L.rowdim(); ++i) L.setEntry(i,i,FF.one);
     Element tmp; FF.init(tmp);
     for(size_t i=0;i<L.rowdim();++i) {
         for(size_t j=0;j<i;++j) {
-            L.setEntry(i,j, zoRandomElt(tmp, FF, generator, bitsize));
+            if (! FF.isZero(zoRandomElt(tmp, FF, generator, bitsize)))
+                L.setEntry(i,j, tmp);
         }
     }
     FVector U(FF,M.coldim(),FF.zero), Row(FF,M.rowdim());
@@ -176,11 +178,21 @@ inline _Mat& zoiRandomMatrix(_Mat& M, const size_t bitsize) {
         L.apply(Row,U);
         setRow(M, P[i], Row);
     }
-
+#else
+        // Only random triangular
+    for(size_t i=0; i<M.rowdim(); ++i) M.setEntry(i,i,FF.one);
+    Element tmp; FF.init(tmp);
+    for(size_t i=0;i<M.rowdim();++i) {
+        for(size_t j=i+1;j<M.rowdim();++j) {
+            if (! FF.isZero(zoRandomElt(tmp, FF, generator, bitsize)))
+                M.setEntry(i,j, tmp);
+        }
+    }
+#endif
     return M;
 }
 
-}
+} // End of namespace PLinOpt
 
 
 // ===============================================================
@@ -259,6 +271,7 @@ int deGrooteAction(const Base& BB, const Field& FF, const size_t bitsize,
         PLinOpt::Tensor(G,iVT,W);
         PLinOpt::Tensor(H,U,iW);
 
+
         DMatrix Lj(FF,L.rowdim(), L.coldim()),
             Rg(FF, R.rowdim(), R.coldim()),
             hP(FF, P.rowdim(), P.coldim());
@@ -272,6 +285,12 @@ int deGrooteAction(const Base& BB, const Field& FF, const size_t bitsize,
 
 #pragma omp critical
         {
+
+            std::clog << "# J: " << PLinOpt::nNonZero(J)
+                      << ", G: " << PLinOpt::nNonZero(G)
+                      << ", H: " << PLinOpt::nNonZero(H)
+                      << std::endl;
+
 #ifdef VERBATIM_PARSING
         U.write(std::clog << "U:=",FileFormat::Maple) << ';' << std::endl;
         V.write(std::clog << "V:=",FileFormat::Maple) << ';' << std::endl;
