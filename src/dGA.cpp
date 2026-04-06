@@ -285,12 +285,6 @@ int deGrooteAction(const Base& BB, const Field& FF, const size_t bitsize,
 
 #pragma omp critical
         {
-
-            std::clog << "# J: " << PLinOpt::nNonZero(J)
-                      << ", G: " << PLinOpt::nNonZero(G)
-                      << ", H: " << PLinOpt::nNonZero(H)
-                      << std::endl;
-
 #ifdef VERBATIM_PARSING
         U.write(std::clog << "U:=",FileFormat::Maple) << ';' << std::endl;
         V.write(std::clog << "V:=",FileFormat::Maple) << ';' << std::endl;
