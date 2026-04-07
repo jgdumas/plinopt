@@ -196,6 +196,7 @@ inline _Mat& zoiRandomMatrix(_Mat& M, const size_t bitsize) {
                 M.setEntry(P[i],Q[j], tmp);
         }
     }
+#endif
     return M;
 }
 
