@@ -180,15 +180,22 @@ inline _Mat& zoiRandomMatrix(_Mat& M, const size_t bitsize) {
     }
 #else
         // Only random triangular
-    for(size_t i=0; i<M.rowdim(); ++i) M.setEntry(i,i,FF.one);
+    std::vector<size_t> P(M.rowdim()),Q(M.coldim());
+    std::iota(P.begin(), P.end(), 0); // Select a random permutation
+    std::iota(Q.begin(), Q.end(), 0); // Select a random permutation
+    std::shuffle(P.begin(), P.end(),
+                 std::default_random_engine(generator()));
+    std::shuffle(Q.begin(), Q.end(),
+                 std::default_random_engine(generator()));
+
+    for(size_t i=0; i<M.rowdim(); ++i) M.setEntry(P[i],Q[i],FF.one);
     Element tmp; FF.init(tmp);
     for(size_t i=0;i<M.rowdim();++i) {
         for(size_t j=i+1;j<M.rowdim();++j) {
             if (! FF.isZero(zoRandomElt(tmp, FF, generator, bitsize)))
-                M.setEntry(i,j, tmp);
+                M.setEntry(P[i],Q[j], tmp);
         }
     }
-#endif
     return M;
 }
 
