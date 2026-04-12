@@ -243,7 +243,7 @@ int deGrooteAction(const Base& BB, const Field& FF, const size_t bitsize,
 #endif
 
     PLinOpt::MMchecker(FF, bitsize, L, R, P);
-    const size_t nnzl(PLinOpt::nNonZero(L)), nnzr(PLinOpt::nNonZero(R)),
+    size_t nnzl(PLinOpt::nNonZero(L)), nnzr(PLinOpt::nNonZero(R)),
         nnzp(PLinOpt::nNonZero(P));
     PLinOpt::Tricounter mkn(PLinOpt::LRP2MM(L,R,P));
     const size_t& m(std::get<0>(mkn)), k(std::get<1>(mkn)), n(std::get<2>(mkn));
@@ -263,7 +263,7 @@ int deGrooteAction(const Base& BB, const Field& FF, const size_t bitsize,
     PLinOpt::sparse2sparse(besthP,P);
     Givaro::Timer chrono; chrono.start();
 
-#pragma omp parallel for shared(L,R,P,m,k,n,bestnnz)
+#pragma omp parallel for shared(L,R,P,m,k,n,bestnnz,nnzl,nnzr,nnzp)
     for(size_t i=0; i<randomloops; ++i) {
         FMatrix U(FF,m,m), V(FF,k,k), W(FF,n,n);
         PLinOpt::zoiRandomMatrix(U, bitsize);
@@ -291,6 +291,10 @@ int deGrooteAction(const Base& BB, const Field& FF, const size_t bitsize,
             nnzhp(PLinOpt::nNonZero(hP));
         const size_t lbnnz(nnzlj+nnzrg+nnzhp);
 
+
+
+
+
 #pragma omp critical
         {
 #ifdef VERBATIM_PARSING
@@ -304,14 +308,28 @@ int deGrooteAction(const Base& BB, const Field& FF, const size_t bitsize,
                   << nnzrg << '+' << nnzhp << std::endl;
 
 #endif
+        bool show(false);
+        if (nnzlj<=nnzl) {
+            show = true;
+            nnzl = nnzlj;
+        }
+        if (nnzrg<=nnzr) {
+            show = true;
+            nnzr = nnzrg;
+        }
+        if (nnzhp<=nnzp) {
+            show = true;
+            nnzp = nnzhp;
+        }
         if (lbnnz<bestnnz) {
-            std::clog << "# Found nnz: " << lbnnz << '=' << nnzlj << '+'
-                      << nnzrg << '+' << nnzhp << '<' << bestnnz << std::endl;
             bestnnz = lbnnz;
             PLinOpt::dense2sparse(bestLj, Lj);
             PLinOpt::dense2sparse(bestRg, Rg);
             PLinOpt::dense2sparse(besthP, hP);
         }
+        if(show)
+            std::clog << "# Found nnz: " << lbnnz << '=' << nnzlj << '+'
+                      << nnzrg << '+' << nnzhp << '|' << bestnnz << std::endl;
         }
     }
 
