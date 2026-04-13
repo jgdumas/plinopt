@@ -12,7 +12,7 @@ OPTFLAGS = -O3 -ffast-math
 # CXXFLAGS += -D DENSITY_OPTIMIZATION	# Non-random optimizer
 # CXXFLAGS += -D KERNEL_FULL_IDENTITY	# Identity goals in kernel method
 # CXXFLAGS += -D ACTION_FULL_PLUQ	# Random PLUQ action
-CXXFLAGS += -D ACTION_HOUSEHOLDER	# Random Householder action
+# CXXFLAGS += -D ACTION_HOUSEHOLDER	# Random Householder action
 #######
 
 RNDFLAGS = -D RANDOM_TIES	# Default randomized search

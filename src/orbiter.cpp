@@ -43,6 +43,7 @@ void usage(const char* prgname, const size_t randomloops) {
               << "  [-r r e s]: check is modulo (r^e-s) or ((r^e-s)/2^k) (default no)\n"
               << "  [-I x]: indeterminate (default is X)\n"
               << "  [-P P(x)]: modular polynomial (default is none)\n"
+              << "  [-s|-z]: search sparser|faster (default is sparser)\n"
               << "  [-O #]: randomized search with that many loops (default "
               << randomloops << " loops)\n";
 
@@ -265,6 +266,7 @@ size_t nbOperations(const _Mat& L, const _Mat& R, const _Mat& P, const size_t rl
 // Reading matrices over Base
 template<typename Base, typename Field>
 int Orbiter(const Base& BB, const Field& FF, const size_t bitsize,
+            const size_t optimization,
             const size_t randomloops,
             const std::vector<std::string>& filenames) {
     typedef LinBox::MatrixStream<Base> BMstream;
@@ -301,20 +303,26 @@ int Orbiter(const Base& BB, const Field& FF, const size_t bitsize,
 #endif
 
     PLinOpt::MMchecker(FF, bitsize, L, R, P);
+
     size_t nnzl(PLinOpt::nNonZero(L)), nnzr(PLinOpt::nNonZero(R)),
         nnzp(PLinOpt::nNonZero(P));
+
     PLinOpt::Tricounter mkn(PLinOpt::LRP2MM(L,R,P));
     const size_t& m(std::get<0>(mkn)), k(std::get<1>(mkn)), n(std::get<2>(mkn));
     const size_t mk(m*k), kn(k*n), mn(m*n);
 
 
-    const size_t initnnz(nnzl+nnzr+nnzp);
-    size_t bestnnz(initnnz);
-    std::clog << "# Init. nnz: " << initnnz << '=' << nnzl << '+'
+    size_t initopt(nnzl+nnzr+nnzp);
+    std::clog << "# Init. nnz: " << initopt << '=' << nnzl << '+'
               << nnzr << '+' << nnzp << std::endl;
-    const auto initops(  PLinOpt::nbOperations(L,R,P,randomloops>>3));
-    size_t bestops(initops);
-    std::clog << "# Init. ops: " << initops << std::endl;
+    size_t bestopt(initopt);
+
+    const size_t subloops( randomloops>16 ? randomloops>>4: 1);
+    if (optimization == 1) {
+        initopt = PLinOpt::nbOperations(L,R,P,subloops);
+        bestopt = initopt;
+        std::clog << "# Init. ops: " << initopt << std::endl;
+    }
 
     FMatrix bestLj(FF,L.rowdim(), L.coldim()),
         bestRg(FF, R.rowdim(), R.coldim()),
@@ -324,7 +332,7 @@ int Orbiter(const Base& BB, const Field& FF, const size_t bitsize,
     PLinOpt::sparse2sparse(besthP,P);
     Givaro::Timer chrono; chrono.start();
 
-#pragma omp parallel for shared(L,R,P,m,k,n,bestnnz,nnzl,nnzr,nnzp)
+#pragma omp parallel for shared(L,R,P,m,k,n,bestopt,optimization,subloops)
     for(size_t i=0; i<randomloops; ++i) {
         FMatrix U(FF,m,m), V(FF,k,k), W(FF,n,n);
         PLinOpt::zoiRandomMatrix(U, bitsize);
@@ -347,12 +355,15 @@ int Orbiter(const Base& BB, const Field& FF, const size_t bitsize,
         BMD.mul(Lj, L, J);
         BMD.mul(Rg, R, G);
         BMD.mul(hP, H, P);
+
         const size_t nnzlj(PLinOpt::nNonZero(Lj)), nnzrg(PLinOpt::nNonZero(Rg)),
             nnzhp(PLinOpt::nNonZero(hP));
-        const size_t lbnnz(nnzlj+nnzrg+nnzhp);
 
-        auto nbops(  PLinOpt::nbOperations(Lj,Rg,hP,randomloops>>3));
+        size_t lbopt(nnzlj+nnzrg+nnzhp);
 
+        if (optimization == 1) {
+            lbopt = PLinOpt::nbOperations(Lj,Rg,hP,subloops);
+        }
 
 #pragma omp critical
         {
@@ -367,37 +378,14 @@ int Orbiter(const Base& BB, const Field& FF, const size_t bitsize,
                   << nnzrg << '+' << nnzhp << std::endl;
 
 #endif
-        char show(0);
-        if (nnzlj<nnzl) {
-            show = 'l';
-            nnzl = nnzlj;
-        }
-        if (nnzrg<nnzr) {
-            show = 'r';
-            nnzr = nnzrg;
-        }
-        if (nnzhp<nnzp) {
-            show = 'p';
-            nnzp = nnzhp;
-        }
-        if (lbnnz<bestnnz) {
-            show = '<';
-            bestnnz = lbnnz;
-//             PLinOpt::dense2sparse(bestLj, Lj);
-//             PLinOpt::dense2sparse(bestRg, Rg);
-//             PLinOpt::dense2sparse(besthP, hP);
-        }
-        if (nbops<bestops) {
-            show = 'o';
-            bestops = nbops;
+        if (lbopt<bestopt) {
+            std::clog << "# Found opt: " << lbopt << '<' << bestopt << std::endl;
+            bestopt = lbopt;
             PLinOpt::dense2sparse(bestLj, Lj);
             PLinOpt::dense2sparse(bestRg, Rg);
             PLinOpt::dense2sparse(besthP, hP);
         }
-        if(show>0)
-            std::clog << "# Found nnz: " << lbnnz << '=' << nnzlj << '+'
-                      << nnzrg << '+' << nnzhp << show << bestnnz
-                      << ", ops: " << nbops << '<' << initops << std::endl;
+
         }
     }
 
@@ -405,12 +393,9 @@ int Orbiter(const Base& BB, const Field& FF, const size_t bitsize,
 
     std::clog << "# Search(" << randomloops <<"): " << chrono << std::endl;
 
-//     if (bestnnz<initnnz) {
-    if (bestops<initops) {
-        std::clog << "# \033[1;36mInfo. nnz: " << bestnnz <<
-            '|' << initnnz << "\033[0m" << std::endl;
-        std::clog << "# \033[1;36mRdcd. ops: " << bestops <<
-            '<' << initops << "\033[0m" << std::endl;
+    if (bestopt<initopt) {
+        std::clog << "# \033[1;36mRdcd. opt: " << bestopt <<
+            '<' << initopt << "\033[0m" << std::endl;
 
             // =============================================
             // Writing matrices
@@ -451,6 +436,8 @@ int main(int argc, char ** argv) {
     QPol::Element QP;
     std::vector<std::string> filenames;
 
+    size_t optimization(0); // 0 for sparsity, 1 for nbops
+
         // Parse arguments
 
     for(int i=1; i<argc; ++i) {
@@ -472,8 +459,14 @@ int main(int argc, char ** argv) {
                 std::stringstream sargs( argv[++i] );
                 QQX.read(sargs, QP);
             }
-            else if (args == "-O") {
+            else if (args[1] == 'O') {
                 randomloops = atoi(argv[++i]);
+            }
+            else if (args[1] == 's') {
+                optimization = 0;
+            }
+            else if (args[1] == 'z') {
+                optimization = 1;
             }
         } else { filenames.push_back(args); }
     }
@@ -495,5 +488,5 @@ int main(int argc, char ** argv) {
 //         return Orbiter(QQX, QQXm, bitsize, randomloops, filenames);
 //     } else
 		// Compute rational verification of rational matrices
-        return Orbiter(QQ, QQ, bitsize, randomloops, filenames);
+        return Orbiter(QQ, QQ, bitsize, optimization, randomloops, filenames);
 }
