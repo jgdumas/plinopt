@@ -32,6 +32,7 @@
 #include "plinopt_library.h"
 #include "plinopt_polynomial.h"
 #include "plinopt_sparsify.h"
+#include "plinopt_optimize.h"
 
 // ===============================================================
 void usage(const char* prgname, const size_t randomloops) {
@@ -232,6 +233,31 @@ inline _Mat& zoiRandomMatrix(_Mat& M, const size_t bitsize) {
     return M;
 }
 
+
+template<typename _Mat>
+size_t nbOperations(const _Mat& M, const size_t rl) {
+    auto nbops(PLinOpt::naiveOps(M));
+    std::ostringstream sout;
+    Givaro::Timer global;
+    _Mat T(M.field(),M.coldim(),M.rowdim()); Transpose(T,M);
+    PLinOpt::CSEOptimiser(nbops, sout, M.field(), M, T, global, rl);
+    return nbops.first+nbops.second;
+}
+
+template<typename Field>
+size_t nbOperations(const LinBox::DenseMatrix<Field>& A, const size_t rl) {
+    LinBox::SparseMatrix<Field> M(A.field(),A.rowdim(),A.coldim()); dense2sparse(M,A);
+    return nbOperations(M, rl);
+}
+
+
+template<typename _Mat>
+size_t nbOperations(const _Mat& L, const _Mat& R, const _Mat& P, const size_t rl) {
+    auto nbL(nbOperations(L,rl)), nbR(nbOperations(R,rl)), nbP(nbOperations(P,rl));
+    return nbL+nbR+nbP;
+}
+
+
 } // End of namespace PLinOpt
 
 
@@ -282,10 +308,13 @@ int Orbiter(const Base& BB, const Field& FF, const size_t bitsize,
     const size_t mk(m*k), kn(k*n), mn(m*n);
 
 
-    size_t bestnnz(nnzl+nnzr+nnzp);
-    const size_t initnnz(bestnnz);
-    std::clog << "# Init. nnz: " << bestnnz << '=' << nnzl << '+'
+    const size_t initnnz(nnzl+nnzr+nnzp);
+    size_t bestnnz(initnnz);
+    std::clog << "# Init. nnz: " << initnnz << '=' << nnzl << '+'
               << nnzr << '+' << nnzp << std::endl;
+    const auto initops(  PLinOpt::nbOperations(L,R,P,randomloops>>3));
+    size_t bestops(initops);
+    std::clog << "# Init. ops: " << initops << std::endl;
 
     FMatrix bestLj(FF,L.rowdim(), L.coldim()),
         bestRg(FF, R.rowdim(), R.coldim()),
@@ -322,8 +351,7 @@ int Orbiter(const Base& BB, const Field& FF, const size_t bitsize,
             nnzhp(PLinOpt::nNonZero(hP));
         const size_t lbnnz(nnzlj+nnzrg+nnzhp);
 
-
-
+        auto nbops(  PLinOpt::nbOperations(Lj,Rg,hP,randomloops>>3));
 
 
 #pragma omp critical
@@ -355,13 +383,21 @@ int Orbiter(const Base& BB, const Field& FF, const size_t bitsize,
         if (lbnnz<bestnnz) {
             show = '<';
             bestnnz = lbnnz;
+//             PLinOpt::dense2sparse(bestLj, Lj);
+//             PLinOpt::dense2sparse(bestRg, Rg);
+//             PLinOpt::dense2sparse(besthP, hP);
+        }
+        if (nbops<bestops) {
+            show = 'o';
+            bestops = nbops;
             PLinOpt::dense2sparse(bestLj, Lj);
             PLinOpt::dense2sparse(bestRg, Rg);
             PLinOpt::dense2sparse(besthP, hP);
         }
         if(show>0)
             std::clog << "# Found nnz: " << lbnnz << '=' << nnzlj << '+'
-                      << nnzrg << '+' << nnzhp << show << bestnnz << std::endl;
+                      << nnzrg << '+' << nnzhp << show << bestnnz
+                      << ", ops: " << nbops << '<' << initops << std::endl;
         }
     }
 
@@ -369,9 +405,12 @@ int Orbiter(const Base& BB, const Field& FF, const size_t bitsize,
 
     std::clog << "# Search(" << randomloops <<"): " << chrono << std::endl;
 
-    if (bestnnz<initnnz) {
-        std::clog << "# \033[1;36mRdcd. nnz: " << bestnnz <<
-            '<' << initnnz << "\033[0m" << std::endl;
+//     if (bestnnz<initnnz) {
+    if (bestops<initops) {
+        std::clog << "# \033[1;36mInfo. nnz: " << bestnnz <<
+            '|' << initnnz << "\033[0m" << std::endl;
+        std::clog << "# \033[1;36mRdcd. ops: " << bestops <<
+            '<' << initops << "\033[0m" << std::endl;
 
             // =============================================
             // Writing matrices
@@ -443,18 +482,18 @@ int main(int argc, char ** argv) {
 
         // Select verification
 
-    if (modulus>0) {
-		// Remove powers of 2 for better probabilities
-        while( (modulus % 2) == 0 ) { modulus >>=1; };
-        if (modulus == 1) modulus = 2;
-		// Compute modular verification of rational matrices
-        Givaro::Modular<Givaro::Integer> F(modulus);
-        return Orbiter(QQ, F, bitsize, randomloops, filenames);
-    } else if (QP.size()>0) {
-            // Compute modular verification of polynomial matrices
-        QQuo QQXm(QQX, QP);
-        return Orbiter(QQX, QQXm, bitsize, randomloops, filenames);
-    } else
+//     if (modulus>0) {
+//		// Remove powers of 2 for better probabilities
+//         while( (modulus % 2) == 0 ) { modulus >>=1; };
+//         if (modulus == 1) modulus = 2;
+//		// Compute modular verification of rational matrices
+//         Givaro::Modular<Givaro::Integer> F(modulus);
+//         return Orbiter(QQ, F, bitsize, randomloops, filenames);
+//     } else if (QP.size()>0) {
+//             // Compute modular verification of polynomial matrices
+//         QQuo QQXm(QQX, QP);
+//         return Orbiter(QQX, QQXm, bitsize, randomloops, filenames);
+//     } else
 		// Compute rational verification of rational matrices
         return Orbiter(QQ, QQ, bitsize, randomloops, filenames);
 }
