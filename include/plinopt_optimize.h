@@ -29,8 +29,8 @@
 
 // ============================================================
 // Kernel method:
-//   deactivate inclusion of identity to kernel goals
-//#define KERNEL_FREEONLY
+//   activate inclusion of identity to kernel goals
+//#define KERNEL_FULL_IDENTiTY
 // ============================================================
 
 

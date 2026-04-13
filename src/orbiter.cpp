@@ -153,7 +153,7 @@ inline _Mat& zoiRandomMatrix(_Mat& M, const size_t bitsize) {
     using Field = typename _Mat::Field;
     using Element=typename Field::Element;
     typedef LinBox::DenseVector<Field> FVector;
-#ifdef ACTION_FULL_PLUQ
+#if defined(ACTION_FULL_PLUQ)
     _Mat L(FF,M.rowdim(),M.coldim());
     for(size_t i=0; i<L.rowdim(); ++i) L.setEntry(i,i,FF.one);
     Element tmp; FF.init(tmp);
@@ -177,7 +177,39 @@ inline _Mat& zoiRandomMatrix(_Mat& M, const size_t bitsize) {
         for(size_t j=Q[i]+1;j<U.size(); ++j) FF.assign(U[j], FF.zero);
         L.apply(Row,U);
         setRow(M, P[i], Row);
+    }M
+#elif defined(ACTION_HOUSEHOLDER)
+    std::vector<Element> u(M.rowdim());
+    Element denom; FF.init(denom); FF.assign(denom,FF.zero);
+    do {
+        for(size_t i=0; i<M.rowdim(); ++i) {
+            zoRandomElt(u[i], FF, generator, bitsize);
+            FF.axpyin(denom,u[i],u[i]);
+       }
+    } while(FF.isZero(denom));
+
+//     std::clog << "u:=";
+//     for(const auto& it: u) std::clog << it << ' ';
+//     std::clog << ';' << std::endl;
+
+    Element tmp; FF.init(tmp);
+
+    FF.invin(denom);
+    FF.add(tmp,denom,denom);
+    FF.neg(denom,tmp); // -2/u^Tu
+
+    for(size_t i=0; i<M.rowdim(); ++i) {
+        for(size_t j=0; j<M.coldim(); ++j) {
+            FF.mul(tmp,u[i],u[j]);
+            FF.mulin(tmp,denom);
+            if (i==j) FF.addin(tmp,FF.one);
+            if (!FF.isZero(tmp))  M.setEntry(i,j, tmp);
+        }
     }
+
+//     M.write(std::clog<<"M:=",FileFormat::Maple) << ';' << std::endl;
+//     size_t r; std::clog << "# rank(M):" << rank(r, M) << std::endl;
+
 #else
         // Only random triangular
     std::vector<size_t> P(M.rowdim()),Q(M.coldim());
@@ -206,9 +238,9 @@ inline _Mat& zoiRandomMatrix(_Mat& M, const size_t bitsize) {
 // ===============================================================
 // Reading matrices over Base
 template<typename Base, typename Field>
-int deGrooteAction(const Base& BB, const Field& FF, const size_t bitsize,
-                   const size_t randomloops,
-                   const std::vector<std::string>& filenames) {
+int Orbiter(const Base& BB, const Field& FF, const size_t bitsize,
+            const size_t randomloops,
+            const std::vector<std::string>& filenames) {
     typedef LinBox::MatrixStream<Base> BMstream;
     typedef LinBox::SparseMatrix<Base,
         LinBox::SparseMatrixFormat::SparseSeq > BMatrix;
@@ -279,7 +311,6 @@ int deGrooteAction(const Base& BB, const Field& FF, const size_t bitsize,
         PLinOpt::Tensor(G,iVT,W);
         PLinOpt::Tensor(H,U,iW);
 
-
         DMatrix Lj(FF,L.rowdim(), L.coldim()),
             Rg(FF, R.rowdim(), R.coldim()),
             hP(FF, P.rowdim(), P.coldim());
@@ -308,28 +339,29 @@ int deGrooteAction(const Base& BB, const Field& FF, const size_t bitsize,
                   << nnzrg << '+' << nnzhp << std::endl;
 
 #endif
-        bool show(false);
-        if (nnzlj<=nnzl) {
-            show = true;
+        char show(0);
+        if (nnzlj<nnzl) {
+            show = 'l';
             nnzl = nnzlj;
         }
-        if (nnzrg<=nnzr) {
-            show = true;
+        if (nnzrg<nnzr) {
+            show = 'r';
             nnzr = nnzrg;
         }
-        if (nnzhp<=nnzp) {
-            show = true;
+        if (nnzhp<nnzp) {
+            show = 'p';
             nnzp = nnzhp;
         }
         if (lbnnz<bestnnz) {
+            show = '<';
             bestnnz = lbnnz;
             PLinOpt::dense2sparse(bestLj, Lj);
             PLinOpt::dense2sparse(bestRg, Rg);
             PLinOpt::dense2sparse(besthP, hP);
         }
-        if(show)
+        if(show>0)
             std::clog << "# Found nnz: " << lbnnz << '=' << nnzlj << '+'
-                      << nnzrg << '+' << nnzhp << '|' << bestnnz << std::endl;
+                      << nnzrg << '+' << nnzhp << show << bestnnz << std::endl;
         }
     }
 
@@ -412,18 +444,17 @@ int main(int argc, char ** argv) {
         // Select verification
 
     if (modulus>0) {
-            // Remove powers of 2 for better probabilities
+		// Remove powers of 2 for better probabilities
         while( (modulus % 2) == 0 ) { modulus >>=1; };
         if (modulus == 1) modulus = 2;
-            // Compute modular verification of rational matrices
+		// Compute modular verification of rational matrices
         Givaro::Modular<Givaro::Integer> F(modulus);
-        return deGrooteAction(QQ, F, bitsize, randomloops, filenames);
-    }
-    else if (QP.size()>0) {
+        return Orbiter(QQ, F, bitsize, randomloops, filenames);
+    } else if (QP.size()>0) {
             // Compute modular verification of polynomial matrices
         QQuo QQXm(QQX, QP);
-        return deGrooteAction(QQX, QQXm, bitsize, randomloops, filenames);
+        return Orbiter(QQX, QQXm, bitsize, randomloops, filenames);
     } else
-            // Compute rational verification of rational matrices
-        return deGrooteAction(QQ, QQ, bitsize, randomloops, filenames);
+		// Compute rational verification of rational matrices
+        return Orbiter(QQ, QQ, bitsize, randomloops, filenames);
 }

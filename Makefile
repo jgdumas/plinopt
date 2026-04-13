@@ -5,13 +5,14 @@
 
 OPTFLAGS = -O3 -ffast-math
 
-# OPTFLAGS += -D INPLACE_CHECKER	# adds Maple checks (needed by ./bin/TTP.sh)
-# OPTFLAGS += -D VERBATIM_PARSING=1	# Verbose output
-# OPTFLAGS += -D DEFAULT_RANDOM_LOOPS=30u	# Default # of loops
-# OPTFLAGS += -D COEFFICIENT_SEARCH=20u		# Default # sparsifier coeffs
-# OPTFLAGS += -D DENSITY_OPTIMIZATION	# Non-random optimizer
-# OPTFLAGS += -D KERNEL_FREEONLY	# No identity goals in kernel method
-# OPTFLAGS += -D ACTION_FULL_PLUQ	# Random PLUQ action
+# CXXFLAGS += -D INPLACE_CHECKER	# Maple checks (needed by ./bin/TTP.sh)
+# CXXFLAGS += -D VERBATIM_PARSING=1	# Verbose output
+# CXXFLAGS += -D DEFAULT_RANDOM_LOOPS=30u	# Default # of loops
+# CXXFLAGS += -D COEFFICIENT_SEARCH=20u		# Default # sparsifier coeffs
+# CXXFLAGS += -D DENSITY_OPTIMIZATION	# Non-random optimizer
+# CXXFLAGS += -D KERNEL_FULL_IDENTITY	# Identity goals in kernel method
+# CXXFLAGS += -D ACTION_FULL_PLUQ	# Random PLUQ action
+CXXFLAGS += -D ACTION_HOUSEHOLDER	# Random Householder action
 #######
 
 RNDFLAGS = -D RANDOM_TIES	# Default randomized search
@@ -27,7 +28,7 @@ EXE += sparsifier factorizer
 EXE += inplacer trilplacer
 EXE += transpozer compacter SLPchecker
 EXE += sms2pretty MMchecker PMchecker
-EXE += matrix-transpose columns-swap negater dGA
+EXE += matrix-transpose columns-swap negater orbiter
 
 SRC=${EXE:%=src/%.cpp}
 
