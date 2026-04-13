@@ -184,12 +184,12 @@ Pair<size_t>& AllKernelOpt(Pair<size_t>& nbops, std::ostringstream& sout,
 // ============================================================
 // Optimizing a linear program (Direct CSE or Kernel methods)
 template<typename Field>
-Pair<size_t>& DKOptimiser(Pair<size_t>& nbops, std::ostringstream& ssout,
-                          const Field& F, const Matrix& M, const Matrix& T,
-                          Givaro::Timer& global, const size_t randomloops,
-                          const bool printMaple, const bool printPretty,
-                          const bool tryDirect, const bool tryKernel,
-                          const bool mostCSE, const bool allkernels);
+Pair<size_t>& OptMethods(Pair<size_t>& nbops, std::ostringstream& ssout,
+                         const Field& F, const Matrix& M, const Matrix& T,
+                         Givaro::Timer& global, const size_t randomloops,
+                         const bool printMaple, const bool printPretty,
+                         const bool tryDirect, const bool tryKernel,
+                         const bool mostCSE, const bool allkernels);
 
 } // End of namespace PLinOpt
 // ============================================
