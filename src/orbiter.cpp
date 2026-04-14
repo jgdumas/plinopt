@@ -138,12 +138,40 @@ inline _Mat& zoiRandomMatrix(_Mat& M) {
 }
 
 
+} // End of namespace PLinOpt
+
+
+
+template<int Measure>
+struct Operations {
+    template<typename _Mat>
+    size_t operator()(const _Mat& L, const _Mat& R, const _Mat& P,
+                      const size_t subloops=0) {
+        const size_t nnzl(PLinOpt::density(L)), nnzr(PLinOpt::density(R)),
+            nnzp(PLinOpt::density(P));
+//         std::clog << "# Init. nnz: " << nnzl << '+' << nnzr << '+'
+//                   << nnzp << std::endl;
+        return (nnzl+nnzr+nnzp);
+    }
+};
+
+
+
+template<>
+struct Operations<1> {
+    template<typename _Mat>
+    size_t operator()(const _Mat& L, const _Mat& R, const _Mat& P,
+                      const size_t subloops) {
+        return nbOperations(L,R,P,subloops);
+    }
+
+    protected:
 template<typename _Mat>
 size_t nbOperations(const _Mat& M, const size_t rl) {
     auto nbops(PLinOpt::naiveOps(M));
     std::ostringstream sout;
     Givaro::Timer global;
-    _Mat T(M.field(),M.coldim(),M.rowdim()); Transpose(T,M);
+    _Mat T(M.field(),M.coldim(),M.rowdim()); PLinOpt::Transpose(T,M);
     PLinOpt::CSEOptimiser(nbops, sout, M.field(), M, T, global, rl);
     return nbops.first+nbops.second;
 }
@@ -151,7 +179,7 @@ size_t nbOperations(const _Mat& M, const size_t rl) {
 template<typename Field>
 size_t nbOperations(const LinBox::DenseMatrix<Field>& A, const size_t rl) {
     LinBox::SparseMatrix<Field> M(A.field(),A.rowdim(),A.coldim());
-    dense2sparse(M,A);
+    PLinOpt::dense2sparse(M,A);
     return nbOperations(M, rl);
 }
 
@@ -165,17 +193,17 @@ size_t nbOperations(const _Mat& L, const _Mat& R, const _Mat& P,
     return nbL+nbR+nbP;
 }
 
+};
 
-} // End of namespace PLinOpt
 
 
 // ===============================================================
 // Reading matrices over Base
-template<typename Base, typename Field>
-int Orbiter(const Base& BB, const Field& FF, const size_t bitsize,
-            const size_t optimization,
-            const size_t randomloops,
-            const std::vector<std::string>& filenames) {
+template<int Measure> struct Orbiter {
+    template<typename Base, typename Field>
+    int operator()(const Base& BB, const Field& FF, const size_t bitsize,
+                   const size_t randomloops,
+                   const std::vector<std::string>& filenames) {
     typedef LinBox::MatrixStream<Base> BMstream;
     typedef LinBox::SparseMatrix<Base,
         LinBox::SparseMatrixFormat::SparseSeq > BMatrix;
@@ -211,25 +239,14 @@ int Orbiter(const Base& BB, const Field& FF, const size_t bitsize,
 
     PLinOpt::MMchecker(FF, bitsize, L, R, P);
 
-    size_t nnzl(PLinOpt::density(L)), nnzr(PLinOpt::density(R)),
-        nnzp(PLinOpt::density(P));
-
     PLinOpt::Tricounter mkn(PLinOpt::LRP2MM(L,R,P));
     const size_t& m(std::get<0>(mkn)), k(std::get<1>(mkn)), n(std::get<2>(mkn));
     const size_t mk(m*k), kn(k*n), mn(m*n);
 
-
-    size_t initopt(nnzl+nnzr+nnzp);
-    std::clog << "# Init. nnz: " << initopt << '=' << nnzl << '+'
-              << nnzr << '+' << nnzp << std::endl;
-    size_t bestopt(initopt);
-
     const size_t subloops( randomloops>16 ? randomloops>>4: 1);
-    if (optimization == 1) {
-        initopt = PLinOpt::nbOperations(L,R,P,subloops);
-        bestopt = initopt;
-        std::clog << "# Init. ops: " << initopt << std::endl;
-    }
+    const size_t initopt = Operations<Measure>()(L,R,P,subloops);
+    size_t bestopt(initopt);
+    std::clog << "# Init. ops: " << initopt << std::endl;
 
     FMatrix bestLj(FF,L.rowdim(), L.coldim()),
         bestRg(FF, R.rowdim(), R.coldim()),
@@ -239,7 +256,7 @@ int Orbiter(const Base& BB, const Field& FF, const size_t bitsize,
     PLinOpt::sparse2sparse(besthP,P);
     Givaro::Timer chrono; chrono.start();
 
-#pragma omp parallel for shared(L,R,P,m,k,n,bestopt,optimization,subloops)
+#pragma omp parallel for shared(L,R,P,m,k,n,bestopt,subloops)
     for(size_t i=0; i<randomloops; ++i) {
         FMatrix U(FF,m,m), V(FF,k,k), W(FF,n,n);
         PLinOpt::zoiRandomMatrix(U);
@@ -263,14 +280,7 @@ int Orbiter(const Base& BB, const Field& FF, const size_t bitsize,
         BMD.mul(Rg, R, G);
         BMD.mul(hP, H, P);
 
-        const size_t nnzlj(PLinOpt::density(Lj)), nnzrg(PLinOpt::density(Rg)),
-            nnzhp(PLinOpt::density(hP));
-
-        size_t lbopt(nnzlj+nnzrg+nnzhp);
-
-        if (optimization == 1) {
-            lbopt = PLinOpt::nbOperations(Lj,Rg,hP,subloops);
-        }
+        const size_t lbopt = Operations<Measure>()(Lj,Rg,hP,subloops);
 
 #pragma omp critical
         {
@@ -327,7 +337,9 @@ int Orbiter(const Base& BB, const Field& FF, const size_t bitsize,
     }
 
     return 0;
-}
+    }
+};
+
 
 
 // ===============================================================
@@ -343,7 +355,7 @@ int main(int argc, char ** argv) {
     QPol::Element QP;
     std::vector<std::string> filenames;
 
-    size_t optimization(0); // 0 for sparsity, 1 for nbops
+    size_t optim(0); // 0 for sparsity, 1 for nbops
 
         // Parse arguments
 
@@ -370,10 +382,10 @@ int main(int argc, char ** argv) {
                 randomloops = atoi(argv[++i]);
             }
             else if (args[1] == 's') {
-                optimization = 0;
+                optim = 0;
             }
             else if (args[1] == 'z') {
-                optimization = 1;
+                optim = 1;
             }
         } else { filenames.push_back(args); }
     }
@@ -382,18 +394,23 @@ int main(int argc, char ** argv) {
 
         // Select verification
 
-//     if (modulus>0) {
+    if (modulus>0) {
 //		// Remove powers of 2 for better probabilities
-//         while( (modulus % 2) == 0 ) { modulus >>=1; };
-//         if (modulus == 1) modulus = 2;
+        while( (modulus % 2) == 0 ) { modulus >>=1; };
+        if (modulus == 1) modulus = 2;
 //		// Compute modular verification of rational matrices
-//         Givaro::Modular<Givaro::Integer> F(modulus);
-//         return Orbiter(QQ, F, bitsize, randomloops, filenames);
-//     } else if (QP.size()>0) {
-//             // Compute modular verification of polynomial matrices
-//         QQuo QQXm(QQX, QP);
-//         return Orbiter(QQX, QQXm, bitsize, randomloops, filenames);
-//     } else
+        Givaro::Modular<Givaro::Integer> F(modulus);
+        return Orbiter<0>()(QQ, F, bitsize, randomloops, filenames);
+    } else if (QP.size()>0) {
+            // Compute modular verification of polynomial matrices
+        QQuo QQXm(QQX, QP);
+        return Orbiter<0>()(QQX, QQXm, bitsize, randomloops, filenames);
+    } else {
 		// Compute rational verification of rational matrices
-        return Orbiter(QQ, QQ, bitsize, optimization, randomloops, filenames);
+        if (optim == 1) {
+            return Orbiter<1>()(QQ, QQ, bitsize, randomloops, filenames);
+        } else {
+            return Orbiter<0>()(QQ, QQ, bitsize, randomloops, filenames);
+        }
+    }
 }
