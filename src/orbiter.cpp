@@ -29,8 +29,8 @@
 #include <filesystem>
 #include <givaro/modular.h>
 #include <givaro/givquotientdomain.h>
-#include "plinopt_library.h"
 #include "plinopt_polynomial.h"
+#include "plinopt_library.h"
 #include "plinopt_sparsify.h"
 #include "plinopt_optimize.h"
 
@@ -50,105 +50,14 @@ void usage(const char* prgname, const size_t randomloops) {
 
     exit(-1);
 }
-
-template<typename Domain>
-typename Domain::Element& zoRandomElt(typename Domain::Element& e,
-                                      const Domain& D,
-                                      Givaro::GivRandom& generator,
-                                      const size_t bitsize) {
-    D.init(e, (generator() % 3));
-    return D.subin(e, D.one);
-}
 // ===============================================================
 
 
 namespace PLinOpt {
 
-// ===============================================================
-// Generic verification, within Field, of matrices over Base
-template<typename _Matrix>
-_Matrix& Tensor(_Matrix& T, const _Matrix& A, const _Matrix& B) {
-    T.resize(A.rowdim()*B.rowdim(), A.coldim()*B.coldim());
-    using Element=typename _Matrix::Element;
-    Element tmp; A.field().init(tmp);
-    for(auto itA = A.IndexedBegin(); itA != A.IndexedEnd(); ++itA) {
-    for(auto itB = B.IndexedBegin(); itB != B.IndexedEnd(); ++itB) {
-        T.setEntry(itA.rowIndex()*B.rowdim()+itB.rowIndex(),
-                   itA.colIndex()*B.coldim()+itB.colIndex(),
-                   A.field().mul(tmp,itA.value(),itB.value()));
-    }
-    }
-    return T;
-}
-
-template<typename _Matrix>
-size_t nNonZero(const _Matrix& A) {
-    size_t nnz(0);
-    for(auto row=A.rowBegin(); row != A.rowEnd(); ++row) {
-        nnz += row->size(); // # of non-zero elements
-    }
-    return nnz;
-}
-
-template<typename Field>
-size_t nNonZero(const LinBox::DenseMatrix<Field>& A) {
-    size_t nnz(0);
-    for(auto itA = A.IndexedBegin(); itA != A.IndexedEnd(); ++itA) {
-        if (! A.field().isZero(itA.value())) ++nnz;
-    }
-    return nnz;
-
-}
-
-	// Update col j of A, by v
-template<typename _Mat, typename _Vector>
-inline _Mat& updCol(_Mat& A, size_t j, const _Vector& v) {
-    using Field = typename _Mat::Field;
-    const Field& F(A.field());
-    for(size_t i=0; i<v.size(); ++i)
-        if (! F.isZero(v[i])) A.setEntry(i,j,v[i]);
-    return A;
-}
-
-	// Computes the inverse of A
-template<typename _Mat1, typename _Mat2>
-inline _Mat1& inverse(_Mat1& T, const _Mat2& A) {
-    assert(A.rowdim() == A.coldim());
-    const size_t n(A.rowdim());
-
-    using Field = typename _Mat1::Field;
-    using FVector = LinBox::DenseVector<Field>;
-    const Field& FF(A.field());
-
-    LinBox::GaussDomain<Field> GD(FF);
-
-    T.resize(n,n);
-    _Mat1 U(FF); matrixCopy(U, A);
-
-    typename Field::Element Det;
-    size_t Rank;
-    _Mat1 L(FF, n, n);
-    LinBox::Permutation<Field> Q(FF,n);
-    LinBox::Permutation<Field> P(FF,n);
-
-    GD.QLUPin(Rank, Det, Q, L, U, P, n, n );
-
-    FVector x(FF,n), w(FF,n), Iv(FF, n);
-    for(size_t j=0; j<Iv.size(); ++j) FF.assign(Iv[j],FF.zero);
-
-    for(size_t j=0; j<n; ++j) {
-        FF.assign(Iv[j],FF.one);
-        GD.solve(x, w, Rank, Q, L, U, P, Iv);
-        FF.assign(Iv[j],FF.zero);
-        updCol(T, j, x);
-    }
-
-    return T;
-}
-
 // Random {-1,0,1}, det=1, matrices
 template<typename _Mat>
-inline _Mat& zoiRandomMatrix(_Mat& M, const size_t bitsize) {
+inline _Mat& zoiRandomMatrix(_Mat& M) {
     static thread_local Givaro::GivRandom
         generator(Givaro::BaseTimer::seed());
     const auto& FF(M.field());
@@ -161,7 +70,7 @@ inline _Mat& zoiRandomMatrix(_Mat& M, const size_t bitsize) {
     Element tmp; FF.init(tmp);
     for(size_t i=0;i<L.rowdim();++i) {
         for(size_t j=0;j<i;++j) {
-            if (! FF.isZero(zoRandomElt(tmp, FF, generator, bitsize)))
+            if (! FF.isZero(zoRandomElt(tmp, FF, generator)))
                 L.setEntry(i,j, tmp);
         }
     }
@@ -175,17 +84,17 @@ inline _Mat& zoiRandomMatrix(_Mat& M, const size_t bitsize) {
                  std::default_random_engine(generator()));
     for(size_t i=0;i<L.rowdim();++i) {
         FF.assign(U[Q[i]],FF.one);
-        for(size_t j=0;j<Q[i];++j) zoRandomElt(U[j], FF, generator, bitsize);
+        for(size_t j=0;j<Q[i];++j) zoRandomElt(U[j], FF, generator);
         for(size_t j=Q[i]+1;j<U.size(); ++j) FF.assign(U[j], FF.zero);
         L.apply(Row,U);
         setRow(M, P[i], Row);
-    }M
+    }
 #elif defined(ACTION_HOUSEHOLDER)
     std::vector<Element> u(M.rowdim());
     Element denom; FF.init(denom); FF.assign(denom,FF.zero);
     do {
         for(size_t i=0; i<M.rowdim(); ++i) {
-            zoRandomElt(u[i], FF, generator, bitsize);
+            zoRandomElt(u[i], FF, generator);
             FF.axpyin(denom,u[i],u[i]);
        }
     } while(FF.isZero(denom));
@@ -226,7 +135,7 @@ inline _Mat& zoiRandomMatrix(_Mat& M, const size_t bitsize) {
     Element tmp; FF.init(tmp);
     for(size_t i=0;i<M.rowdim();++i) {
         for(size_t j=i+1;j<M.rowdim();++j) {
-            if (! FF.isZero(zoRandomElt(tmp, FF, generator, bitsize)))
+            if (! FF.isZero(zoRandomElt(tmp, FF, generator)))
                 M.setEntry(P[i],Q[j], tmp);
         }
     }
@@ -247,14 +156,18 @@ size_t nbOperations(const _Mat& M, const size_t rl) {
 
 template<typename Field>
 size_t nbOperations(const LinBox::DenseMatrix<Field>& A, const size_t rl) {
-    LinBox::SparseMatrix<Field> M(A.field(),A.rowdim(),A.coldim()); dense2sparse(M,A);
+    LinBox::SparseMatrix<Field> M(A.field(),A.rowdim(),A.coldim());
+    dense2sparse(M,A);
     return nbOperations(M, rl);
 }
 
 
 template<typename _Mat>
-size_t nbOperations(const _Mat& L, const _Mat& R, const _Mat& P, const size_t rl) {
-    auto nbL(nbOperations(L,rl)), nbR(nbOperations(R,rl)), nbP(nbOperations(P,rl));
+size_t nbOperations(const _Mat& L, const _Mat& R, const _Mat& P,
+                    const size_t rl) {
+    auto nbL(nbOperations(L,rl)),
+        nbR(nbOperations(R,rl)),
+        nbP(nbOperations(P,rl));
     return nbL+nbR+nbP;
 }
 
@@ -304,8 +217,8 @@ int Orbiter(const Base& BB, const Field& FF, const size_t bitsize,
 
     PLinOpt::MMchecker(FF, bitsize, L, R, P);
 
-    size_t nnzl(PLinOpt::nNonZero(L)), nnzr(PLinOpt::nNonZero(R)),
-        nnzp(PLinOpt::nNonZero(P));
+    size_t nnzl(PLinOpt::density(L)), nnzr(PLinOpt::density(R)),
+        nnzp(PLinOpt::density(P));
 
     PLinOpt::Tricounter mkn(PLinOpt::LRP2MM(L,R,P));
     const size_t& m(std::get<0>(mkn)), k(std::get<1>(mkn)), n(std::get<2>(mkn));
@@ -335,9 +248,9 @@ int Orbiter(const Base& BB, const Field& FF, const size_t bitsize,
 #pragma omp parallel for shared(L,R,P,m,k,n,bestopt,optimization,subloops)
     for(size_t i=0; i<randomloops; ++i) {
         FMatrix U(FF,m,m), V(FF,k,k), W(FF,n,n);
-        PLinOpt::zoiRandomMatrix(U, bitsize);
-        PLinOpt::zoiRandomMatrix(V, bitsize);
-        PLinOpt::zoiRandomMatrix(W, bitsize);
+        PLinOpt::zoiRandomMatrix(U);
+        PLinOpt::zoiRandomMatrix(V);
+        PLinOpt::zoiRandomMatrix(W);
 
         FMatrix J(FF,mk,mk), G(FF,kn,kn), H(FF,mn,mn);
         FMatrix iVT(FF,k,k); PLinOpt::inverseTranspose(iVT, V);
@@ -356,8 +269,8 @@ int Orbiter(const Base& BB, const Field& FF, const size_t bitsize,
         BMD.mul(Rg, R, G);
         BMD.mul(hP, H, P);
 
-        const size_t nnzlj(PLinOpt::nNonZero(Lj)), nnzrg(PLinOpt::nNonZero(Rg)),
-            nnzhp(PLinOpt::nNonZero(hP));
+        const size_t nnzlj(PLinOpt::density(Lj)), nnzrg(PLinOpt::density(Rg)),
+            nnzhp(PLinOpt::density(hP));
 
         size_t lbopt(nnzlj+nnzrg+nnzhp);
 

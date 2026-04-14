@@ -66,6 +66,18 @@ inline DenseMatrix& setRow(DenseMatrix& A, size_t i, const _Vector& v) {
 }
 
 
+	// Update col j of A, by v
+template<typename _Mat, typename _Vector>
+inline _Mat& updCol(_Mat& A, size_t j, const _Vector& v) {
+
+    using Field = typename _Mat::Field;
+    const Field& F(A.field());
+    for(size_t i=0; i<v.size(); ++i)
+        if (! F.isZero(v[i])) A.setEntry(i,j,v[i]);
+    return A;
+}
+
+
 	// Negate row i of (sparse) A
 template<typename _Mat>
 inline _Mat& negRow(_Mat& A, size_t i) {
@@ -183,8 +195,8 @@ inline Matrix& permuteRows(Matrix& R, const Permutation& P,
     return dense2sparse(R, dR);
 }
 
-template<>
-inline Matrix& permuteRows(Matrix& R, const Permutation& P,
+template<> inline
+Matrix& permuteRows(Matrix& R, const Permutation& P,
                     const Matrix& A, const QRat& QQ) {
     DenseMatrix dA(QQ,A.rowdim(),A.coldim()); any2dense(dA, A);
     DenseMatrix dR(QQ,A.rowdim(),A.coldim());
@@ -192,8 +204,26 @@ inline Matrix& permuteRows(Matrix& R, const Permutation& P,
     return dense2sparse(R, dR);
 }
 
+
+// ===============================================================
+// Tensor product of matrices
+template<typename _Matrix>
+_Matrix& Tensor(_Matrix& T, const _Matrix& A, const _Matrix& B) {
+    T.resize(A.rowdim()*B.rowdim(), A.coldim()*B.coldim());
+    using Element=typename _Matrix::Element;
+    Element tmp; A.field().init(tmp);
+    for(auto itA = A.IndexedBegin(); itA != A.IndexedEnd(); ++itA) {
+    for(auto itB = B.IndexedBegin(); itB != B.IndexedEnd(); ++itB) {
+        T.setEntry(itA.rowIndex()*B.rowdim()+itB.rowIndex(),
+                   itA.colIndex()*B.coldim()+itB.colIndex(),
+                   A.field().mul(tmp,itA.value(),itB.value()));
+    }
+    }
+    return T;
+}
+
 // Matrix operations
-template<typename _Mat>
+template<typename _Mat> inline
 Pair<size_t> naiveOps(const _Mat& M) {
     const auto& FF(M.field());
     size_t nbadd(0), nbmul(0);
@@ -204,11 +234,43 @@ Pair<size_t> naiveOps(const _Mat& M) {
     return Pair<size_t>{nbadd,nbmul};
 }
 
+	// Number of non-zero elements (sparse)
+template<typename _Matrix> inline
+size_t density(const _Matrix& A) {
+    size_t nnz(0);
+    for(auto row=A.rowBegin(); row != A.rowEnd(); ++row) {
+        nnz += row->size(); // # of non-zero elements
+    }
+    return nnz;
+}
+
+	// Number of non-zero elements (dense)
+template<typename Field> inline
+size_t density(const LinBox::DenseMatrix<Field>& A) {
+    size_t nnz(0);
+    for(auto itA = A.IndexedBegin(); itA != A.IndexedEnd(); ++itA) {
+        if (! A.field().isZero(itA.value())) ++nnz;
+    }
+    return nnz;
+
+}
+
+template<typename _Mat> inline
+Pair<size_t> nonzeroes(const _Mat& M) {
+    const auto& F(M.field());
+    size_t nnz(0), nno(0);
+    for(auto it=M.IndexedBegin();it!=M.IndexedEnd();++it) {
+        if (! F.isZero(it.value()) ) ++nnz;
+        if (! isAbsOne(F, it.value())) ++nno;
+    }
+    return Pair<size_t>{nnz,nno};
+}
+
 // ==================
 // Returns the kth-permutation of 0..(n-1) via the factoradic
 // Fn is the factorial vector up to n-1 -- from 'factorial(m)'
-std::vector<size_t> kthpermutation(const size_t k, const size_t n,
-                                   const std::vector<size_t>& Fn ) {
+inline std::vector<size_t> kthpermutation(const size_t k, const size_t n,
+                                          const std::vector<size_t>& Fn ) {
     std::vector<size_t> l;
     std::vector<size_t> Q(n);
     std::iota(Q.begin(), Q.end(), 0); // 0,1,2,3,4
@@ -227,8 +289,8 @@ std::vector<size_t> kthpermutation(const size_t k, const size_t n,
 
 // ==================
 // Sets new temporaries with the input values
-std::ostream& input2Temps(std::ostream& sout, const size_t N,
-                          const char inv, const char tev) {
+inline std::ostream& input2Temps(std::ostream& sout, const size_t N,
+                                 const char inv, const char tev) {
         // Inputs to temporaries
     for(size_t i=0; i<N; ++i) {
         sout << tev << i << ":="
@@ -237,7 +299,7 @@ std::ostream& input2Temps(std::ostream& sout, const size_t N,
     return sout;
 }
 // Sets new temporaries with the input values, checking usage
-template<typename _Mat>
+template<typename _Mat> inline
 std::ostream& input2Temps(std::ostream& sout, const size_t N,
                           const char inv, const char tev,
                           const _Mat& trsp) {
@@ -252,9 +314,9 @@ std::ostream& input2Temps(std::ostream& sout, const size_t N,
 }
 // ==================
 // Sets new temporaries with the permuted input values
-std::ostream& input2Temps(std::ostream& sout, const size_t N,
-                          const char inv, const char tev,
-                          const LinBox::LightContainer<long>& P) {
+inline std::ostream& input2Temps(std::ostream& sout, const size_t N,
+                                 const char inv, const char tev,
+                                 const LinBox::LightContainer<long>& P) {
     // Inputs to temporaries
     for(size_t i=0; i<N; ++i) {
         sout << tev << i << ":="
@@ -265,7 +327,7 @@ std::ostream& input2Temps(std::ostream& sout, const size_t N,
 
 // ==================
 // Program outputs
-template<typename Ring>
+template<typename Ring> inline
 std::ostream& printmulorjustdiv(std::ostream& out,
                                 const char c, const size_t i,
                                 const typename Ring::Element& e,
@@ -278,7 +340,7 @@ std::ostream& printmulorjustdiv(std::ostream& out,
     return out;
 }
 
-template<>
+template<> inline
 std::ostream& printmulorjustdiv(std::ostream& out,
                                 const char c, const size_t i,
                                 const Givaro::Rational& r,
@@ -294,10 +356,10 @@ std::ostream& printmulorjustdiv(std::ostream& out,
     return out;
 }
 
-std::ostream& printSCA(std::ostream& out,
-                       const char c, const size_t i, const char p,
-                       const Givaro::Rational& r,
-                       size_t& nbmul, const QRat& QQ) {
+inline std::ostream& printSCA(std::ostream& out,
+                              const char c, const size_t i, const char p,
+                              const Givaro::Rational& r,
+                              size_t& nbmul, const QRat& QQ) {
     if (p == '*')
         return printmulorjustdiv(out, c, i, r, nbmul, QQ);
     else { // operation is division --> multiply by the inverse
@@ -316,7 +378,7 @@ std::ostream& printSCA(std::ostream& out,
 
 // ===============================================================
 // Generic random element with bitsize
-template<typename Domain>
+template<typename Domain> inline
 typename Domain::Element& RandomElt(typename Domain::Element& e,
                                     const Domain& D,
                                     Givaro::GivRandom& generator,
@@ -325,12 +387,21 @@ typename Domain::Element& RandomElt(typename Domain::Element& e,
 }
 
 // Specialization for Modular, as bitsize is meanigless for its random
-template<>
+template<> inline
 typename Givaro::Integer& RandomElt(Givaro::Integer& e,
                                     const Givaro::Modular<Givaro::Integer>& D,
                                     Givaro::GivRandom& generator,
                                     const size_t bitsize) {
     return D.random(generator, e);
+}
+
+// Generic {-1,0,1} element
+template<typename Domain>
+typename Domain::Element& zoRandomElt(typename Domain::Element& e,
+                                      const Domain& D,
+                                      Givaro::GivRandom& generator) {
+    D.init(e, (generator() % 3));
+    return D.subin(e, D.one);
 }
 // ===============================================================
 
