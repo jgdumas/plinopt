@@ -64,6 +64,15 @@ inline _Mat& zoiRandomMatrix(_Mat& M) {
     using Field = typename _Mat::Field;
     using Element=typename Field::Element;
     typedef LinBox::DenseVector<Field> FVector;
+
+    std::vector<size_t> P(M.rowdim()),Q(M.coldim());
+    std::iota(P.begin(), P.end(), 0); // Select a random permutation
+    std::iota(Q.begin(), Q.end(), 0); // Select a random permutation
+    std::shuffle(P.begin(), P.end(),
+                 std::default_random_engine(generator()));
+    std::shuffle(Q.begin(), Q.end(),
+                 std::default_random_engine(generator()));
+
 #if defined(ACTION_FULL_PLUQ)
     _Mat L(FF,M.rowdim(),M.coldim());
     for(size_t i=0; i<L.rowdim(); ++i) L.setEntry(i,i,FF.one);
@@ -75,13 +84,6 @@ inline _Mat& zoiRandomMatrix(_Mat& M) {
         }
     }
     FVector U(FF,M.coldim(),FF.zero), Row(FF,M.rowdim());
-    std::vector<size_t> P(M.rowdim()),Q(M.coldim());
-    std::iota(P.begin(), P.end(), 0); // Select a random permutation
-    std::iota(Q.begin(), Q.end(), 0); // Select a random permutation
-    std::shuffle(P.begin(), P.end(),
-                 std::default_random_engine(generator()));
-    std::shuffle(Q.begin(), Q.end(),
-                 std::default_random_engine(generator()));
     for(size_t i=0;i<L.rowdim();++i) {
         FF.assign(U[Q[i]],FF.one);
         for(size_t j=0;j<Q[i];++j) zoRandomElt(U[j], FF, generator);
@@ -89,6 +91,7 @@ inline _Mat& zoiRandomMatrix(_Mat& M) {
         L.apply(Row,U);
         setRow(M, P[i], Row);
     }
+
 #elif defined(ACTION_HOUSEHOLDER)
     std::vector<Element> u(M.rowdim()), v(M.rowdim());
     Element dutu; FF.init(dutu);
@@ -105,7 +108,7 @@ inline _Mat& zoiRandomMatrix(_Mat& M) {
             FF.mul(coef,u[i],u[j]);
             FF.mulin(coef,dutu);
             if (i==j) FF.addin(coef,FF.one);
-            if (!FF.isZero(coef))  M.setEntry(i,j, coef);
+            if (!FF.isZero(coef))  M.setEntry(P[i],Q[j], coef);
         }
     }
 
@@ -117,14 +120,6 @@ inline _Mat& zoiRandomMatrix(_Mat& M) {
 
 #else
         // Only random triangular
-    std::vector<size_t> P(M.rowdim()),Q(M.coldim());
-    std::iota(P.begin(), P.end(), 0); // Select a random permutation
-    std::iota(Q.begin(), Q.end(), 0); // Select a random permutation
-    std::shuffle(P.begin(), P.end(),
-                 std::default_random_engine(generator()));
-    std::shuffle(Q.begin(), Q.end(),
-                 std::default_random_engine(generator()));
-
     for(size_t i=0; i<M.rowdim(); ++i) M.setEntry(P[i],Q[i],FF.one);
     Element tmp; FF.init(tmp);
     for(size_t i=0;i<M.rowdim();++i) {
@@ -142,21 +137,22 @@ inline _Mat& zoiRandomMatrix(_Mat& M) {
 
 
 
+// Counting non-zero elements
 template<int Measure>
 struct Operations {
     template<typename _Mat>
     size_t operator()(const _Mat& L, const _Mat& R, const _Mat& P,
-                      const size_t subloops=0) {
+                      const size_t silent) {
         const size_t nnzl(PLinOpt::density(L)), nnzr(PLinOpt::density(R)),
             nnzp(PLinOpt::density(P));
-//         std::clog << "# Init. nnz: " << nnzl << '+' << nnzr << '+'
-//                   << nnzp << std::endl;
+        if (! silent) std::clog << nnzl << '+' << nnzr << '+' << nnzp;
         return (nnzl+nnzr+nnzp);
     }
 };
 
 
 
+// Counting number of SLP operations
 template<>
 struct Operations<1> {
     template<typename _Mat>
@@ -256,7 +252,7 @@ template<int Measure> struct Orbiter {
     PLinOpt::sparse2sparse(besthP,P);
     Givaro::Timer chrono; chrono.start();
 
-#pragma omp parallel for shared(L,R,P,m,k,n,bestopt,subloops)
+#pragma omp parallel for shared(L,R,P,m,k,n,bestopt,subloops,bestLj,bestRg,besthP)
     for(size_t i=0; i<randomloops; ++i) {
         FMatrix U(FF,m,m), V(FF,k,k), W(FF,n,n);
         PLinOpt::zoiRandomMatrix(U);
@@ -311,8 +307,9 @@ template<int Measure> struct Orbiter {
     std::clog << "# Search(" << randomloops <<"): " << chrono << std::endl;
 
     if (bestopt<initopt) {
-        std::clog << "# \033[1;36mRdcd. opt: " << bestopt <<
-            '<' << initopt << "\033[0m" << std::endl;
+        std::clog << "# \033[1;36mRdcd. opt: " << bestopt << '=';
+        Operations<0>()(bestLj,bestRg,besthP,0);
+        std::clog << '<' << initopt << "\033[0m" << std::endl;
 
             // =============================================
             // Writing matrices

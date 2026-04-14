@@ -5,23 +5,27 @@
 
 OPTFLAGS = -O3 -ffast-math
 
-# CXXFLAGS += -D INPLACE_CHECKER	# Maple checks (needed by ./bin/TTP.sh)
-# CXXFLAGS += -D VERBATIM_PARSING=1	# Verbose output
 # CXXFLAGS += -D DEFAULT_RANDOM_LOOPS=30u	# Default # of loops
 # CXXFLAGS += -D COEFFICIENT_SEARCH=20u		# Default # sparsifier coeffs
+
+# CXXFLAGS += -D VERBATIM_PARSING=1	# Verbose output
+# CXXFLAGS += -D INPLACE_CHECKER	# Maple checks (needed by ./bin/TTP.sh)
+
 # CXXFLAGS += -D DENSITY_OPTIMIZATION	# Non-random optimizer
+
 # CXXFLAGS += -D KERNEL_FULL_IDENTITY	# Identity goals in kernel method
+
 # CXXFLAGS += -D ACTION_FULL_PLUQ	# Random PLUQ action
 # CXXFLAGS += -D ACTION_HOUSEHOLDER	# Random Householder action
 #######
 
-RNDFLAGS = -D RANDOM_TIES	# Default randomized search
+RNDFLAGS = -D RANDOM_TIES		# Default randomized search
 
-#######
+##############
 CXXFLAGS += ${OPTFLAGS} ${RNDFLAGS} -I`pwd`/include/ `pkg-config linbox --cflags`
 LOADLIBES+= `pkg-config linbox --libs |sed 's/-liml//;s/-lfplll//;s/-lflint//'`
 
-#######
+##############
 
 EXE  = optimizer
 EXE += sparsifier factorizer
@@ -34,7 +38,7 @@ SRC=${EXE:%=src/%.cpp}
 
 BIN=${EXE:%=bin/%}
 
-#######
+##############
 
 all: ${BIN}
 
@@ -44,6 +48,8 @@ bin/%: src/%.cpp
 clean:
 	- \rm ${BIN}
 
+
+#######
 
 SHELL=/bin/bash
 check: ${BIN} pmcheck mmcheck opcheck slpcheck
