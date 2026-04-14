@@ -90,36 +90,30 @@ inline _Mat& zoiRandomMatrix(_Mat& M) {
         setRow(M, P[i], Row);
     }
 #elif defined(ACTION_HOUSEHOLDER)
-    std::vector<Element> u(M.rowdim());
-    Element denom; FF.init(denom); FF.assign(denom,FF.zero);
-    do {
-        for(size_t i=0; i<M.rowdim(); ++i) {
-            zoRandomElt(u[i], FF, generator);
-            FF.axpyin(denom,u[i],u[i]);
-       }
-    } while(FF.isZero(denom));
+    std::vector<Element> u(M.rowdim()), v(M.rowdim());
+    Element dutu; FF.init(dutu);
+    zoRandomVect(dutu, u, FF, generator);
 
-//     std::clog << "u:=";
-//     for(const auto& it: u) std::clog << it << ' ';
-//     std::clog << ';' << std::endl;
+    Element coef, tmp; FF.init(coef); FF.init(tmp);
 
-    Element tmp; FF.init(tmp);
-
-    FF.invin(denom);
-    FF.add(tmp,denom,denom);
-    FF.neg(denom,tmp); // -2/u^Tu
+    FF.invin(dutu);
+    FF.add(tmp,dutu,dutu);
+    FF.neg(dutu,tmp); // -2/u^Tu
 
     for(size_t i=0; i<M.rowdim(); ++i) {
         for(size_t j=0; j<M.coldim(); ++j) {
-            FF.mul(tmp,u[i],u[j]);
-            FF.mulin(tmp,denom);
-            if (i==j) FF.addin(tmp,FF.one);
-            if (!FF.isZero(tmp))  M.setEntry(i,j, tmp);
+            FF.mul(coef,u[i],u[j]);
+            FF.mulin(coef,dutu);
+            if (i==j) FF.addin(coef,FF.one);
+            if (!FF.isZero(coef))  M.setEntry(i,j, coef);
         }
     }
 
-//     M.write(std::clog<<"M:=",FileFormat::Maple) << ';' << std::endl;
-//     size_t r; std::clog << "# rank(M):" << rank(r, M) << std::endl;
+// #pragma omp critical
+//         {
+//             M.write(std::clog<<"M:=",FileFormat::Maple) << ';' << std::endl;
+//             size_t r; std::clog << "# rank(M):" << rank(r, M) << std::endl;
+//         }
 
 #else
         // Only random triangular

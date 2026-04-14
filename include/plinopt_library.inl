@@ -403,6 +403,20 @@ typename Domain::Element& zoRandomElt(typename Domain::Element& e,
     D.init(e, (generator() % 3));
     return D.subin(e, D.one);
 }
+
+template<typename Domain, typename _Vect>
+_Vect& zoRandomVect(typename Domain::Element&e, _Vect& v,
+                    const Domain& D, Givaro::GivRandom& generator) {
+    D.assign(e,D.zero);
+    do {
+        for(auto& it: v) {
+            zoRandomElt(it, D, generator);
+            D.axpyin(e,it,it);
+        }
+    } while(D.isZero(e));
+    return v;
+}
+
 // ===============================================================
 
 
