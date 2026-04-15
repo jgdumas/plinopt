@@ -1083,7 +1083,8 @@ Pair<size_t>& LUOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
                         std::clog << "# Found G: "
                                   << Uops.first << '|' << Uops.second
                                   << " instead of "
-                                  << gops.first << '|' << gops.second
+                                  << gops.first << '|' << gops.second << "\t["
+                                  << i << '/' << omp_get_thread_num() << ']'
                                   << std::endl;
                     }
                     gops = Uops;
@@ -1159,7 +1160,8 @@ Pair<size_t>& ABOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
                                   << ')' << '\t' << Bops.first << '+' << Aops.first
                                   << '|' << Bops.second << '+' << Aops.second
                                   << " instead of "
-                                  << gops.first << '|' << gops.second
+                                  << gops.first << '|' << gops.second << "\t["
+                                  << i << '/' << omp_get_thread_num() << ']'
                                   << std::endl;
                     }
                     gops = ABops;
@@ -1220,7 +1222,8 @@ Pair<size_t>& CSEOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
                         std::clog << "# Found D: "
                                   << lnbops.first << '|' << lnbops.second
                                   << " instead of "
-                                  << dops.first << '|' << dops.second
+                                  << dops.first << '|' << dops.second << "\t["
+                                  << i << '/' << omp_get_thread_num() << ']'
                                   << std::endl;
                     }
                     dops = lnbops;
@@ -1316,6 +1319,8 @@ Pair<size_t>& KernelOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
                                       << lnbops.first << '|' << lnbops.second
                                       << " instead of "
                                       << kops.first << '|' << kops.second
+                                      << "\t[" << i << '/'
+                                      << omp_get_thread_num() << ']'
                                       << std::endl;
                         }
                         kops = lnbops;
@@ -1377,7 +1382,8 @@ Pair<size_t>& AllKernelOpt(Pair<size_t>& nbops, std::ostringstream& sout,
                         std::clog << "# Found E: "
                                   << lkops.first << '|' << lkops.second
                                   << " instead of "
-                                  << aops.first << '|' << aops.second
+                                  << aops.first << '|' << aops.second << "\t["
+                                  << i << '/' << omp_get_thread_num() << ']'
                                   << std::endl;
                     }
                     aops = lkops;
