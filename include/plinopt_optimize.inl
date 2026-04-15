@@ -637,7 +637,7 @@ template<typename outstream, typename _Mat>
 Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
                              const bool mostCSE) {
 	std::vector<size_t> l;
-#if defined(KERNEL_FULL_IDENTiTY)
+#if defined(KERNEL_FULL_IDENTITY)
     const auto& FF(A.field());
     const size_t Ni(A.rowdim());
     const size_t Nj(A.coldim());
@@ -790,7 +790,7 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
 
             // ============================================
             // Remove (randomly chosen) dependent rows from FreePart
-#if defined(RANDOM_TIES) || defined(KERNEL_FULL_IDENTiTY)
+#if defined(RANDOM_TIES) || defined(KERNEL_FULL_IDENTITY)
             static thread_local Givaro::GivRandom
                 generator(Givaro::BaseTimer::seed());
             const size_t NotIndep(generator() % nullity);

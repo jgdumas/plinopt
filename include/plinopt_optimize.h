@@ -30,7 +30,7 @@
 // ============================================================
 // Kernel method:
 //   activate inclusion of identity to kernel goals
-//#define KERNEL_FULL_IDENTiTY
+//#define KERNEL_FULL_IDENTITY
 // ============================================================
 
 
