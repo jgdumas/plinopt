@@ -408,12 +408,10 @@ template<typename Domain, typename _Vect>
 _Vect& zoRandomVect(typename Domain::Element&e, _Vect& v,
                     const Domain& D, Givaro::GivRandom& generator) {
     D.assign(e,D.zero);
-    do {
-        for(auto& it: v) {
-            zoRandomElt(it, D, generator);
-            D.axpyin(e,it,it);
-        }
-    } while(D.isZero(e));
+    for(auto& it: v) {
+        zoRandomElt(it, D, generator);
+        D.axpyin(e,it,it);
+    }
     return v;
 }
 

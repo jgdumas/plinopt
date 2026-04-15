@@ -27,9 +27,9 @@ fi
 
 MMchecker $L $R $P
 
-Lr=`basename $L| sed -e "s/_[LRP].sms$/_${SUFF}&/"`
-Rr=`basename $R| sed -e "s/_[LRP].sms$/_${SUFF}&/"`
-Pr=`basename $P| sed -e "s/_[LRP].sms$/_${SUFF}&/"`
+Lr=`basename $L| sed -e "s/_[LRP]\./_${SUFF}&/"`
+Rr=`basename $R| sed -e "s/_[LRP]\./_${SUFF}&/"`
+Pr=`basename $P| sed -e "s/_[LRP]\./_${SUFF}&/"`
 
 GROT=0
 if [ -f ${Lr} ] || [ -f ${Rr} ] || [ -f ${Pr} ]; then

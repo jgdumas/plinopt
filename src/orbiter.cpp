@@ -74,6 +74,7 @@ inline _Mat& zoiRandomMatrix(_Mat& M) {
                  std::default_random_engine(generator()));
 
 #if defined(ACTION_FULL_PLUQ)
+        // Random det 1 matrix
     _Mat L(FF,M.rowdim(),M.coldim());
     for(size_t i=0; i<L.rowdim(); ++i) L.setEntry(i,i,FF.one);
     Element tmp; FF.init(tmp);
@@ -93,22 +94,30 @@ inline _Mat& zoiRandomMatrix(_Mat& M) {
     }
 
 #elif defined(ACTION_HOUSEHOLDER)
+        // Random orthogonal rank-1 update
+    std::vector<size_t> D(M.rowdim()); for(auto& it: D) it = generator() & 1;
     std::vector<Element> u(M.rowdim()), v(M.rowdim());
     Element dutu; FF.init(dutu);
     zoRandomVect(dutu, u, FF, generator);
+    if (FF.isZero(dutu)) {
+        for(size_t i=0; i<M.rowdim(); ++i) {
+            M.setEntry(P[i],Q[i], (D[i]?FF.one:FF.mOne) );
+        }
+    } else {
+        Element coef, tmp; FF.init(coef); FF.init(tmp);
 
-    Element coef, tmp; FF.init(coef); FF.init(tmp);
+        FF.invin(dutu);
+        FF.add(tmp,dutu,dutu);
+        FF.neg(dutu,tmp); // -2/u^Tu
 
-    FF.invin(dutu);
-    FF.add(tmp,dutu,dutu);
-    FF.neg(dutu,tmp); // -2/u^Tu
-
-    for(size_t i=0; i<M.rowdim(); ++i) {
-        for(size_t j=0; j<M.coldim(); ++j) {
-            FF.mul(coef,u[i],u[j]);
-            FF.mulin(coef,dutu);
-            if (i==j) FF.addin(coef,FF.one);
-            if (!FF.isZero(coef))  M.setEntry(P[i],Q[j], coef);
+        for(size_t i=0; i<M.rowdim(); ++i) {
+            for(size_t j=0; j<M.coldim(); ++j) {
+                FF.mul(coef,u[i],u[j]);
+                FF.mulin(coef,dutu);
+                if (i==j) FF.addin(coef,FF.one);
+                if (!FF.isZero(coef))  M.setEntry(P[i],Q[j],
+                                                  D[i]? coef : FF.negin(coef));
+            }
         }
     }
 
