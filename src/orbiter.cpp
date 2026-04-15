@@ -73,10 +73,12 @@ inline _Mat& zoiRandomMatrix(_Mat& M) {
     std::shuffle(Q.begin(), Q.end(),
                  std::default_random_engine(generator()));
 
+    std::vector<bool> D(M.rowdim()); for(auto&& it: D) it = bool(generator()&1);
+
 #if defined(ACTION_FULL_PLUQ)
         // Random det 1 matrix
     _Mat L(FF,M.rowdim(),M.coldim());
-    for(size_t i=0; i<L.rowdim(); ++i) L.setEntry(i,i,FF.one);
+    for(size_t i=0; i<L.rowdim(); ++i) xL.setEntry(i,i, D[i] ? FF.one : FF.mOne);
     Element tmp; FF.init(tmp);
     for(size_t i=0;i<L.rowdim();++i) {
         for(size_t j=0;j<i;++j) {
@@ -95,13 +97,12 @@ inline _Mat& zoiRandomMatrix(_Mat& M) {
 
 #elif defined(ACTION_HOUSEHOLDER)
         // Random orthogonal rank-1 update
-    std::vector<size_t> D(M.rowdim()); for(auto& it: D) it = generator() & 1;
     std::vector<Element> u(M.rowdim()), v(M.rowdim());
     Element dutu; FF.init(dutu);
     zoRandomVect(dutu, u, FF, generator);
     if (FF.isZero(dutu)) {
         for(size_t i=0; i<M.rowdim(); ++i) {
-            M.setEntry(P[i],Q[i], (D[i]?FF.one:FF.mOne) );
+            M.setEntry(P[i],Q[i], D[i]?FF.one:FF.mOne );
         }
     } else {
         Element coef, tmp; FF.init(coef); FF.init(tmp);
@@ -121,23 +122,19 @@ inline _Mat& zoiRandomMatrix(_Mat& M) {
         }
     }
 
-// #pragma omp critical
-//         {
-//             M.write(std::clog<<"M:=",FileFormat::Maple) << ';' << std::endl;
-//             size_t r; std::clog << "# rank(M):" << rank(r, M) << std::endl;
-//         }
-
 #else
         // Only random triangular
-    for(size_t i=0; i<M.rowdim(); ++i) M.setEntry(P[i],Q[i],FF.one);
+    for(size_t i=0; i<M.rowdim(); ++i)
+        M.setEntry(P[i],Q[i], D[i] ? FF.one : FF.mOne );
     Element tmp; FF.init(tmp);
     for(size_t i=0;i<M.rowdim();++i) {
         for(size_t j=i+1;j<M.rowdim();++j) {
             if (! FF.isZero(zoRandomElt(tmp, FF, generator)))
-                M.setEntry(P[i],Q[j], tmp);
+                M.setEntry(P[i],Q[j],tmp);
         }
     }
 #endif
+
     return M;
 }
 
@@ -301,7 +298,9 @@ template<int Measure> struct Orbiter {
 
 #endif
         if (lbopt<bestopt) {
-            std::clog << "# Found opt: " << lbopt << '<' << bestopt << std::endl;
+            std::clog << "# Found opt: " << lbopt << '<' << bestopt
+                      << "\t[" << i << '/' << omp_get_thread_num() << ']'
+                      << std::endl;
             bestopt = lbopt;
             PLinOpt::dense2sparse(bestLj, Lj);
             PLinOpt::dense2sparse(bestRg, Rg);
