@@ -637,9 +637,7 @@ template<typename outstream, typename _Mat>
 Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
                              const bool mostCSE) {
 	std::vector<size_t> l;
-#ifdef KERNEL_FREEONLY
-    return nullspacedecomp(sout, x, A, l, 'o', 'i', mostCSE);
-#else
+#if defined(KERNEL_FULL_IDENTITY)
     const auto& FF(A.field());
     const size_t Ni(A.rowdim());
     const size_t Nj(A.coldim());
@@ -681,6 +679,8 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
         sout << 'o' << j << ":=" << 'q' << j << ';' << std::endl;
 
     return Pops;
+#else
+    return nullspacedecomp(sout, x, A, l, 'o', 'i', mostCSE);
 #endif
 }
 
@@ -790,7 +790,7 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
 
             // ============================================
             // Remove (randomly chosen) dependent rows from FreePart
-#if defined(RANDOM_TIES) || !defined(KERNEL_FREEONLY)
+#if defined(RANDOM_TIES) || defined(KERNEL_FULL_IDENTITY)
             static thread_local Givaro::GivRandom
                 generator(Givaro::BaseTimer::seed());
             const size_t NotIndep(generator() % nullity);
@@ -1014,7 +1014,7 @@ Pair<size_t> RecOptimizer(outstream& sout, _Mat& M,
 template<typename Field>
 Pair<size_t>& LUOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
                           const Field& F, const Matrix& M, const Matrix& T,
-                          Givaro::Timer& global, const size_t randomloops) {
+                          Givaro::Timer& global, const size_t randomloops, const int verbose) {
 
         // ============================================================
         // Rebind matrix type over sub field matrix type
@@ -1079,11 +1079,14 @@ Pair<size_t>& LUOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
                 gout.clear(); gout.str(std::string());
                 gout.str(luout.str());
                 if (better) {
-                    std::clog << "# Found G: "
-                              << Uops.first << '|' << Uops.second
-                              << " instead of "
-                              << gops.first << '|' << gops.second
-                              << std::endl;
+                    if (verbose>0) {
+                        std::clog << "# Found G: "
+                                  << Uops.first << '|' << Uops.second
+                                  << " instead of "
+                                  << gops.first << '|' << gops.second << "\t["
+                                  << i << '/' << omp_get_thread_num() << ']'
+                                  << std::endl;
+                    }
                     gops = Uops;
                 }
             }
@@ -1105,7 +1108,7 @@ template<typename Field>
 Pair<size_t>& ABOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
                           const Field& F, const Matrix& M, const Matrix& T,
                           const size_t selectinnerdim,
-                          Givaro::Timer& global, const size_t randomloops) {
+                          Givaro::Timer& global, const size_t randomloops, const int verbose) {
 
         // ============================================================
         // Rebind matrix type over sub field matrix type
@@ -1150,14 +1153,17 @@ Pair<size_t>& ABOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
                 gout.clear(); gout.str(std::string());
                 gout << about.str();
                 if (better) {
-                    std::clog << "# Found A: ("
-                              << Alt.rowdim() << 'x' << Alt.coldim() << 'x'
-                              << CoB.coldim() << ' ' << sa << '/' << sc
-                              << ')' << '\t' << Bops.first << '+' << Aops.first
-			      << '|' << Bops.second << '+' << Aops.second
-                              << " instead of "
-                              << gops.first << '|' << gops.second
-                              << std::endl;
+                    if (verbose>0) {
+                        std::clog << "# Found A: ("
+                                  << Alt.rowdim() << 'x' << Alt.coldim() << 'x'
+                                  << CoB.coldim() << ' ' << sa << '/' << sc
+                                  << ')' << '\t' << Bops.first << '+' << Aops.first
+                                  << '|' << Bops.second << '+' << Aops.second
+                                  << " instead of "
+                                  << gops.first << '|' << gops.second << "\t["
+                                  << i << '/' << omp_get_thread_num() << ']'
+                                  << std::endl;
+                    }
                     gops = ABops;
                 }
             }
@@ -1180,7 +1186,7 @@ Pair<size_t>& ABOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
 template<typename Field>
 Pair<size_t>& CSEOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
                            const Field& F, const Matrix& M, const Matrix& T,
-                           Givaro::Timer& global, const size_t randomloops) {
+                           Givaro::Timer& global, const size_t randomloops, const int verbose) {
         // ============================================================
         // Rebind matrix type over sub field matrix type
     typedef typename Matrix::template rebind<Field>::other FMatrix;
@@ -1211,14 +1217,17 @@ Pair<size_t>& CSEOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
             if ( (dout.tellp() == std::streampos(0)) || better ) {
                 dout.clear(); dout.str(std::string());
                 dout << ldout.str();
-                    if (better) {
+                if (better) {
+                    if (verbose>0) {
                         std::clog << "# Found D: "
                                   << lnbops.first << '|' << lnbops.second
                                   << " instead of "
-                                  << dops.first << '|' << dops.second
+                                  << dops.first << '|' << dops.second << "\t["
+                                  << i << '/' << omp_get_thread_num() << ']'
                                   << std::endl;
-                        dops = lnbops;
                     }
+                    dops = lnbops;
+                }
             }
         }
     }
@@ -1273,7 +1282,7 @@ Pair<size_t>& AllCSEOpt(Pair<size_t>& nbops, std::ostringstream& sout,
 template<typename Field>
 Pair<size_t>& KernelOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
                               const Field& F, const Matrix& T,
-                              Givaro::Timer& global, const size_t randomloops) {
+                              Givaro::Timer& global, const size_t randomloops, const int verbose) {
         // ============================================================
         // Rebind matrix type over sub field matrix type
     typedef typename Matrix::template rebind<Field>::other FMatrix;
@@ -1305,11 +1314,15 @@ Pair<size_t>& KernelOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
                     kout.clear(); kout.str(std::string());
                     kout << lkout.str();
                     if (better) {
-                        std::clog << "# Found K: "
-                                  << lnbops.first << '|' << lnbops.second
-                                  << " instead of "
-                                  << kops.first << '|' << kops.second
-                                  << std::endl;
+                        if (verbose>0) {
+                            std::clog << "# Found K: "
+                                      << lnbops.first << '|' << lnbops.second
+                                      << " instead of "
+                                      << kops.first << '|' << kops.second
+                                      << "\t[" << i << '/'
+                                      << omp_get_thread_num() << ']'
+                                      << std::endl;
+                        }
                         kops = lnbops;
                     }
                 }
@@ -1335,7 +1348,7 @@ Pair<size_t>& KernelOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
 template<typename Field>
 Pair<size_t>& AllKernelOpt(Pair<size_t>& nbops, std::ostringstream& sout,
                            const Field& F, const Matrix& T, const bool mostCSE,
-                           Givaro::Timer& global, const size_t randomloops) {
+                           Givaro::Timer& global, const size_t randomloops, const int verbose) {
         // ============================================================
         // Rebind matrix type over sub field matrix type
     typedef typename Matrix::template rebind<Field>::other FMatrix;
@@ -1365,11 +1378,14 @@ Pair<size_t>& AllKernelOpt(Pair<size_t>& nbops, std::ostringstream& sout,
                 aout.clear(); aout.str(std::string());
                 aout << laout.str();
                 if (better) {
-                    std::clog << "# Found E: "
-                              << lkops.first << '|' << lkops.second
-                              << " instead of "
-                              << aops.first << '|' << aops.second
-                              << std::endl;
+                    if (verbose>0) {
+                        std::clog << "# Found E: "
+                                  << lkops.first << '|' << lkops.second
+                                  << " instead of "
+                                  << aops.first << '|' << aops.second << "\t["
+                                  << i << '/' << omp_get_thread_num() << ']'
+                                  << std::endl;
+                    }
                     aops = lkops;
                 }
             }
@@ -1402,7 +1418,7 @@ Pair<size_t> OptMethods(const Pair<size_t> opsinit,
                         const bool printMaple, const bool printPretty,
                         const bool tryDirect, const bool tryKernel,
                         const bool tryLU, bool tryAB,
-                        const bool mostCSE, const bool allkernels) {
+                        const bool mostCSE, const bool allkernels, const int verbose) {
 
     Pair<size_t> nbops(opsinit);
 
@@ -1411,32 +1427,32 @@ Pair<size_t> OptMethods(const Pair<size_t> opsinit,
     if (tryAB) {
 //         for(int id(M.rowdim()-1); id >= M.coldim(); --id)
         for(size_t id(M.coldim()); id < M.rowdim(); ++id)
-            ABOptimiser(nbops, sout, F, M, T, id, global, randomloops);
+            ABOptimiser(nbops, sout, F, M, T, id, global, randomloops,verbose);
     }
 
 
         // ============================================================
         // Otimize the whole matrix
     if (tryDirect) {
-        CSEOptimiser(nbops, sout, F, M, T, global, randomloops);
+        CSEOptimiser(nbops, sout, F, M, T, global, randomloops,verbose);
     }
 
         // ============================================================
         // Separate independent and dependent rows
     if (tryKernel) {
-        KernelOptimiser(nbops, sout, F, T, global, randomloops);
+        KernelOptimiser(nbops, sout, F, T, global, randomloops,verbose);
     }
 
         // ============================================================
         // Optimize the factorized matrix
     if (tryLU) {
-        LUOptimiser(nbops, sout, F, M, T, global, randomloops);
+        LUOptimiser(nbops, sout, F, M, T, global, randomloops,verbose);
     }
 
         // ============================================================
         // Exhaustive nullspace permutation search (if # is <= 12!)
     if (allkernels && (M.rowdim() < 13)) {
-        AllKernelOpt(nbops, sout, F, T, mostCSE, global, randomloops);
+        AllKernelOpt(nbops, sout, F, T, mostCSE, global, randomloops,verbose);
     }
 
         // ============================================================

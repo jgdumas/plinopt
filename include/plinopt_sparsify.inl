@@ -52,42 +52,6 @@ inline size_t& rank(size_t& r, const _Mat& A) {
     return GD.rankInPlace(r, copyA);
 }
 
-	// Computes the transposed inverse of A
-template<typename _Mat1, typename _Mat2>
-inline _Mat1& inverseTranspose(_Mat1& TI, const _Mat2& A) {
-    assert(A.rowdim() == A.coldim());
-    const size_t n(A.rowdim());
-
-    using Field = typename _Mat1::Field;
-    using FVector = LinBox::DenseVector<Field>;
-    const Field& FF(A.field());
-
-    LinBox::GaussDomain<Field> GD(FF);
-
-    TI.resize(n,n);
-    _Mat1 U(FF); matrixCopy(U, A);
-
-    typename Field::Element Det;
-    size_t Rank;
-    _Mat1 L(FF, n, n);
-    LinBox::Permutation<Field> Q(FF,n);
-    LinBox::Permutation<Field> P(FF,n);
-
-    GD.QLUPin(Rank, Det, Q, L, U, P, n, n );
-
-    FVector x(FF,n), w(FF,n), Iv(FF, n);
-    for(size_t i=0; i<Iv.size(); ++i) Iv[i] = FF.zero;
-
-    for(size_t i=0; i<n; ++i) {
-        Iv[i] = FF.one;
-        GD.solve(x, w, Rank, Q, L, U, P, Iv);
-        Iv[i] = FF.zero;
-        setRow(TI, i, x);
-    }
-
-    return TI;
-}
-
 
 	// Build block diagonal matrix from vector of blocks
 inline Matrix& diagonalMatrix(Matrix& M, const std::vector<Matrix>& V) {
@@ -148,26 +112,6 @@ inline std::vector<Matrix>& separateColumnBlocks(
     }
 
     return V;
-}
-
-template<typename _Mat>
-size_t density(const _Mat& M) {
-    size_t ss(0);
-    for(auto it=M.rowBegin();it!=M.rowEnd();++it) {
-        ss += it->size();
-    }
-    return ss;
-}
-
-template<typename _Mat>
-Pair<size_t> nonzeroes(const _Mat& M) {
-    const auto& F(M.field());
-    size_t nnz(0), nno(0);
-    for(auto it=M.IndexedBegin();it!=M.IndexedEnd();++it) {
-        if (! F.isZero(it.value()) ) ++nnz;
-        if (! isAbsOne(F, it.value())) ++nno;
-    }
-    return Pair<size_t>{nnz,nno};
 }
 
     // Prints out density profile of M
@@ -387,6 +331,41 @@ inline Matrix& FactorDiagonals(Matrix& TCoB, Matrix& TM) {
 
 
 
+	// Computes the inverse of A
+template<typename _Mat1, typename _Mat2>
+inline _Mat1& inverse(_Mat1& T, const _Mat2& A) {
+    assert(A.rowdim() == A.coldim());
+    const size_t n(A.rowdim());
+
+    using Field = typename _Mat1::Field;
+    using FVector = LinBox::DenseVector<Field>;
+    const Field& FF(A.field());
+
+    LinBox::GaussDomain<Field> GD(FF);
+
+    T.resize(n,n);
+    _Mat1 U(FF); matrixCopy(U, A);
+
+    typename Field::Element Det;
+    size_t Rank;
+    _Mat1 L(FF, n, n);
+    LinBox::Permutation<Field> Q(FF,n);
+    LinBox::Permutation<Field> P(FF,n);
+
+    GD.QLUPin(Rank, Det, Q, L, U, P, n, n );
+
+    FVector x(FF,n), w(FF,n), Iv(FF, n);
+    for(size_t j=0; j<Iv.size(); ++j) FF.assign(Iv[j],FF.zero);
+
+    for(size_t j=0; j<n; ++j) {
+        FF.assign(Iv[j],FF.one);
+        GD.solve(x, w, Rank, Q, L, U, P, Iv);
+        FF.assign(Iv[j],FF.zero);
+        updCol(T, j, x);
+    }
+
+    return T;
+}
     // ============================================================
     // Compute R, s.t. A == TICoB . R
 template<typename _Mat1, typename _Mat2>
@@ -400,6 +379,41 @@ DenseMatrix& applyInverse(DenseMatrix& R, const _Mat1& TICoB, const _Mat2& A,
     return BMD.mul(R,TCoB,A);     // A == TICoB . R
 }
 
+	// Computes the transposed inverse of A
+template<typename _Mat1, typename _Mat2>
+inline _Mat1& inverseTranspose(_Mat1& TI, const _Mat2& A) {
+    assert(A.rowdim() == A.coldim());
+    const size_t n(A.rowdim());
+
+    using Field = typename _Mat1::Field;
+    using FVector = LinBox::DenseVector<Field>;
+    const Field& FF(A.field());
+
+    LinBox::GaussDomain<Field> GD(FF);
+
+    TI.resize(n,n);
+    _Mat1 U(FF); matrixCopy(U, A);
+
+    typename Field::Element Det;
+    size_t Rank;
+    _Mat1 L(FF, n, n);
+    LinBox::Permutation<Field> Q(FF,n);
+    LinBox::Permutation<Field> P(FF,n);
+
+    GD.QLUPin(Rank, Det, Q, L, U, P, n, n );
+
+    FVector x(FF,n), w(FF,n), Iv(FF, n);
+    for(size_t i=0; i<Iv.size(); ++i) Iv[i] = FF.zero;
+
+    for(size_t i=0; i<n; ++i) {
+        Iv[i] = FF.one;
+        GD.solve(x, w, Rank, Q, L, U, P, Iv);
+        Iv[i] = FF.zero;
+        setRow(TI, i, x);
+    }
+
+    return TI;
+}
 
 
 // ============================================================

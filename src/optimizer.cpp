@@ -50,7 +50,7 @@ int FOptimiser(std::istream& input, const size_t randomloops,
                const bool printMaple, const bool printPretty,
                const bool tryDirect, const bool tryKernel, const bool tryLU,
                const bool tryAB, const bool mostCSE, const bool allkernels,
-               const Field& F) {
+               const Field& F, const int verbose) {
 
         // ============================================================
         // Read Matrix of Linear Transformation
@@ -82,7 +82,7 @@ int FOptimiser(std::istream& input, const size_t randomloops,
     Pair<size_t> nbops( OptMethods(opsinit, ssout, F, M, T, global, randomloops,
                                    printMaple, printPretty,
                                    tryDirect, tryKernel, tryLU, tryAB,
-                                   mostCSE, allkernels) );
+                                   mostCSE, allkernels, verbose) );
 
     std::cout << ssout.str() << std::flush;
 
@@ -126,15 +126,15 @@ int Selector(std::istream& input, const size_t randomloops,
              const bool printMaple, const bool printPretty,
              const bool tryDirect, const bool tryKernel, const bool tryLU,
              const bool tryAB, const bool mostCSE, const bool allkernels,
-             const Givaro::Integer& q) {
+             const Givaro::Integer& q, const int verbose) {
     if (! Givaro::isZero(q)) {
         Givaro::Modular<Givaro::Integer> FF(q);
         return FOptimiser(input, randomloops, printMaple, printPretty, tryDirect,
-                          tryKernel, tryLU, tryAB, mostCSE, allkernels, FF);
+                          tryKernel, tryLU, tryAB, mostCSE, allkernels, FF, verbose);
     } else {
         QRat QQ;
         return FOptimiser(input, randomloops, printMaple, printPretty, tryDirect,
-                          tryKernel, tryLU, tryAB, mostCSE, allkernels, QQ);
+                          tryKernel, tryLU, tryAB, mostCSE, allkernels, QQ, verbose);
     }
 }
 
@@ -160,6 +160,7 @@ int main(int argc, char** argv) {
         tryKernel(false), tryLU(false), tryAB(false),
         tryDirect(false), allkernels(false);
 
+    int verbose(1);
     size_t randomloops(DORANDOMSEARCH?DEFAULT_RANDOM_LOOPS:1);
     Givaro::Integer prime(0u);
 
@@ -192,6 +193,7 @@ int main(int argc, char** argv) {
         else if (args == "-E") { mostCSE = true; }
         else if (args == "-N") { allkernels = true; }
         else if (args == "-q") { prime = Givaro::Integer(argv[++i]); }
+        else if (args == "-v") { verbose = atoi(argv[++i]); }
         else if (args == "-O") {
             randomloops = atoi(argv[++i]);
             if ( (randomloops>1) && (!DORANDOMSEARCH) ) {
@@ -211,13 +213,13 @@ int main(int argc, char** argv) {
     if (filename == "") {
         return PLinOpt::Selector(std::cin, randomloops, printMaple,
                                  printPretty, tryDirect, tryKernel, tryLU,
-                                 tryAB, mostCSE, allkernels, prime);
+                                 tryAB, mostCSE, allkernels, prime, verbose);
     } else {
         std::ifstream inputmatrix(filename);
         if ( inputmatrix ) {
             int s=PLinOpt::Selector(inputmatrix, randomloops, printMaple,
                                     printPretty, tryDirect, tryKernel, tryLU,
-                                    tryAB, mostCSE, allkernels, prime);
+                                    tryAB, mostCSE, allkernels, prime, verbose);
             inputmatrix.close();
             return s;
         }

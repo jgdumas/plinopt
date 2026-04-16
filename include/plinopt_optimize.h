@@ -29,8 +29,8 @@
 
 // ============================================================
 // Kernel method:
-//   deactivate inclusion of identity to kernel goals
-//#define KERNEL_FREEONLY
+//   activate inclusion of identity to kernel goals
+//#define KERNEL_FULL_IDENTITY
 // ============================================================
 
 
@@ -149,7 +149,7 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
 template<typename Field>
 Pair<size_t>& LUOptimiser(Pair<size_t>& nbops, std::ostringstream& gout,
                           const Field& F, const Matrix& M, const Matrix& T,
-                          const size_t randomloops);
+                          const size_t randomloops, const int verbose=0);
 
 
 // ============================================================
@@ -157,7 +157,7 @@ Pair<size_t>& LUOptimiser(Pair<size_t>& nbops, std::ostringstream& gout,
 template<typename Field>
 Pair<size_t>& CSEOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
                            const Field& F, const Matrix& M, const Matrix& T,
-                           Givaro::Timer& global, const size_t randomloops);
+                           Givaro::Timer& global, const size_t randomloops, const int verbose=0);
 
 // ============================================================
 // Optimizing a linear program (whole CSE tree)
@@ -171,25 +171,26 @@ Pair<size_t>& AllCSEOpt(Pair<size_t>& nbops, std::ostringstream& sout,
 template<typename Field>
 Pair<size_t>& KernelOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
                               const Field& F, const Matrix& T,
-                              Givaro::Timer& global, const size_t randomloops);
+                              Givaro::Timer& global, const size_t randomloops,
+                              const int verbose=0);
 
 // ============================================================
 // Optimizing a linear program (kernel method, all permutations)
 template<typename Field>
 Pair<size_t>& AllKernelOpt(Pair<size_t>& nbops, std::ostringstream& sout,
                            const Field& F, const Matrix& T, const bool mostCSE,
-                           Givaro::Timer& global, const size_t randomloops);
+                           Givaro::Timer& global, const size_t randomloops, const int verbose=0);
 
 
 // ============================================================
 // Optimizing a linear program (Direct CSE or Kernel methods)
 template<typename Field>
-Pair<size_t>& DKOptimiser(Pair<size_t>& nbops, std::ostringstream& ssout,
-                          const Field& F, const Matrix& M, const Matrix& T,
-                          Givaro::Timer& global, const size_t randomloops,
-                          const bool printMaple, const bool printPretty,
-                          const bool tryDirect, const bool tryKernel,
-                          const bool mostCSE, const bool allkernels);
+Pair<size_t>& OptMethods(Pair<size_t>& nbops, std::ostringstream& ssout,
+                         const Field& F, const Matrix& M, const Matrix& T,
+                         Givaro::Timer& global, const size_t randomloops,
+                         const bool printMaple, const bool printPretty,
+                         const bool tryDirect, const bool tryKernel,
+                         const bool mostCSE, const bool allkernels, const int verbose=0);
 
 } // End of namespace PLinOpt
 // ============================================

@@ -115,25 +115,36 @@ template<typename _Mat1, typename _Mat2, typename _DMat>
 std::ostream& consistency(std::ostream& out, const _Mat1& M,
                           const _Mat2& R, const _DMat& C);
 
+	// Operations upper bound for matrix-vector multiplication
+template<typename _Mat>
+Pair<size_t> naiveOps(const _Mat& M);
+
+	// Number of non-zero elements
+template<typename _Matrix> size_t density(const _Matrix& A);
+template<typename _Mat> Pair<size_t> nonzeroes(const _Mat& M);
+
     // Prints out density profile of M
     // returns total density
 template<typename _Mat>
 std::ostream& densityProfile(std::ostream& out, size_t& s, const _Mat& M);
 
-	// Computes the transposed inverse of A
-template<typename _Mat1, typename _Mat2>
-_Mat1& inverseTranspose(_Mat1& TI, const _Mat2& A);
-
-    // ============================================================
-    // Compute R, s.t. A == T . R
-template<typename _Mat1, typename _Mat2>
-DenseMatrix& applyInverse(DenseMatrix& R, const _Mat1& T, const _Mat2& A,
-                          const LinBox::MatrixDomain<QRat>& BMD);
-
 	// Computes the rank of A
 template<typename _Mat>
 size_t& rank(size_t& r, const _Mat& A);
 
+	// Computes the inverse of A
+template<typename _Mat1, typename _Mat2>
+_Mat1& inverse(_Mat1& T, const _Mat2& A);
+
+	// Computes the transposed inverse of A
+template<typename _Mat1, typename _Mat2>
+_Mat1& inverseTranspose(_Mat1& TI, const _Mat2& A);
+
+    // ==========================
+    // Compute R, s.t. A == T . R
+template<typename _Mat1, typename _Mat2>
+DenseMatrix& applyInverse(DenseMatrix& R, const _Mat1& T, const _Mat2& A,
+                          const LinBox::MatrixDomain<QRat>& BMD);
 
 // ============================================================
 // QLUP Gaussian elimination of A
