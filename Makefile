@@ -5,6 +5,7 @@
 
 OPTFLAGS = -O3 -ffast-math
 
+##############
 # CXXFLAGS += -D DEFAULT_RANDOM_LOOPS=30u	# Default # of loops
 # CXXFLAGS += -D COEFFICIENT_SEARCH=20u		# Default # sparsifier coeffs
 
@@ -17,7 +18,8 @@ OPTFLAGS = -O3 -ffast-math
 
 # CXXFLAGS += -D ACTION_FULL_PLUQ	# Random PLUQ action
 # CXXFLAGS += -D ACTION_HOUSEHOLDER	# Random Householder action
-#######
+# CXXFLAGS += -D NEGATER_ONLY_SIGN	# Disable common divisors to matrix P
+##############
 
 RNDFLAGS = -D RANDOM_TIES		# Default randomized search
 

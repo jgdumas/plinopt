@@ -182,6 +182,11 @@ bool notAbsOne(const Ring& F, const typename Ring::Element& e) {
     return ( (!F.isOne(e)) && (!F.isMOne(e)) );
 }
 
+template<typename Ring>
+bool notZeroNotAbsOne(const Ring& F, const typename Ring::Element& e) {
+    return ( (!F.isZero(e)) && (!F.isOne(e)) && (!F.isMOne(e)) );
+}
+
 Givaro::Rational Fabs(const QRat& QQ, const Givaro::Rational& r) {
     return abs(r);
 }

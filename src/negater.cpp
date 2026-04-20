@@ -21,6 +21,47 @@
 #include "plinopt_library.h"
 #include <filesystem>
 
+// Default is grouping signs and common divisors
+// This macro disables pushing the common divisors to matrix P
+// #define NEGATER_ONLY_SIGN
+
+template<typename _Row>
+size_t ndGCD(PLinOpt::Pair<Givaro::Integer>& nd, const _Row& row) {
+    static Givaro::ZRing<Givaro::Integer> ZZ;
+    nd.first = nd.second = Givaro::Integer::zero;
+    for(const auto& it: row) {
+        if (! ZZ.isZero(it.second.nume()) ) {
+            if (PLinOpt::notAbsOne(ZZ,it.second.nume())) {
+                ZZ.gcdin(nd.first, it.second.nume());
+            } else {
+                nd.first = Givaro::Integer::one;
+            }
+        }
+        if (! ZZ.isZero(it.second.deno()) ) {
+            if (PLinOpt::notAbsOne(ZZ,it.second.deno())) {
+                ZZ.gcdin(nd.second, it.second.deno());
+            } else {
+                nd.second = Givaro::Integer::one;
+            }
+        }
+    }
+    size_t nZOmO(0);
+    if (PLinOpt::notZeroNotAbsOne(ZZ,nd.first)) ++nZOmO;
+    if (PLinOpt::notZeroNotAbsOne(ZZ,nd.second)) ++nZOmO;
+    return nZOmO;
+}
+
+
+template<typename _Row>
+void swapMultipliers(_Row& divLine, _Row& mulLine,
+                     const Givaro::Integer& c, const PLinOpt::QRat& QQ) {
+    if (PLinOpt::notZeroNotAbsOne(QQ,c)) {
+        for(auto& it: divLine) QQ.divin(it.second,c);
+        for(auto& it: mulLine) QQ.mulin(it.second,c);
+    }
+}
+
+
 // ===============================================================
 // argv[1-3]: L.sms R.sms P.sms
 int main(int argc, char ** argv) {
@@ -65,10 +106,48 @@ int main(int argc, char ** argv) {
               << " Matrix-Multiplication..." << std::endl;
 
     PLinOpt::Matrix Pt(QQ); PLinOpt::Transpose(Pt,P);
+
     size_t Gn(0), Nn(0), Sn(0);
     size_t GLn(0),NLn(0),SLn(0), GRn(0),NRn(0),SRn(0), GPn(0),NPn(0),SPn(0);
 
+
+    size_t iZO(0), eZO(0);
+
+
     for(size_t i=0; i<L.rowdim(); ++i) {
+        std::clog << "# LRP" << '<' << i << '>' << '\t';
+
+#if !defined(NEGATER_ONLY_SIGN)
+        PLinOpt::Pair<Givaro::Integer> ndL, ndR, ndP;
+        size_t lZO(0), sZO(0);
+
+        lZO += ndGCD(ndL, L[i]);
+        lZO += ndGCD(ndR, R[i]);
+        lZO += ndGCD(ndP, Pt[i]);
+        iZO += lZO;
+
+        std::clog << '<' << ndL.first << '/' << ndL.second << '>'
+                  << '<' << ndR.first << '/' << ndR.second << '>'
+                  << '<' << ndP.first << '/' << ndP.second << '>';
+
+        swapMultipliers(L[i],Pt[i],ndL.first,QQ);
+        swapMultipliers(Pt[i],L[i],ndL.second,QQ);
+        swapMultipliers(R[i],Pt[i],ndR.first,QQ);
+        swapMultipliers(Pt[i],R[i],ndR.second,QQ);
+
+        sZO += ndGCD(ndL, L[i]);
+        sZO += ndGCD(ndR, R[i]);
+        sZO += ndGCD(ndP, Pt[i]);
+        eZO += sZO;
+
+        std::clog << "  -->  " << (sZO<lZO?"\033[1;32m":"\033[0m")
+                  << '<' << ndL.first << '/' << ndL.second << '>'
+                  << '<' << ndR.first << '/' << ndR.second << '>'
+                  << '<' << ndP.first << '/' << ndP.second << '>'
+                  << "\033[0m" << '\t' << ';' << '\t';
+#endif
+
+
         Sn += L[i].size(); Sn += R[i].size(); Sn += Pt[i].size();
         SLn += L[i].size(); SRn += R[i].size(); SPn += Pt[i].size();
 
@@ -84,16 +163,15 @@ int main(int argc, char ** argv) {
         size_t NLP(L[i].size()-Lnegs+Rnegs+Pt[i].size()-Pnegs);
         size_t NRP(Lnegs+R[i].size()-Rnegs+Pt[i].size()-Pnegs);
 
-
-        std::clog << "# LRP" << '<' << i << '>'
-                  << ' ' << Lnegs << '/' << L[i].size()
+        std::clog << Lnegs << '/' << L[i].size()
                   << ' ' << Rnegs << '/' << R[i].size()
                   << ' ' << Pnegs << '/' << Pt[i].size()
                   << "  -->  "
                   << None << ':' << NLR << ',' << NLP << ',' << NRP;
 
         if ((NLR < None) && (NLR <= NLP) && (NLR <= NRP)) {
-            std::clog << "  -->  swap signs L[" << i << "] & R[" << i << ']';
+            std::clog << "  --> " << NLR << '<' << None
+                      << ": swap signs L[" << i << "] & R[" << i << ']';
             for(auto& it: L[i]) QQ.negin(it.second);
             for(auto& it: R[i]) QQ.negin(it.second);
             Nn += NLR;
@@ -102,7 +180,8 @@ int main(int argc, char ** argv) {
             NPn += Pnegs;
         } else
         if ((NLP < None) && (NLP < NLR) && (NLP <= NRP)) {
-            std::clog << "  -->  swap signs L[" << i << "] & Pt[" << i << ']';
+            std::clog << "  --> " << NLP << '<' << None
+                      << ": swap signs L[" << i << "] & Pt[" << i << ']';
             for(auto& it: L[i]) QQ.negin(it.second);
             for(auto& it: Pt[i]) QQ.negin(it.second);
             Nn += NLP;
@@ -111,7 +190,8 @@ int main(int argc, char ** argv) {
             NPn += Pt[i].size(); NPn -= Pnegs;
         } else
         if ((NRP < None) && (NRP < NLP) && (NRP < NLR)) {
-            std::clog << "  -->  swap signs R[" << i << "] & Pt[" << i << ']';
+            std::clog << "  --> " << NRP << '<' << None
+                      << ": swap signs R[" << i << "] & Pt[" << i << ']';
             for(auto& it: R[i]) QQ.negin(it.second);
             for(auto& it: Pt[i]) QQ.negin(it.second);
             Nn += NRP;
@@ -142,9 +222,14 @@ int main(int argc, char ** argv) {
     R.write(oright,FileFormat(5));
     P.write(opost,FileFormat(5));
 
+       // =============================================
+    std::clog << "# GCDs: " << (eZO<iZO?"\033[1;32m":"\033[1;36m") << eZO
+              << " common divisors instead of "
+              << iZO << "\033[0m" << std::endl;
 
        // =============================================
-    std::clog << "# \033[1;32m" << Nn << '/' << Sn << ':'
+    std::clog << "# NEGs: "<< (Nn<Gn?"\033[1;32m":"\033[1;36m")
+              << Nn << '/' << Sn << ':'
               << '(' << NLn << '+' << NRn << '+' << NPn << ')'
               << '/' << '(' << SLn << '+' << SRn << '+' << SPn << ')'
               << " negative instead of "
