@@ -609,7 +609,17 @@ int Tellegen(std::istream& input,
 }
 // ============================================================
 
-
+// ============================================================
+// Cleaning program lines
+inline void stringTrim(std::string &s) {
+        // Trim everything after comment character
+    const auto hascomment(s.find_first_of('#',0));
+    if (hascomment != std::string::npos)
+        s.erase(s.begin()+hascomment,s.end());
+        // Trim spaces from the end (in place)
+    s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char c) { return !std::isspace(c);}
+                         ).base(), s.end());
+}
 
 // ============================================================
 // Creating a vector of lines from a text file program
@@ -620,6 +630,7 @@ VProgram_t& programParser(VProgram_t& ProgramVector, std::stringstream& ssin) {
         // Working line by line
     std::string line;
     while(std::getline(ssin, line)) {
+        stringTrim(line); // clean-up
             // ========================================================
             // Finding the LHS
         const std::size_t postassign(line.find(":=",0));
@@ -671,7 +682,7 @@ VProgram_t& programParser(VProgram_t& ProgramVector, std::stringstream& ssin) {
 #ifdef VERBATIM_PARSING
                 // =================
                 // Got a line
-            std::clog << "# Parsed: ";
+            std::clog << "# Parsed<" << wordVector.size() << ">:\t";
             for(const auto& iter: wordVector) std::clog << iter << ' ';
             std::clog << std::endl;
 #endif
