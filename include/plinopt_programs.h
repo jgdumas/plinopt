@@ -130,6 +130,19 @@ struct stackbuf;
 char unusedChar(const std::set<char>& C, const char cstart = 'a'-1);
 // ============================================================
 
+// ============================================================
+// Cleaning program lines: remove comments and trailing spaces
+inline void stringTrimer(std::string &s) {
+        // Trim everything after comment character
+    const auto hascomment(s.find_first_of('#',0));
+    if (hascomment != std::string::npos) s.erase(s.begin()+hascomment,s.end());
+        // Trim spaces from the end (in place)
+    s.erase(std::find_if(s.rbegin(), s.rend(),
+                         [](unsigned char c) { return !std::isspace(c);}
+                         ).base(),
+            s.end());
+}
+// ============================================================
 
 
 } // End of namespace PLinOpt
