@@ -119,10 +119,6 @@ std::ostream& consistency(std::ostream& out, const _Mat1& M,
 template<typename _Mat>
 Pair<size_t> naiveOps(const _Mat& M);
 
-	// Number of non-zero elements
-template<typename _Matrix> size_t density(const _Matrix& A);
-template<typename _Mat> Pair<size_t> nonzeroes(const _Mat& M);
-
     // Prints out density profile of M
     // returns total density
 template<typename _Mat>

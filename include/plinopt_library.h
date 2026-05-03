@@ -73,17 +73,25 @@ typedef std::vector<Givaro::Rational> QArray;
 typedef LinBox::DenseVector<QRat> QVector;
 
 template<typename _T> using Pair = std::pair<_T,_T>;
-inline Pair<size_t>& operator +=(Pair<size_t>& x, const Pair<size_t>& y) {
+
+template<typename _T>
+inline Pair<_T>& operator +=(Pair<_T>& x, const Pair<_T>& y) {
     x.first += y.first; x.second += y.second;
     return x;
 }
-inline Pair<size_t>& operator -=(Pair<size_t>& x, const Pair<size_t>& y) {
+
+template<typename _T>
+inline Pair<_T>& operator -=(Pair<_T>& x, const Pair<_T>& y) {
     x.first -= y.first; x.second -= y.second;
     return x;
 }
 
 // ============================================
 // === PLinOpt matrix operations
+
+	// Number of non-zero elements
+template<typename _Matrix> size_t density(const _Matrix& A);
+template<typename _Mat> Pair<size_t> nonzeroes(const _Mat& M);
 
 	// Copy the transposed  matrix
 template<typename _Mat1, typename _Mat2>

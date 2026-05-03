@@ -139,6 +139,14 @@ inline _Mat& zoiRandomMatrix(_Mat& M) {
 }
 
 
+
+template<typename _Mat>
+Pair<size_t> nonzeroes(const _Mat& L, const _Mat& R, const _Mat& P) {
+    Pair<size_t> nnz(nonzeroes(L));
+    const Pair<size_t> nnzr(nonzeroes(R)), nnzp(nonzeroes(P));
+    nnz += nnzr; return nnz += nnzp;
+}
+
 } // End of namespace PLinOpt
 
 
@@ -155,7 +163,6 @@ struct Operations {
         return (nnzl+nnzr+nnzp);
     }
 };
-
 
 
 // Counting number of SLP operations
@@ -248,7 +255,9 @@ template<int Measure> struct Orbiter {
     const size_t subloops( randomloops>16 ? randomloops>>4: 1);
     const size_t initopt = Operations<Measure>()(L,R,P,subloops);
     size_t bestopt(initopt);
-    std::clog << "# Init. ops: " << initopt << std::endl;
+    const auto initnz(PLinOpt::nonzeroes(L,R,P));
+    auto bestnz(initnz);
+    std::clog << "# Init. ops: " << initopt << ", " << initnz << std::endl;
 
     FMatrix bestLj(FF,L.rowdim(), L.coldim()),
         bestRg(FF, R.rowdim(), R.coldim()),
@@ -284,29 +293,33 @@ template<int Measure> struct Orbiter {
 
         const size_t lbopt = Operations<Measure>()(Lj,Rg,hP,subloops);
 
+        if (lbopt<=bestopt) {
+            const auto lbnz(PLinOpt::nonzeroes(Lj,Rg,hP));
+            if ((lbopt<bestopt) || (lbnz.first<bestnz.first) || (lbnz.second<bestnz.second)) {
 #pragma omp critical
-        {
+                {
 #ifdef VERBATIM_PARSING
-        U.write(std::clog << "U:=",FileFormat::Maple) << ';' << std::endl;
-        V.write(std::clog << "V:=",FileFormat::Maple) << ';' << std::endl;
-        W.write(std::clog << "W:=",FileFormat::Maple) << ';' << std::endl;
-        J.write(std::clog << "J:=",FileFormat::Maple) << ';' << std::endl;
-        G.write(std::clog << "G:=",FileFormat::Maple) << ';' << std::endl;
-        H.write(std::clog << "H:=",FileFormat::Maple) << ';' << std::endl;
-        std::clog << "# Curr. nnz: " << lbnnz << '=' << nnzlj << '+'
-                  << nnzrg << '+' << nnzhp << std::endl;
-
+                    U.write(std::clog << "U:=",FileFormat::Maple) << ';' << std::endl;
+                    V.write(std::clog << "V:=",FileFormat::Maple) << ';' << std::endl;
+                    W.write(std::clog << "W:=",FileFormat::Maple) << ';' << std::endl;
+                    J.write(std::clog << "J:=",FileFormat::Maple) << ';' << std::endl;
+                    G.write(std::clog << "G:=",FileFormat::Maple) << ';' << std::endl;
+                    H.write(std::clog << "H:=",FileFormat::Maple) << ';' << std::endl;
+                    std::clog << "# Curr. nnz: " << lbnnz << '=' << nnzlj << '+'
+                              << nnzrg << '+' << nnzhp << std::endl;
 #endif
-        if (lbopt<bestopt) {
-            std::clog << "# Found opt: " << lbopt << '<' << bestopt
-                      << "\t[" << i << '/' << omp_get_thread_num() << ']'
-                      << std::endl;
-            bestopt = lbopt;
-            PLinOpt::dense2sparse(bestLj, Lj);
-            PLinOpt::dense2sparse(bestRg, Rg);
-            PLinOpt::dense2sparse(besthP, hP);
-        }
 
+                std::clog << "# Found opt: " << lbopt << (lbopt<bestopt?'<':'=') << bestopt
+                          << '\t' << lbnz << '&' << bestnz
+                          << "\t[" << i << '/' << omp_get_thread_num() << ']'
+                          << std::endl;
+                bestopt = lbopt;
+                bestnz = lbnz;
+                PLinOpt::dense2sparse(bestLj, Lj);
+                PLinOpt::dense2sparse(bestRg, Rg);
+                PLinOpt::dense2sparse(besthP, hP);
+                }
+            }
         }
     }
 
@@ -314,7 +327,8 @@ template<int Measure> struct Orbiter {
 
     std::clog << "# Search(" << randomloops <<"): " << chrono << std::endl;
 
-    if (bestopt<initopt) {
+    if ((bestopt<=initopt) &&
+        ((bestopt<initopt) || (bestnz.first<initnz.first) || (bestnz.second<initnz.second)) ) {
         std::clog << "# \033[1;36mRdcd. opt: " << bestopt << '=';
         Operations<0>()(bestLj,bestRg,besthP,0);
         std::clog << '<' << initopt << "\033[0m" << std::endl;
