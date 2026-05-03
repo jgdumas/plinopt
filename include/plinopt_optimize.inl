@@ -949,14 +949,14 @@ bool RecSub(std::vector<std::string>& out, _Mat& Mat,
 
 #pragma omp critical
                 {
-                    if ( (ladditions < bestadds) ||
-                         ( (ladditions == bestadds) && (lmuls < bestmuls) ) ) {
-                        bestadds = ladditions;
-                        bestmuls = lmuls;
-                        sparse2sparse(bestM, lM);
-                        bestmultiples = lmultiples;
-                        bestdout = sdout;
-                    }
+                if ( (ladditions < bestadds) ||
+                     ( (ladditions == bestadds) && (lmuls < bestmuls) ) ) {
+                    bestadds = ladditions;
+                    bestmuls = lmuls;
+                    sparse2sparse(bestM, lM);
+                    bestmultiples = lmultiples;
+                    bestdout = sdout;
+                }
                 }
             }
         }
@@ -1074,22 +1074,22 @@ Pair<size_t>& LUOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
 
 #pragma omp critical
         {
-            const bool better(cmpOpCount(Uops,gops));
-            if ( (gout.tellp() == std::streampos(0) ) || better ) {
-                gout.clear(); gout.str(std::string());
-                gout.str(luout.str());
-                if (better) {
-                    if (verbose>0) {
-                        std::clog << "# Found G: "
-                                  << Uops.first << '|' << Uops.second
-                                  << " instead of "
-                                  << gops.first << '|' << gops.second << "\t["
-                                  << i << '/' << omp_get_thread_num() << ']'
-                                  << std::endl;
-                    }
-                    gops = Uops;
+        const bool better(cmpOpCount(Uops,gops));
+        if ( (gout.tellp() == std::streampos(0) ) || better ) {
+            gout.clear(); gout.str(std::string());
+            gout.str(luout.str());
+            if (better) {
+                if (verbose>0) {
+                    std::clog << "# Found G: "
+                              << Uops.first << '|' << Uops.second
+                              << " instead of "
+                              << gops.first << '|' << gops.second << "\t["
+                              << i << '/' << omp_get_thread_num() << ']'
+                              << std::endl;
                 }
+                gops = Uops;
             }
+        }
         }
     }
 
@@ -1148,25 +1148,25 @@ Pair<size_t>& ABOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
 
 #pragma omp critical
         {
-            const bool better(cmpOpCount(ABops,gops));
-            if ( better || (gout.tellp() == std::streampos(0) ) ) {
-                gout.clear(); gout.str(std::string());
-                gout << about.str();
-                if (better) {
-                    if (verbose>0) {
-                        std::clog << "# Found A: ("
-                                  << Alt.rowdim() << 'x' << Alt.coldim() << 'x'
-                                  << CoB.coldim() << ' ' << sa << '/' << sc
-                                  << ')' << '\t' << Bops.first << '+' << Aops.first
-                                  << '|' << Bops.second << '+' << Aops.second
-                                  << " instead of "
-                                  << gops.first << '|' << gops.second << "\t["
-                                  << i << '/' << omp_get_thread_num() << ']'
-                                  << std::endl;
-                    }
-                    gops = ABops;
+        const bool better(cmpOpCount(ABops,gops));
+        if ( better || (gout.tellp() == std::streampos(0) ) ) {
+            gout.clear(); gout.str(std::string());
+            gout << about.str();
+            if (better) {
+                if (verbose>0) {
+                    std::clog << "# Found A: ("
+                              << Alt.rowdim() << 'x' << Alt.coldim() << 'x'
+                              << CoB.coldim() << ' ' << sa << '/' << sc
+                              << ')' << '\t' << Bops.first << '+' << Aops.first
+                              << '|' << Bops.second << '+' << Aops.second
+                              << " instead of "
+                              << gops.first << '|' << gops.second << "\t["
+                              << i << '/' << omp_get_thread_num() << ']'
+                              << std::endl;
                 }
+                gops = ABops;
             }
+        }
         }
     }
 
@@ -1205,30 +1205,29 @@ Pair<size_t>& CSEOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
         input2Temps(ldout, lM.coldim(), 'i', 't', lT);
         auto lnbops( Optimizer(ldout, lM, 'o', 't', 'r') );
 
-
 #pragma omp critical
         {
+        const bool better(cmpOpCount(lnbops,dops));
+        if ( (dout.tellp() == std::streampos(0)) || better ) {
 #ifdef VERBATIM_PARSING
             std::clog << "# Found, direct: "
                       << lnbops.first << "\tadditions, "
                       << lnbops.second << "\tmultiplications." << std::endl;
 #endif
-            const bool better(cmpOpCount(lnbops,dops));
-            if ( (dout.tellp() == std::streampos(0)) || better ) {
-                dout.clear(); dout.str(std::string());
-                dout << ldout.str();
-                if (better) {
-                    if (verbose>0) {
-                        std::clog << "# Found D: "
-                                  << lnbops.first << '|' << lnbops.second
-                                  << " instead of "
-                                  << dops.first << '|' << dops.second << "\t["
-                                  << i << '/' << omp_get_thread_num() << ']'
-                                  << std::endl;
-                    }
-                    dops = lnbops;
+            dout.clear(); dout.str(std::string());
+            dout << ldout.str();
+            if (better) {
+                if (verbose>0) {
+                    std::clog << "# Found D: "
+                              << lnbops.first << '|' << lnbops.second
+                              << " instead of "
+                              << dops.first << '|' << dops.second << "\t["
+                              << i << '/' << omp_get_thread_num() << ']'
+                              << std::endl;
                 }
+                dops = lnbops;
             }
+        }
         }
     }
 
@@ -1299,33 +1298,37 @@ Pair<size_t>& KernelOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
             FMatrix NullSpace(F,lT.coldim(),lT.coldim());
             auto lnbops( nullspacedecomp(lkout, NullSpace, lT) );
 
+            if (lnbops == Pair<size_t>{-1,-1}) {
 #pragma omp critical
             {
+                nonzerokernel = false;
+            }
+            }
+
+#pragma omp critical
+            {
+            const bool better(cmpOpCount(lnbops,kops));
+            if ( (kout.tellp() == std::streampos(0) ) || better ) {
 #ifdef VERBATIM_PARSING
                 std::clog << "# Found, kernel: "
                           << lnbops.first << "\tadditions, "
                           << lnbops.second << "\tmultiplications." << std::endl;
 #endif
-                if (lnbops == Pair<size_t>{-1,-1}) {
-                    nonzerokernel = false;
-                }
-                const bool better(cmpOpCount(lnbops,kops));
-                if ( (kout.tellp() == std::streampos(0) ) || better ) {
-                    kout.clear(); kout.str(std::string());
-                    kout << lkout.str();
-                    if (better) {
-                        if (verbose>0) {
-                            std::clog << "# Found K: "
-                                      << lnbops.first << '|' << lnbops.second
-                                      << " instead of "
-                                      << kops.first << '|' << kops.second
-                                      << "\t[" << i << '/'
-                                      << omp_get_thread_num() << ']'
-                                      << std::endl;
-                        }
-                        kops = lnbops;
+                kout.clear(); kout.str(std::string());
+                kout << lkout.str();
+                if (better) {
+                    if (verbose>0) {
+                        std::clog << "# Found K: "
+                                  << lnbops.first << '|' << lnbops.second
+                                  << " instead of "
+                                  << kops.first << '|' << kops.second
+                                  << "\t[" << i << '/'
+                                  << omp_get_thread_num() << ']'
+                                  << std::endl;
                     }
+                    kops = lnbops;
                 }
+            }
             }
         }
     }
@@ -1368,27 +1371,27 @@ Pair<size_t>& AllKernelOpt(Pair<size_t>& nbops, std::ostringstream& sout,
 
 #pragma omp critical
         {
+        const bool better(cmpOpCount(lkops,aops));
+        if ( (aout.tellp() == std::streampos(0)) || better) {
 #ifdef VERBATIM_PARSING
             std::clog << "# Found, kernel: "
                       << lkops.first << "\tadditions, "
                       << lkops.second << "\tmultiplications." << std::endl;
 #endif
-            const bool better(cmpOpCount(lkops,aops));
-            if ( (aout.tellp() == std::streampos(0)) || better) {
-                aout.clear(); aout.str(std::string());
-                aout << laout.str();
-                if (better) {
-                    if (verbose>0) {
-                        std::clog << "# Found E: "
-                                  << lkops.first << '|' << lkops.second
-                                  << " instead of "
-                                  << aops.first << '|' << aops.second << "\t["
-                                  << i << '/' << omp_get_thread_num() << ']'
-                                  << std::endl;
-                    }
-                    aops = lkops;
+            aout.clear(); aout.str(std::string());
+            aout << laout.str();
+            if (better) {
+                if (verbose>0) {
+                    std::clog << "# Found E: "
+                              << lkops.first << '|' << lkops.second
+                              << " instead of "
+                              << aops.first << '|' << aops.second << "\t["
+                              << i << '/' << omp_get_thread_num() << ']'
+                              << std::endl;
                 }
+                aops = lkops;
             }
+        }
         }
     }
 

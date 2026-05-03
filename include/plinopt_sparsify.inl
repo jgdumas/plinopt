@@ -889,22 +889,21 @@ int Factorizer(_Mat& Alt, _Mat& CoB, const _Mat& M,
         FMatrix lAlt(F, M.rowdim(), innerdim);
         auto bSops{backSolver(lCoB, lAlt, M)};
 
-
 #pragma omp critical
         {
+        if (tricOpCount(bSops, nbops)) {
 #ifdef VERBATIM_PARSING
             std::clog << "# Alt/CoB profile[" << i << "]: "
                       << bSops << std::endl;
 #endif
-            if (tricOpCount(bSops, nbops)) {
-                nbops = bSops;
-                sparse2sparse(CoB, lCoB);
-                sparse2sparse(Alt, lAlt);
+            nbops = bSops;
+            sparse2sparse(CoB, lCoB);
+            sparse2sparse(Alt, lAlt);
 
-                if (progressreport)
-                    std::clog << "# Found [" << i << "], R/CB profile: "
-                              << bSops << std::endl;
-            }
+            if (progressreport)
+                std::clog << "# Found [" << i << "], R/CB profile: "
+                          << bSops << std::endl;
+        }
         }
     }
 

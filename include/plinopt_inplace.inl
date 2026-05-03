@@ -638,17 +638,17 @@ Tricounter SearchLinearAlgorithm(AProgram_t& Program,
 
 #pragma omp critical
         {
-            if ( (std::get<0>(lops)<std::get<0>(nbops)) ||
-                 ( (std::get<0>(lops)==std::get<0>(nbops))
-                   && (std::get<1>(lops)<std::get<1>(nbops)) ) ) {
-                nbops = lops;
-                Program = lProgram;
-                P.getStorage() = std::move(lP.getStorage());
+        if ( (std::get<0>(lops)<std::get<0>(nbops)) ||
+             ( (std::get<0>(lops)==std::get<0>(nbops))
+               && (std::get<1>(lops)<std::get<1>(nbops)) ) ) {
+            nbops = lops;
+            Program = lProgram;
+            P.getStorage() = std::move(lP.getStorage());
 #ifdef VERBATIM_PARSING
-                std::clog << "# Found algorithm[" << i << "] for " << variable
-                          << ", operations: " << lops << std::endl;
+            std::clog << "# Found algorithm[" << i << "] for " << variable
+                      << ", operations: " << lops << std::endl;
 #endif
-            }
+        }
         }
 
 
@@ -656,17 +656,17 @@ Tricounter SearchLinearAlgorithm(AProgram_t& Program,
 
 #pragma omp critical
         {
-            if ( (std::get<0>(lops)<std::get<0>(nbops)) ||
-                 ( (std::get<0>(lops)==std::get<0>(nbops))
-                   && (std::get<1>(lops)<std::get<1>(nbops)) ) ) {
-                nbops = lops;
-                Program = lProgram;
-                P.getStorage() = std::move(lP.getStorage());
+        if ( (std::get<0>(lops)<std::get<0>(nbops)) ||
+             ( (std::get<0>(lops)==std::get<0>(nbops))
+               && (std::get<1>(lops)<std::get<1>(nbops)) ) ) {
+            nbops = lops;
+            Program = lProgram;
+            P.getStorage() = std::move(lP.getStorage());
 #ifdef VERBATIM_PARSING
-                std::clog << "# Found oriented[" << i << "] for " << variable
-                          << ", operations: " << lops << std::endl;
+            std::clog << "# Found oriented[" << i << "] for " << variable
+                      << ", operations: " << lops << std::endl;
 #endif
-            }
+        }
         }
     }
 
@@ -893,19 +893,16 @@ Tricounter SearchTriLinearAlgorithm(std::ostream& out,
 
 #pragma omp critical
         {
-            if ( (std::get<0>(lops)<std::get<0>(nbops)) ||
-                 ( (std::get<0>(lops)==std::get<0>(nbops))
-                   && (std::get<1>(lops)<std::get<1>(nbops)) ) ) {
-                nbops = lops;
-                res = lout.str();
-                std::clog << "# Found algorithm[" << i << "], operations: "
-                          << lops << std::endl;
-
-
+        if ( (std::get<0>(lops)<std::get<0>(nbops)) ||
+             ( (std::get<0>(lops)==std::get<0>(nbops))
+               && (std::get<1>(lops)<std::get<1>(nbops)) ) ) {
+            nbops = lops;
+            res = lout.str();
+            std::clog << "# Found algorithm[" << i << "], operations: "
+                      << lops << std::endl;
 //     std::clog << res << std::endl;
 //     std::clog << std::string(40,'#') << std::endl;
-
-            }
+        }
         }
 
             // =============================================
@@ -914,26 +911,23 @@ Tricounter SearchTriLinearAlgorithm(std::ostream& out,
 
 #pragma omp critical
         {
-            if ( (std::get<0>(lops)<std::get<0>(nbops)) ||
-                 ( (std::get<0>(lops)==std::get<0>(nbops))
-                   && (std::get<1>(lops)<std::get<1>(nbops)) ) ) {
-                nbops = lops;
-                res = sout.str();
-                std::clog << "# Found oriented [" << i << "], operations: "
-                          << lops << std::endl;
-
-
+        if ( (std::get<0>(lops)<std::get<0>(nbops)) ||
+             ( (std::get<0>(lops)==std::get<0>(nbops))
+               && (std::get<1>(lops)<std::get<1>(nbops)) ) ) {
+            nbops = lops;
+            res = sout.str();
+            std::clog << "# Found oriented [" << i << "], operations: "
+                      << lops << std::endl;
 //     std::clog << res << std::endl;
 //     std::clog << std::string(40,'#') << std::endl;
-
-            }
+        }
         }
     }
 
         // Print the chosen algorithm
     out << res << std::flush;
     return nbops;
- }
+}
 // ===============================================================
 
 

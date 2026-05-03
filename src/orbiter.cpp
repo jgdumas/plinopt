@@ -293,11 +293,11 @@ template<int Measure> struct Orbiter {
 
         const size_t lbopt = Operations<Measure>()(Lj,Rg,hP,subloops);
 
+#pragma omp critical
+        {
         if (lbopt<=bestopt) {
             const auto lbnz(PLinOpt::nonzeroes(Lj,Rg,hP));
             if ((lbopt<bestopt) || (lbnz.first<bestnz.first) || (lbnz.second<bestnz.second)) {
-#pragma omp critical
-                {
 #ifdef VERBATIM_PARSING
                     U.write(std::clog << "U:=",FileFormat::Maple) << ';' << std::endl;
                     V.write(std::clog << "V:=",FileFormat::Maple) << ';' << std::endl;
@@ -318,8 +318,8 @@ template<int Measure> struct Orbiter {
                 PLinOpt::dense2sparse(bestLj, Lj);
                 PLinOpt::dense2sparse(bestRg, Rg);
                 PLinOpt::dense2sparse(besthP, hP);
-                }
             }
+        }
         }
     }
 
