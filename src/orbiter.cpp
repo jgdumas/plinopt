@@ -331,7 +331,7 @@ template<int Measure> struct Orbiter {
         ((bestopt<initopt) || (bestnz.first<initnz.first) || (bestnz.second<initnz.second)) ) {
         std::clog << "# \033[1;36mRdcd. opt: " << bestopt << '=';
         Operations<0>()(bestLj,bestRg,besthP,0);
-        std::clog << '<' << initopt << "\033[0m" << std::endl;
+        std::clog << '<' << initopt << '\t' << bestnz << "\033[0m" << std::endl;
 
             // =============================================
             // Writing matrices

@@ -260,8 +260,10 @@ Pair<size_t> nonzeroes(const _Mat& M) {
     const auto& F(M.field());
     size_t nnz(0), nno(0);
     for(auto it=M.IndexedBegin();it!=M.IndexedEnd();++it) {
-        if (! F.isZero(it.value()) ) ++nnz;
-        if (! isAbsOne(F, it.value())) ++nno;
+        if (! F.isZero(it.value()) ) {
+            ++nnz;
+            if (! isAbsOne(F, it.value())) ++nno;
+        }
     }
     return Pair<size_t>{nnz,nno};
 }
