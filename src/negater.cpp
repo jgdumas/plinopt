@@ -115,7 +115,7 @@ int main(int argc, char ** argv) {
 
 
     for(size_t i=0; i<L.rowdim(); ++i) {
-        std::clog << "# LRP" << '<' << i << '>' << '\t';
+        std::clog << "# LRP" << '<' << i << '>' << '\t' << "gcd ";
 
 #if !defined(NEGATER_ONLY_SIGN)
         PLinOpt::Pair<Givaro::Integer> ndL, ndR, ndP;
@@ -144,7 +144,7 @@ int main(int argc, char ** argv) {
                   << '<' << ndL.first << '/' << ndL.second << '>'
                   << '<' << ndR.first << '/' << ndR.second << '>'
                   << '<' << ndP.first << '/' << ndP.second << '>'
-                  << "\033[0m" << '\t' << ';' << '\t';
+                  << "\033[0m" << '\t' << ';' << '\t' << "neg ";
 #endif
 
 
@@ -170,7 +170,7 @@ int main(int argc, char ** argv) {
                   << None << ':' << NLR << ',' << NLP << ',' << NRP;
 
         if ((NLR < None) && (NLR <= NLP) && (NLR <= NRP)) {
-            std::clog << "  --> " << NLR << '<' << None
+            std::clog << "  --> \033[1;32m" << NLR << '<' << None
                       << ": swap signs L[" << i << "] & R[" << i << ']';
             for(auto& it: L[i]) QQ.negin(it.second);
             for(auto& it: R[i]) QQ.negin(it.second);
@@ -180,7 +180,7 @@ int main(int argc, char ** argv) {
             NPn += Pnegs;
         } else
         if ((NLP < None) && (NLP < NLR) && (NLP <= NRP)) {
-            std::clog << "  --> " << NLP << '<' << None
+            std::clog << "  --> \033[1;32m" << NLP << '<' << None
                       << ": swap signs L[" << i << "] & Pt[" << i << ']';
             for(auto& it: L[i]) QQ.negin(it.second);
             for(auto& it: Pt[i]) QQ.negin(it.second);
@@ -190,7 +190,7 @@ int main(int argc, char ** argv) {
             NPn += Pt[i].size(); NPn -= Pnegs;
         } else
         if ((NRP < None) && (NRP < NLP) && (NRP < NLR)) {
-            std::clog << "  --> " << NRP << '<' << None
+            std::clog << "  --> \033[1;32m" << NRP << '<' << None
                       << ": swap signs R[" << i << "] & Pt[" << i << ']';
             for(auto& it: R[i]) QQ.negin(it.second);
             for(auto& it: Pt[i]) QQ.negin(it.second);
@@ -205,7 +205,7 @@ int main(int argc, char ** argv) {
             NPn += Pnegs;
         }
 
-        std::clog << std::endl;
+        std::clog << "\033[0m" << std::endl;
     }
 
 
