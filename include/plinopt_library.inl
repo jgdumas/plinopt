@@ -529,6 +529,7 @@ int MMchecker(const Field& FF, const size_t bitsize,
     if (BMD.isZero (Delta)) {
         FF.write(std::clog <<"# \033[1;32mSUCCESS: correct "
                  << m << 'x' << k << 'x' << n
+                 << ' ' << PLinOpt::nonzeroes(L,R,P)
                  << " Matrix-Multiplication \033[0m") << std::endl;
     } else {
         FF.write(std::cerr << "# \033[1;31m****** ERROR, not a "
