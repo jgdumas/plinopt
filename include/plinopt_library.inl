@@ -268,6 +268,21 @@ Pair<size_t> nonzeroes(const _Mat& M) {
     return Pair<size_t>{nnz,nno};
 }
 
+template<typename _Mat>
+size_t density(const _Mat& L, const _Mat& R, const _Mat& P,const size_t silent) {
+    const size_t nnzl(PLinOpt::density(L)),
+        nnzr(PLinOpt::density(R)), nnzp(PLinOpt::density(P));
+    if (! silent) std::clog << nnzl << '+' << nnzr << '+' << nnzp;
+    return (nnzl+nnzr+nnzp);
+}
+
+template<typename _Mat>
+Pair<size_t> nonzeroes(const _Mat& L, const _Mat& R, const _Mat& P) {
+    Pair<size_t> nnz(nonzeroes(L));
+    const Pair<size_t> nnzr(nonzeroes(R)), nnzp(nonzeroes(P));
+    nnz += nnzr; return nnz += nnzp;
+}
+
 // ==================
 // Returns the kth-permutation of 0..(n-1) via the factoradic
 // Fn is the factorial vector up to n-1 -- from 'factorial(m)'

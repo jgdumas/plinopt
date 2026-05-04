@@ -112,7 +112,7 @@ int main(int argc, char ** argv) {
 
 
     size_t iZO(0), eZO(0);
-
+    const auto initNZ(PLinOpt::nonzeroes(L,R,P));
 
     for(size_t i=0; i<L.rowdim(); ++i) {
         std::clog << "# LRP" << '<' << i << '>' << '\t' << "gcd ";
@@ -210,6 +210,7 @@ int main(int argc, char ** argv) {
 
 
     PLinOpt::Transpose(P, Pt);
+    const auto newNZ(PLinOpt::nonzeroes(L,R,P));
 
         // =============================================
         // Writing matrices
@@ -225,7 +226,8 @@ int main(int argc, char ** argv) {
        // =============================================
     std::clog << "# GCDs: " << (eZO<iZO?"\033[1;32m":"\033[1;36m") << eZO
               << " common divisors instead of "
-              << iZO << "\033[0m" << std::endl;
+              << iZO << ';' << '\t' << initNZ << "  -->  " << newNZ
+              << "\033[0m" << std::endl;
 
        // =============================================
     std::clog << "# NEGs: "<< (Nn<Gn?"\033[1;32m":"\033[1;36m")

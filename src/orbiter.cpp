@@ -138,15 +138,6 @@ inline _Mat& zoiRandomMatrix(_Mat& M) {
     return M;
 }
 
-
-
-template<typename _Mat>
-Pair<size_t> nonzeroes(const _Mat& L, const _Mat& R, const _Mat& P) {
-    Pair<size_t> nnz(nonzeroes(L));
-    const Pair<size_t> nnzr(nonzeroes(R)), nnzp(nonzeroes(P));
-    nnz += nnzr; return nnz += nnzp;
-}
-
 } // End of namespace PLinOpt
 
 
@@ -157,10 +148,7 @@ struct Operations {
     template<typename _Mat>
     size_t operator()(const _Mat& L, const _Mat& R, const _Mat& P,
                       const size_t silent) {
-        const size_t nnzl(PLinOpt::density(L)), nnzr(PLinOpt::density(R)),
-            nnzp(PLinOpt::density(P));
-        if (! silent) std::clog << nnzl << '+' << nnzr << '+' << nnzp;
-        return (nnzl+nnzr+nnzp);
+        return PLinOpt::density(L,R,P,silent);
     }
 };
 

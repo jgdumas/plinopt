@@ -93,6 +93,11 @@ inline Pair<_T>& operator -=(Pair<_T>& x, const Pair<_T>& y) {
 template<typename _Matrix> size_t density(const _Matrix& A);
 template<typename _Mat> Pair<size_t> nonzeroes(const _Mat& M);
 
+template<typename _Mat> size_t density(const _Mat& L, const _Mat& R, 
+                                       const _Mat& P, const size_t silent=0);
+template<typename _Mat> Pair<size_t> nonzeroes(const _Mat& L, const _Mat& R,
+                                               const _Mat& P);
+
 	// Copy the transposed  matrix
 template<typename _Mat1, typename _Mat2>
 inline _Mat1& Transpose(_Mat1& T, const _Mat2& A);
