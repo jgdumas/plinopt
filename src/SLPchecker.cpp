@@ -20,10 +20,10 @@ namespace PLinOpt {
 // ============================================================
 // Parsing a program and building the associated matrix
 template<typename _Mat>
-_Mat& SLPbuilder(_Mat& A, std::istream& input) {
+Pair<size_t> SLPbuilder(_Mat& A, std::istream& input) {
     std::stringstream ssin; ssin << input.rdbuf();
 
-        // Line by line parsing
+	// Line by line parsing
     VProgram_t ProgramVector;
     programParser(ProgramVector, ssin);
     const auto PVs { progOperations(ProgramVector) };
@@ -35,67 +35,71 @@ _Mat& SLPbuilder(_Mat& A, std::istream& input) {
     char next; parenthesisExpand(ProgramVector, next);
     std::clog << std::string(40,'#') << std::endl;
 
-    return matrixBuilder(A, ProgramVector);
+    matrixBuilder(A, ProgramVector);
+
+    return PVs;
 }
 
 // ============================================================
 // Checking a linear program with a matrix
 template<typename Field>
 int SLPcheck(const std::string& prgname, const std::string& matname,
-            const Field& F) {
+	    const Field& F) {
 
-        // ============================================================
-        // Rebind matrix type over sub field matrix type
+	// ============================================================
+	// Rebind matrix type over sub field matrix type
     using FMatrix=typename Matrix::template rebind<Field>::other;
 
     FMatrix A(F);
+    Pair<size_t> Ops;
 
     if (prgname == "") {
-        SLPbuilder(A, std::cin);
+	Ops = SLPbuilder(A, std::cin);
     } else {
-        std::ifstream ifile(prgname);
-        if ( ifile ) {
-            SLPbuilder(A, ifile);
-            ifile.close();
-        }
+	std::ifstream ifile(prgname);
+	if ( ifile ) {
+	    Ops = SLPbuilder(A, ifile);
+	    ifile.close();
+	}
     }
 
     if (matname != "") {
-        std::ifstream matfile(matname);
-        QRat QQ;
-        QMstream ms(QQ, matfile);
-        Matrix M(ms);
-        const Pair<size_t> nbops(naiveOps(M));
+	std::ifstream matfile(matname);
+	QRat QQ;
+	QMstream ms(QQ, matfile);
+	Matrix M(ms);
+	const Pair<size_t> nbelts(naiveOps(M));
 
-        const size_t m(std::max(M.rowdim(),A.rowdim()));
-        const size_t n(std::max(M.coldim(),A.coldim()));
-        M.resize(m,n); A.resize(m,n);
-        FMatrix B(M,F);
-        LinBox::DenseMatrix<Field> dB(F,m,n),dA(F,m,n),R(F,m,n);
-        any2dense(dA,A); any2dense(dB,B);
-        LinBox::MatrixDomain<Field> BMD(F);
-        BMD.sub(R,dB,dA);
+	const size_t m(std::max(M.rowdim(),A.rowdim()));
+	const size_t n(std::max(M.coldim(),A.coldim()));
+	M.resize(m,n); A.resize(m,n);
+	FMatrix B(M,F);
+	LinBox::DenseMatrix<Field> dB(F,m,n),dA(F,m,n),R(F,m,n);
+	any2dense(dA,A); any2dense(dB,B);
+	LinBox::MatrixDomain<Field> BMD(F);
+	BMD.sub(R,dB,dA);
 
-        if (BMD.isZero (R))
-            std::clog <<"# \033[1;32mSUCCESS: correct SLP for "
-                      << m << 'x' << n
-                      << " (" << nbops.first << '+'
-                      << '|' << nbops.second << 'x'
-                      << ") Matrix-Vector multiplication!\033[0m" << std::endl;
-        else {
-            std::cerr << "# \033[1;31m****** ERROR, not a "
-                      << m << 'x' << n
-                      << " m-v algorithm******\033[0m"
-                      << std::endl;
+	if (BMD.isZero (R))
+	    std::clog <<"# \033[1;32mSUCCESS: correct SLP for "
+		      << m << 'x' << n
+		      << " (" << nbelts.first << '+'
+		      << '|' << nbelts.second << 'x'
+		      << ") : " << Ops
+		      << " Matrix-Vector multiplication!\033[0m" << std::endl;
+	else {
+	    std::cerr << "# \033[1;31m****** ERROR, not a "
+		      << m << 'x' << n
+		      << " m-v algorithm******\033[0m"
+		      << std::endl;
 
-            A.write(std::clog<<"# Program:\n", FileFormat::Pretty);
-            B.write(std::clog<<"\n# Matrix:\n", FileFormat::Pretty);
-            R.write(std::clog<<"\n# diff:\n", FileFormat::Pretty) << std::endl;
+	    A.write(std::clog<<"# Program:\n", FileFormat::Pretty);
+	    B.write(std::clog<<"\n# Matrix:\n", FileFormat::Pretty);
+	    R.write(std::clog<<"\n# diff:\n", FileFormat::Pretty) << std::endl;
 
-            return 1;
-        }
+	    return 1;
+	}
     } else
-        A.write(std::cout, FileFormat(5)) << std::endl;
+	A.write(std::cout, FileFormat(5)) << std::endl;
 
     return 0;
 }
@@ -114,25 +118,25 @@ int main(int argc, char** argv) {
     Givaro::Integer q(0u);
 
     for (int i = 1; argc>i; ++i) {
-        std::string args(argv[i]);
-        if (args == "-h") {
-            std::clog << "Usage: " << argv[0] << "[-q #] [-M file.sms] [stdin|file.prg] \n"
-                      << "        produces the matrix associated to the given program\n"
-                      << "  -M f: or compares the program with the given matrix in file f\n"
-                      << "  -q #: modular generation/check (default is Rationals)\n";
-            exit(-1);
-        }
-        else if (args == "-M") { matname = std::string(argv[++i]); }
-        else if (args == "-q") { q = Givaro::Integer(argv[++i]); }
-        else { prgname = args; }
+	std::string args(argv[i]);
+	if (args == "-h") {
+	    std::clog << "Usage: " << argv[0] << "[-q #] [-M file.sms] [stdin|file.prg] \n"
+		      << "        produces the matrix associated to the given program\n"
+		      << "  -M f: or compares the program with the given matrix in file f\n"
+		      << "  -q #: modular generation/check (default is Rationals)\n";
+	    exit(-1);
+	}
+	else if (args == "-M") { matname = std::string(argv[++i]); }
+	else if (args == "-q") { q = Givaro::Integer(argv[++i]); }
+	else { prgname = args; }
     }
 
     if (! Givaro::isZero(q)) {
-        Givaro::Modular<Givaro::Integer> FF(q);
-        return PLinOpt::SLPcheck(prgname, matname, FF);
+	Givaro::Modular<Givaro::Integer> FF(q);
+	return PLinOpt::SLPcheck(prgname, matname, FF);
     } else {
-        PLinOpt::QRat QQ;
-        return PLinOpt::SLPcheck(prgname, matname, QQ);
+	PLinOpt::QRat QQ;
+	return PLinOpt::SLPcheck(prgname, matname, QQ);
     }
 }
 // ============================================================
