@@ -204,7 +204,7 @@ Givaro::Rational Fabs(const QRat& QQ, const Givaro::Rational& r) {
     return abs(r);
 }
 
-    // Modular genrralizations
+    // Modular generalizations
 template<typename Element>
 Element Fabs(const Givaro::Modular<Element>& F, const Element& e) {
     Element a; F.init(a);

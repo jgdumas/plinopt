@@ -14,10 +14,10 @@ OPTFLAGS = -O3 -ffast-math
 
 # CXXFLAGS += -D DENSITY_OPTIMIZATION	# Non-random optimizer
 
-CXXFLAGS += -D KERNEL_FULL_IDENTITY	# Identity goals in kernel method
+# CXXFLAGS += -D KERNEL_FULL_IDENTITY	# Identity goals in kernel method
 
 # CXXFLAGS += -D ACTION_FULL_PLUQ	# Random PLUQ action
-CXXFLAGS += -D ACTION_HOUSEHOLDER	# Random Householder action
+# CXXFLAGS += -D ACTION_HOUSEHOLDER	# Random Householder action
 # CXXFLAGS += -D NEGATER_ONLY_SIGN	# Disable common divisors to matrix P
 ##############
 
@@ -35,6 +35,7 @@ EXE += inplacer trilplacer
 EXE += transpozer compacter SLPchecker
 EXE += sms2pretty MMchecker PMchecker
 EXE += matrix-transpose columns-swap negater orbiter
+EXE += growthfactor
 
 SRC=${EXE:%=src/%.cpp}
 
