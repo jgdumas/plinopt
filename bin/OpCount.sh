@@ -18,10 +18,10 @@ NC='\033[0m'    # No Color
 operations=`sed 's/\#.*//' ${file} | sed -E 's/:=-/:=/g;s/:=+/:=/g;s/[*/]([^1-9c])/.\1/;s/[*/][0-9]*[*/]/*/g;s/([^-+*/&.]*)([-+*/&.]*)/\2/g' | tr -d '\n'`
 
 
-btf=`echo -n ${operations} | sed -E 's/[^&]//g'| wc -m`
-add=`echo -n ${operations} | sed -E 's/[^+-]//g'| wc -m`
-sca=`echo -n ${operations} | sed -E 's/[^*/]//g'| wc -m`
-trk=`echo -n ${operations} | sed -E 's/[^\.]//g'| wc -m`
+btf=`echo -n "${operations}" | sed -E 's/[^&]//g'| wc -m`
+add=`echo -n "${operations}" | sed -E 's/[^+-]//g'| wc -m`
+sca=`echo -n "${operations}" | sed -E 's/[^*/]//g'| wc -m`
+trk=`echo -n "${operations}" | sed -E 's/[^\.]//g'| wc -m`
 
 if [[ $((trk)) -gt 0 ]]; then
     echo -e "${BLU}${trk}\trank${NC}"
