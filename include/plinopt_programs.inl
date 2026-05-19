@@ -1137,8 +1137,8 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
     for(const auto& line: P) for(const auto& word: line)
         varsChar.insert(word[0]);
 
-    char freechar(unusedChar(varsChar));
-    char tmpchar(unusedChar(varsChar,freechar));
+    const char freechar(unusedChar(varsChar));
+    const char tmpchar(unusedChar(varsChar,freechar));
 
         // ==================================
         // [1] Use output variables only at the end of the program

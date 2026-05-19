@@ -40,6 +40,37 @@
 #include "plinopt_programs.h"
 
 // ============================================================
+int Transpozer(std::istream& input) {
+    std::stringstream ssin; ssin << input.rdbuf();
+    PLinOpt::VProgram_t progV; PLinOpt::programParser(progV, ssin);
+    char next('d'); PLinOpt::parenthesisExpand(progV, next);
+    std::clog << std::string(40,'#') << std::endl;
+    std::clog << "# Transpozing " << PLinOpt::progSize(progV) << " elements"
+              << std::endl;
+    std::clog << std::string(40,'#') << std::endl;
+
+    std::stringstream ssout;
+    for(const auto& line: progV) {
+        for(const auto& word: line) {
+            ssout << word;
+        }
+        ssout << std::endl;
+    }
+
+#ifdef VERBATIM_PARSING
+#  if VERBATIM_PARSING >= 4
+    std::clog << "# Expanded program:\n" << ssout.str() << std::endl;
+    std::clog << std::string(40,'#') << std::endl;
+#  endif
+#endif
+
+    return PLinOpt::Tellegen(ssout);
+}
+
+
+
+
+// ============================================================
 // Main: select between file / std::cin for Transpozition
 int main(int argc, char** argv) {
     if ( argc > 1 ) {
@@ -51,12 +82,12 @@ int main(int argc, char** argv) {
 
         std::ifstream ifile(argv[1]);
         if ( ifile ) {
-            int rt=PLinOpt::Tellegen(ifile);
+            int rt=Transpozer(ifile);
             ifile.close();
             return rt;
         }
     } else {
-        return PLinOpt::Tellegen(std::cin);
+        return Transpozer(std::cin);
     }
     return -1;
 }
