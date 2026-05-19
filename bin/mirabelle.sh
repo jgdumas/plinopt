@@ -86,7 +86,7 @@ egrep ${FROS} ${FIL} > ${BOD}
 ## Define output and input variables of the subprogram
 ##     together with replacement names
 
-CHARS=(i o `sed 's/.*:=//;s/+/ /g;s/.*:=//;s/+/ /g;s/-/ /g;s/;.*/ /;s/\*[0-9]* / /g;s/\/[0-9]* / /g;s/)//g;s/(//g' ${BOD} | tr ' ' '\n' | sed 's/[0-9]//g;/^$/d' | sort -u`)
+CHARS=(`sed 's/.*:=//;s/+/ /g;s/.*:=//;s/+/ /g;s/-/ /g;s/;.*/ /;s/\*[0-9]* / /g;s/\/[0-9]* / /g;s/)//g;s/(//g' ${BOD} | tr ' ' '\n' | sed 's/[0-9]//g;/^$/d' | sort -u| tr '\n' ' '`)
 # echo "CHARS: ${CHARS[@]}"
 
 NCHAR="a"
@@ -117,7 +117,7 @@ cat ${HEA} ${BOD} > ${RES}
 egrep -v "(^${VAR})" ${BOD} | cut -d':' -f1 | sort -r| awk 'BEGIN {s=0} {print "s/"$1"/o"s"/g";s++}' |tac > ${SDO}
 egrep -v "(^${VAR})" ${BOD} | cut -d':' -f1 | sort -r| awk 'BEGIN {s=0} {print "o"s":="$1";";s++}' >> ${RES}
 
-sed -i -f ${SDO} ${RES}
+###### sed -i -f ${SDO} ${RES}
 sed -i 's/s\/\([^\/]*\)\/\([^\/]*\)\/g/s\/\2\/\1\//g' ${SDO}
 echo "s/${OCHAR}/o/g;s/${NCHAR}/i/g" >> ${SDO}
 
@@ -143,7 +143,7 @@ function Compare() {
       tac ${HEA} | sed 's/:=/ /;s/;.*//' | awk '{print "s/"$2"/"$1"/g;"}' > ${SDI}
       sed "s/${OCHAR}/o/g;s/${NCHAR}/i/g" ${BOD} > ${FND}
       uniq ${COM} &>> ${FND}
-      ((sed -f ${SDI} ${OPT} | compacter | egrep -v '(:=0;)' | sed -f ${SDO}) >> ${FND}) 2> /dev/null
+      ((compacter ${OPT} | egrep -v '(:=0;)' | sed -f ${SDI} | sed -f ${SDO}) >> ${FND}) 2> /dev/null
 
   else
       ADD=$((BEF[0]-AFT[0]))
@@ -154,7 +154,7 @@ function Compare() {
 	  tac ${HEA} | sed 's/:=/ /;s/;.*//' | awk '{print "s/"$2"/"$1"/g;"}' > ${SDI}
 	  sed "s/${OCHAR}/o/g;s/${NCHAR}/i/g" ${BOD} > ${FND}
 	  uniq ${COM} &>> ${FND}
-	  ((sed -f ${SDI} ${OPT} | compacter| egrep -v '(:=0;)' | sed -f ${SDO}) >> ${FND}) 2> /dev/null
+	  ((compacter ${OPT} | egrep -v '(:=0;)' | sed -f ${SDI} | sed -f ${SDO}) >> ${FND}) 2> /dev/null
       else
 	  if [[ "$DIF" -eq 0 ]]; then
 	      >&2 echo "== ${AFT[*]}"
