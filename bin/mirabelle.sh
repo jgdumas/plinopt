@@ -81,12 +81,11 @@ FROS="${FROS}${VARP})"
 
 egrep ${FROS} ${FIL} > ${BOD}
 
-
 #############################################################
 ## Define output and input variables of the subprogram
 ##     together with replacement names
 
-CHARS=(`sed 's/.*:=//;s/+/ /g;s/.*:=//;s/+/ /g;s/-/ /g;s/;.*/ /;s/\*[0-9]* / /g;s/\/[0-9]* / /g;s/)//g;s/(//g' ${BOD} | tr ' ' '\n' | sed 's/[0-9]//g;/^$/d' | sort -u| tr '\n' ' '`)
+CHARS=(`sed 's/:=/ /;s/+/ /g;s/:=/ /;s/+/ /g;s/-/ /g;s/;.*/ /;s/\*[0-9]* / /g;s/\/[0-9]* / /g;s/)//g;s/(//g' ${BOD} | tr ' ' '\n' | sed 's/[0-9]//g;/^$/d' | sort -u| tr '\n' ' '`)
 # echo "CHARS: ${CHARS[@]}"
 
 NCHAR="a"
