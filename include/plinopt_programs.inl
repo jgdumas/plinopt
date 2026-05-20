@@ -295,7 +295,8 @@ int Tellegen(std::istream& input,
     for(std::string word{ichar}; !ssin.eof(); ssin>>word) {
         varsChar.insert(word[0]);
     }
-    const char freechar(unusedChar(varsChar));
+    const char next('d');
+    const char freechar(unusedChar(varsChar,next));
 
         // Roll back the stringstream
     ssin.clear(); ssin.seekg(0);
@@ -1638,7 +1639,7 @@ VProgram_t& parenthesisExpand(VProgram_t& P, char& nextfree) {
     std::set<char> varsChar;
     for(const auto& line: P) for(const auto& word: line)
         varsChar.insert(word[0]);
-    char freechar(unusedChar(varsChar));
+    char freechar(unusedChar(varsChar,nextfree));
     nextfree = unusedChar(varsChar,freechar);
     size_t tmpnum(0);
 
