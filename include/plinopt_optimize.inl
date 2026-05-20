@@ -665,7 +665,7 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
 
     if (isreduced) {
         sout.clear(); sout.str(std::string());
-        char next; parenthesisExpand(progV, next);
+        char next(0u); parenthesisExpand(progV, next);
             // Make output suitable for potential transpose
         input2Temps(sout, Ni, 'i', next);
         for(auto& line: progV) for(auto& word: line)

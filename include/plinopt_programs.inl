@@ -1594,7 +1594,7 @@ _Mat& matrixBuilder(_Mat& A, const VProgram_t& P, const char outchar /* ='o'*/) 
 size_t extractParenthesis(VProgram_t& newP, std::vector<std::string>& line,
                           const char freechar, size_t& tmpnum) {
 #ifdef VERBATIM_PARSING
-    std::clog << "# initial    line: " << line  << std::endl;
+    std::clog << "# initial " << freechar << "  line: " << line  << std::endl;
 #endif
     size_t ep(0);
     auto openp = std::find(line.begin(),line.end(),"(");
@@ -1639,13 +1639,16 @@ size_t extractParenthesis(VProgram_t& newP, std::vector<std::string>& line,
 VProgram_t& parenthesisExpand(VProgram_t& P, char& nextfree) {
         // ==================================
         // Find two unused variable names
+
+
+    if ( static_cast<size_t>(nextfree) == 0u) nextfree='a'-1;
     std::set<char> varsChar;
     for(const auto& line: P) for(const auto& word: line)
         varsChar.insert(word[0]);
     char freechar(unusedChar(varsChar,nextfree));
     nextfree = unusedChar(varsChar,freechar);
-    size_t tmpnum(0);
 
+    size_t tmpnum(10);
     VProgram_t nProgram;
     for(auto& line: P) {
         extractParenthesis(nProgram, line, freechar, tmpnum);

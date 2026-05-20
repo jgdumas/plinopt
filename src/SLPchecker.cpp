@@ -32,7 +32,7 @@ Pair<size_t> SLPbuilder(_Mat& A, std::istream& input) {
     std::clog << "# \033[1;32m" << PVs.second << "\tmultiplications" << "\033[0m" << std::endl;
 
 
-    char next; parenthesisExpand(ProgramVector, next);
+    char next(0); parenthesisExpand(ProgramVector, next);
     std::clog << std::string(40,'#') << std::endl;
 
     matrixBuilder(A, ProgramVector);
