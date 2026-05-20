@@ -47,7 +47,6 @@ int Transpozer(std::istream& input) {
     std::clog << std::string(40,'#') << std::endl;
     std::clog << "# Transpozing " << PLinOpt::progSize(progV) << " elements"
               << std::endl;
-    std::clog << std::string(40,'#') << std::endl;
 
     std::stringstream ssout;
     for(const auto& line: progV) {
@@ -59,6 +58,8 @@ int Transpozer(std::istream& input) {
 
 #ifdef VERBATIM_PARSING
 #  if VERBATIM_PARSING >= 4
+    std::clog << progV << std::endl;
+    std::clog << std::string(40,'#') << std::endl;
     std::clog << "# Expanded program:\n" << ssout.str() << std::endl;
     std::clog << std::string(40,'#') << std::endl;
 #  endif

@@ -264,9 +264,8 @@ char unusedChar(const std::set<char>& C, const char cstart /* = 'a'-1 */) {
 
 // ============================================================
 // Main parsing procedure, writing the ouput program
-int Tellegen(std::istream& input,
-             const char ichar /* = 'i'*/, const char ochar /*= 'o'*/,
-             const char cchar /* = 'c'*/, const char zchar /* = 'z'*/) {
+int Tellegen(std::istream& input, const char cchar /* = 'c'*/,
+             const char ichar /* = 'i'*/, const char ochar /*= 'o'*/) {
         // Files contains a program with the following SYNTAX
         // [+] constants name start with 'c'
         // [+] input variables start with 'i' --> transformed into 'o'
@@ -291,12 +290,13 @@ int Tellegen(std::istream& input,
     std::pair<size_t,size_t> Nops(0,0);
 
         // One pass to find a freechar
-    std::string ssstr; std::set<char> varsChar;
+    std::string ssstr; std::set<char> varsChar{'i','o',cchar};
     for(std::string word{ichar}; !ssin.eof(); ssin>>word) {
         varsChar.insert(word[0]);
     }
-    const char next('d');
-    const char freechar(unusedChar(varsChar,next));
+    const char next(cchar);
+    const char zchar(unusedChar(varsChar,next));
+    const char freechar(unusedChar(varsChar,zchar));
 
         // Roll back the stringstream
     ssin.clear(); ssin.seekg(0);
@@ -463,6 +463,9 @@ int Tellegen(std::istream& input,
     for(auto iter=sbuf.rbegin(); iter != sbuf.rend(); ++iter) {
         std::string line(*iter);
         if (line.size() == 0) continue;
+#ifdef VERBATIM_PARSING
+            std::clog << "# working on " << line << std::endl;
+#endif
 
             // ==================================
             // Instead of "xi:=0; xi:=xi + ... ;"
