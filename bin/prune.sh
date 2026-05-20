@@ -65,11 +65,16 @@ VARS=(`egrep -v '(^o)' ${FIL} | egrep "(${LIM})" | cut -d':' -f1|sort -u`)
 VARV="`echo ${VARS[@]}| sed 's/ / -v /g'`"
 echo "VARS: ${VARS[@]}"
 if [[ ${#VARS[@]} -gt 0 ]]; then
+  LOG=prune_$$.log
   for var in ${VARS[@]}; do
-    ${DIR}/mirabelle.sh -v $var ${OPTFLAGS} ${MOD} ${FIL}
+    ${DIR}/mirabelle.sh -v $var ${OPTFLAGS} ${MOD} ${FIL} |& tee -a ${LOG}
   done
 
   if [[ ${ALL} -gt 0 ]]; then
-    ${DIR}/mirabelle.sh -v ${VARV} ${ALLFLAGS} ${MOD} ${FIL}
+    ${DIR}/mirabelle.sh -v ${VARV} ${ALLFLAGS} ${MOD} ${FIL} |& tee -a ${LOG}
   fi
+
+  echo "-------- prune ${FIL} --------"
+  egrep -i '(improv|other)' ${LOG}
+  \rm ${LOG}
 fi

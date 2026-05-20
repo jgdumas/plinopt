@@ -58,15 +58,15 @@ VARP=`echo ${VARS[@]}|sed 's/ /|/g'`
 # echo "VARS: ${VARS[@]}"
 
 NAM="mirabelle_${VAR}"
-HEA="${NAM}_inp.slp"
-BOD="${NAM}_bod.slp"
-OPT="${NAM}_opt.slp"
-COM="${NAM}.com"
-RUN="${NAM}.run"
-SDO="${NAM}_sdo.sed"
-SDI="${NAM}_sdi.sed"
-RES="${NAM}.slp"
-FND="${NAM}.log"
+HEA="${NAM}_inp-$$.slp"
+BOD="${NAM}_bod-$$.slp"
+OPT="${NAM}_opt-$$.slp"
+COM="${NAM}-$$.com"
+RUN="${NAM}-$$.run"
+SDO="${NAM}_sdo-$$.sed"
+SDI="${NAM}_sdi-$$.sed"
+RES="${NAM}-$$.slp"
+FND="${NAM}-$$.log"
 
 #############################################################
 ## Recover all related variables to form the subprogram
@@ -129,7 +129,6 @@ BEF=(`(${SLPCHK} ${RES} |& egrep '(additions|multiplications)' | sed 's/\x1b\[[0
 
 #############################################################
 ## Function comparing the subprogram and an optimized version
-##
 function Compare() {
   AFT=(`egrep '(additions|multiplications)' ${COM} | tail -2 | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g'| awk '{print $2}'`)
 #echo ${AFT[*]}
@@ -144,7 +143,6 @@ function Compare() {
       sed "s/${OCHAR}/o/g;s/${NCHAR}/i/g" ${BOD} > ${FND}
       uniq ${COM} &>> ${FND}
       ((compacter ${OPT} | egrep -v '(:=0;)' | sed -f ${SDI} | sed -f ${SDO}) >> ${FND}) 2> /dev/null
-
   else
       ADD=$((BEF[0]-AFT[0]))
       MUL=$((BEF[1]-AFT[1]))
@@ -183,7 +181,7 @@ echo -n "${VARS[@]}t: ${BEF[*]} "
 echo "((${SLPCHK} ${RES} | ${MATTRP} | ${OPTMZR} | ${TRSPZR} ) > ${OPT}) 2> ${COM}" > ${RUN}
 chmod +x ${RUN}
 ${RUN}
-FND="${NAM}t.log"
+FND="${NAM}t-$$.log"
 Compare
 
 
