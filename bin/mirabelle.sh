@@ -175,7 +175,7 @@ function Compare() {
 #############################################################
 ## Optimize program
 
-echo -n "${VARS[@]} : ${BEF[*]} "
+echo -n "${VARS[@]}: ${BEF[*]} "
 echo "((${SLPCHK} ${RES} | ${OPTMZR}) > ${OPT}) 2> ${COM}" > ${RUN}
 chmod +x ${RUN}
 ${RUN}
