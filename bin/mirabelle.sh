@@ -145,8 +145,16 @@ function Compare() {
   else
       ADD=$((BEF[0]-AFT[0]))
       MUL=$((BEF[1]-AFT[1]))
-      if [[ "$ADD" -gt 0 || "$MUL" -gt 0 ]]; then
-	  >&2 echo -e "== ${BLU}${AFT[*]}\t\t other additions ...${NC}"
+      MSG=
+      if [[ "$ADD" -gt 0 ]]; then
+	  MSG="additions"
+      fi
+      if [[ "$MUL" -gt 0 ]]; then
+	  MSG="multiplications"
+      fi
+      if [[ "$MSG" != "" ]]; then
+
+	  >&2 echo -e "== ${BLU}${AFT[*]}\t\t less ${MSG} ...${NC}"
 
 	  tac ${HEA} | sed 's/:=/ /;s/;.*//' | awk '{print "s/"$2"/"$1"/g;"}' > ${SDI}
 	  sed "s/${OCHAR}/o/g;s/${NCHAR}/i/g" ${BOD} > ${FND}

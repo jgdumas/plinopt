@@ -13,9 +13,10 @@ DIR=`dirname $0`
 OPTFLAGS=""
 ALLFLAGS=""
 VARS=()
-MOD=""
-LIM=""
-ALL=0
+MOD=""	# modular search
+LIM=""	# subset of variables containing LIM
+ALL=0	# Mirabelle on all variables at once, (with reduced -O $2)
+SQR=0	# Try all *pairs* of variables
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -24,7 +25,7 @@ while [[ $# -gt 0 ]]; do
     shift # past argument
     shift # past value
     ;;
-    -r|-m|--modular)
+    -r|-q|-m|--modular)
     MOD="-m $2"
     shift # past argument
     shift # past value
@@ -36,6 +37,10 @@ while [[ $# -gt 0 ]]; do
     ;;
     -c)
     LIM="o|c_"
+    shift # past argument
+    ;;
+    -p|-s|--pairs)
+    SQR=1
     shift # past argument
     ;;
     -n|-nl|--no-limit)
@@ -50,7 +55,7 @@ while [[ $# -gt 0 ]]; do
     shift # past value
     ;;
     -h|--h|-help|--help|-*|--*)
-    echo "Usage: $0 [-O|-a #] [-q|-r #] [-l pattern] [-n|-nl] P.slp"
+    echo "Usage: $0 [-O|-a #] [-q|-r|-m #] [-l pattern] [-n|-nl] [-p] f.slp"
       exit 1
       ;;
     *)
@@ -66,15 +71,24 @@ VARV="`echo ${VARS[@]}| sed 's/ / -v /g'`"
 echo "VARS: ${VARS[@]}"
 if [[ ${#VARS[@]} -gt 0 ]]; then
   LOG=prune_$$.log
-  for var in ${VARS[@]}; do
-    ${DIR}/mirabelle.sh -v $var ${OPTFLAGS} ${MOD} ${FIL} |& tee -a ${LOG}
-  done
+  if [[ ${SQR} -gt 0 ]]; then
+    for var in ${VARS[@]}; do
+      for rav in ${VARS[@]}; do
+	${DIR}/mirabelle.sh -v $var -v $rav ${OPTFLAGS} ${MOD} ${FIL} |& tee -a ${LOG}
+      done
+    done
+  else
+    for var in ${VARS[@]}; do
+      ${DIR}/mirabelle.sh -v $var ${OPTFLAGS} ${MOD} ${FIL} |& tee -a ${LOG}
+    done
+  fi
 
   if [[ ${ALL} -gt 0 ]]; then
     ${DIR}/mirabelle.sh -v ${VARV} ${ALLFLAGS} ${MOD} ${FIL} |& tee -a ${LOG}
   fi
 
   echo "-------- prune ${FIL} --------"
-  egrep -i '(improv|other)' ${LOG}
+  grep -i less ${LOG}
+  grep -i impr ${LOG}
   \rm ${LOG}
 fi
