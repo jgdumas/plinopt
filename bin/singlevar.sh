@@ -4,7 +4,7 @@
 # Authors: J-G. Dumas, B. Grenet, C. Pernet, A. Sedoglavic
 # ==========================================================================
 # ==========================================================================
-# Replaces all temporary variables names by variabbles with the same char x
+# Replaces all temporary variables names by variables with the same char x
 # ==========================================================================
 
 FIL=

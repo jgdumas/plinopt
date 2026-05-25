@@ -57,14 +57,15 @@ VAR=${VARS[0]}
 VARP=`echo ${VARS[@]}|sed 's/ /|/g'`
 # echo "VARS: ${VARS[@]}"
 
+function Show() {
+    local NAM=$1
+    echo -e "----- BEG: ${NAM} -----\n${!NAM}\n----- END: ${NAM} -----"
+}
+
 NAM="mirabelle_${VAR}"
-HEA="${NAM}_inp-$$.slp"
 BOD="${NAM}_bod-$$.slp"
 OPT="${NAM}_opt-$$.slp"
 COM="${NAM}-$$.com"
-RUN="${NAM}-$$.run"
-SDO="${NAM}_sdo-$$.sed"
-SDI="${NAM}_sdi-$$.sed"
 RES="${NAM}-$$.slp"
 FND="${NAM}-$$.log"
 
@@ -108,17 +109,18 @@ sed -i "s/i/${NCHAR}/g;s/o/${OCHAR}/g" ${BOD}
 INP=`sed 's/:=.*/\[\^0-9\]|/g' ${BOD} | tr '\n' ' '|sed 's/ //g;s/|$//'`
 # echo "INP: ${INP}"
 
-sed 's/.*:=//;s/+/ /g;s/-/ /g;s/;.*/ /;s/\*[0-9]*/ /g;s/\/[0-9]*/ /g;s/)//g;s/(//g' ${BOD} | tr -s '[:space:]' | tr ' ' '\n'|sort -u| sed 's/$/;/'|egrep -v "(^;$|^i|${VAR}|${INP})"|sed 's/;.*//'|awk 'BEGIN {s=0} {print $1":=i"s";";s++}' > ${HEA}
+HEA=$(sed 's/.*:=//;s/+/ /g;s/-/ /g;s/;.*/ /;s/\*[0-9]*/ /g;s/\/[0-9]*/ /g;s/)//g;s/(//g' ${BOD} | tr -s '[:space:]' | tr ' ' '\n'|sort -u| sed 's/$/;/'|egrep -v "(^;$|^i|${VAR}|${INP})"|sed 's/;.*//'|awk 'BEGIN {s=0} {print $1":=i"s";";s++}')
 
-cat ${HEA} ${BOD} > ${RES}
+echo -e "${HEA}" > ${RES}
+cat ${BOD} >> ${RES}
 
-
-egrep -v "(^${VAR})" ${BOD} | cut -d':' -f1 | sort -r| awk 'BEGIN {s=0} {print "s/"$1"/o"s"/g";s++}' |tac > ${SDO}
+TSDO=$(egrep -v "(^${VAR})" ${BOD} | cut -d':' -f1 | sort -r| awk 'BEGIN {s=0} {print "s/"$1"/o"s"/g";s++}' |tac|tr '\n' ';')
 egrep -v "(^${VAR})" ${BOD} | cut -d':' -f1 | sort -r| awk 'BEGIN {s=0} {print "o"s":="$1";";s++}' >> ${RES}
 
 ###### sed -i -f ${SDO} ${RES}
-sed -i 's/s\/\([^\/]*\)\/\([^\/]*\)\/g/s\/\2\/\1\//g' ${SDO}
-echo "s/${OCHAR}/o/g;s/${NCHAR}/i/g" >> ${SDO}
+SDO=$(sed 's/s\/\([^\/]*\)\/\([^\/]*\)\/g/s\/\2\/\1\//g' <<< "${TSDO}")
+SDO=${SDO}"s/${OCHAR}/o/g;s/${NCHAR}/i/g"
+# Show SDO
 
 #############################################################
 ## Compute original subprogram number of operations
@@ -138,10 +140,11 @@ function Compare() {
   if [[ "$DIF" -gt 0 ]]; then
       >&2 echo -e "${GRE}> ${AFT[*]}\t\t/!\\ IMPROVEMENT /!\ ${NC}"
 
-      tac ${HEA} | sed 's/:=/ /;s/;.*//' | awk '{print "s/"$2"/"$1"/g;"}' > ${SDI}
+      SDI=$(tac <<< "${HEA}" | sed 's/:=/ /;s/;.*//' | awk '{print "s/"$2"/"$1"/g;"}'|tr '\n' ';')
+#       Show SDI
       sed "s/${OCHAR}/o/g;s/${NCHAR}/i/g" ${BOD} > ${FND}
       uniq ${COM} &>> ${FND}
-      ((compacter ${OPT} | egrep -v '(:=0;)' | sed -f ${SDI} | sed -f ${SDO}) >> ${FND}) 2> /dev/null
+      ((compacter ${OPT} | egrep -v '(:=0;)' | sed "${SDI}${SDO}") >> ${FND}) 2> /dev/null
   else
       ADD=$((BEF[0]-AFT[0]))
       MUL=$((BEF[1]-AFT[1]))
@@ -156,10 +159,11 @@ function Compare() {
 
 	  >&2 echo -e "== ${BLU}${AFT[*]}\t\t less ${MSG} ...${NC}"
 
-	  tac ${HEA} | sed 's/:=/ /;s/;.*//' | awk '{print "s/"$2"/"$1"/g;"}' > ${SDI}
+	  SDI=$(tac <<< "${HEA}" | sed 's/:=/ /;s/;.*//' | awk '{print "s/"$2"/"$1"/g;"}' |tr '\n' ';')
+#       Show SDI
 	  sed "s/${OCHAR}/o/g;s/${NCHAR}/i/g" ${BOD} > ${FND}
 	  uniq ${COM} &>> ${FND}
-	  ((compacter ${OPT} | egrep -v '(:=0;)' | sed -f ${SDI} | sed -f ${SDO}) >> ${FND}) 2> /dev/null
+	  ((compacter ${OPT} | egrep -v '(:=0;)' | sed "${SDI};${SDO}") >> ${FND}) 2> /dev/null
       else
 	  if [[ "$DIF" -eq 0 ]]; then
 	      >&2 echo "== ${AFT[*]}"
@@ -175,19 +179,15 @@ function Compare() {
 #############################################################
 ## Optimize program
 
-echo -n "${VARS[@]}: ${BEF[*]} "
-echo "((${SLPCHK} ${RES} | ${OPTMZR}) > ${OPT}) 2> ${COM}" > ${RUN}
-chmod +x ${RUN}
-${RUN}
+echo -n "${VARS[@]}D: ${BEF[*]} "
+((${SLPCHK} ${RES} | ${OPTMZR}) > ${OPT}) 2> ${COM}
 Compare
 
 #############################################################
 ## Optimize its transposition
 
-echo -n "${VARS[@]}t: ${BEF[*]} "
-echo "((${SLPCHK} ${RES} | ${MATTRP} | ${OPTMZR} | ${TRSPZR} ) > ${OPT}) 2> ${COM}" > ${RUN}
-chmod +x ${RUN}
-${RUN}
+echo -n "${VARS[@]}T: ${BEF[*]} "
+((${SLPCHK} ${RES} | ${MATTRP} | ${OPTMZR} | ${TRSPZR} ) > ${OPT}) 2> ${COM}
 FND="${NAM}t-$$.log"
 Compare
 
@@ -195,4 +195,4 @@ Compare
 #############################################################
 ## Clean-up tyemporary files
 
-\rm -rf ${RES} ${HEA} ${BOD} ${SDO} ${SDI} ${OPT} ${COM} ${RUN}
+\rm -rf ${RES} ${BOD} ${OPT} ${COM} # ${RUN} ${SDO} ${SDI} ${HEA}
