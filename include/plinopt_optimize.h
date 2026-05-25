@@ -52,7 +52,11 @@ namespace PLinOpt {
 auto cmpOpCount {[](const auto& a, const auto& b) { return (a.first<b.first) || ( (a.first==b.first) && (a.second<b.second) ); } };
 #else
 // Optimize for sum of additions and multiplications
-auto cmpOpCount {[](const auto& a, const auto& b) { return (a.first+a.second<b.first+b.second); } };
+// auto cmpOpCount {[](const auto& a, const auto& b) { return (a.first+a.second<b.first+b.second); } };
+// Optimize for sum of add and mul, then on additions
+auto cmpOpCount {[](const auto& a, const auto& b) {
+    const auto asum(a.first+a.second), bsum(b.first+b.second);
+    return (asum<bsum) || ( (asum==bsum) && (a.first<b.first) ); } };
 #endif
 
 
