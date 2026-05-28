@@ -45,7 +45,7 @@ OPTMZR="${DIR}/optimizer${OPTFLAGS}${MOD}"
 MATTRP="${DIR}/matrix-transpose"
 TRSPZR="${DIR}/transpozer"
 
-GRE='\033[0;32m'
+GRE='\033[1;32m'
 RED='\033[0;41m'
 BLU='\033[0;36m'
 NC='\033[0m'    # No Color
@@ -138,7 +138,7 @@ function Compare() {
 #echo $DIF
 
   if [[ "$DIF" -gt 0 ]]; then
-      >&2 echo -e "${GRE}> ${AFT[*]}\t\t/!\\ IMPROVEMENT /!\ ${NC}"
+      >&2 echo -e "${GRE}> ${AFT[*]}\t\t/!\ IMPROVEMENT /!\ ${NC}"
 
       SDI=$(tac <<< "${HEA}" | sed 's/:=/ /;s/;.*//' | awk '{print "s/"$2"/"$1"/g;"}'|tr '\n' ';')
 #       Show SDI
