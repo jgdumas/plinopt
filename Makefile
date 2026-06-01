@@ -35,7 +35,7 @@ EXE += inplacer trilplacer
 EXE += transpozer compacter SLPchecker
 EXE += sms2pretty MMchecker PMchecker
 EXE += matrix-transpose columns-swap negater orbiter
-EXE += growthfactor
+EXE += growthfactor dependency
 
 SRC=${EXE:%=src/%.cpp}
 

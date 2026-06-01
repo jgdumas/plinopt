@@ -118,7 +118,7 @@ TSDO=$(egrep -v "(^${VAR})" ${BOD} | cut -d':' -f1 | sort -r| awk 'BEGIN {s=0} {
 egrep -v "(^${VAR})" ${BOD} | cut -d':' -f1 | sort -r| awk 'BEGIN {s=0} {print "o"s":="$1";";s++}' >> ${RES}
 
 ###### sed -i -f ${SDO} ${RES}
-SDO=$(sed 's/s\/\([^\/]*\)\/\([^\/]*\)\/g/s\/\2\/\1\//g' <<< "${TSDO}")
+SDO=$(sed 's/s\/\([^\/]*\)\/\([^\/]*\)\/g/s\/\2\/\1\/g/g' <<< "${TSDO}")
 SDO=${SDO}"s/${OCHAR}/o/g;s/${NCHAR}/i/g"
 # Show SDO
 
