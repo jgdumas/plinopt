@@ -4,63 +4,144 @@
 # Authors: J-G. Dumas, B. Grenet, C. Pernet, A. Sedoglavic
 # ==========================================================================
 # ==========================================================================
-# Wrapper testing combination of variables
+# Testing linear combination of variables of SLPS
 # ==========================================================================
 
-FIL=$1
-SMS=/tmp/m_$$.sms
-SLP=/usr/local/soft/plinopt/bin/SLPchecker
-${SLP} ${FIL} > ${SMS}
+DIR=`dirname $0`
+MOD=""
+COE=2
 
-VARS=$(sed 's/:=.*//g' ${FIL})
-LVARS=(`echo "${VARS}"`)
-OVARS=$(sed -r "s/([:+-])/ /g" ${FIL}|awk '{if (NF>3) print $1}')
-LOARS=(`echo "${OVARS}"`)
-# echo "LVARS ${#LVARS[@]}: ${LVARS[@]}"
-# echo "LOARS ${#LOARS[@]}: ${LOARS[@]}"
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -c|-n|--coeffs)
+    COE="$2"
+    shift # past argument
+    shift # past value
+    ;;
+    -r|-m|--modular)
+    MOD=" -q $2"
+    shift # past argument
+    shift # past value
+    ;;
+    -h|--h|-help|--help|-*|--*)
+    echo "Usage: $0 [-c #] [-q #] P.slp"
+      exit 1
+      ;;
+    *)
+    FIL=$1
+    shift # past argument
+    ;;
+    esac
+done
 
-
-echo "# [combiner] ${#LOARS[@]} x ${#LVARS[@]} x ${#LVARS[@]}: [${LOARS[@]}] ${LVARS[@]}"
-
-function Show() {
-    local NAM=$1
-    echo -e "----- BEG: ${NAM} -----\n${!NAM}\n----- END: ${NAM} -----"
-}
+SLPCHK="${DIR}/SLPchecker${MOD}"
+OPTMZR="${DIR}/optimizer${OPTFLAGS}${MOD}"
+MATTRP="${DIR}/matrix-transpose"
+TRSPZR="${DIR}/transpozer"
+DEPND="${DIR}/dependency"
 
 GRE='\033[1;32m'
 RED='\033[0;41m'
 BLU='\033[0;36m'
 NC='\033[0m'    # No Color
 
-for var in ${OVARS[@]}; do
-    OTH=$(egrep -v "(${var})" <<< "${VARS[@]}")
-    echo -n "${var}:"
-    for rav in ${OTH[@]}; do
-	THD=$(egrep -v "(${rav})" <<< "${OTH[@]}")
-	for avr in ${THD[@]}; do
-	    CMD="${var}:=${rav}+${avr};";
-	    # echo "${var} : ${rav} : ${avr} : ${CMD}"
-	    TSR=$(egrep -v "${var}:=" ${FIL})
-	    TST="${TSR}"`echo -e "\n${CMD}"`
-	    # Show TST
+OVARS=$(sed -r "s/([:+-])/ /g" ${FIL}|awk '{if (NF>3) print "<"$1","NF"> "}')
+LOARS=(`echo "${OVARS}"`)
+echo "# VARS>3 (${#LOARS[@]}): ${LOARS[@]}"
 
-	    if ("${SLP}" -M "${SMS}" <<< "${TST}" 2> /dev/null); then
-		echo -e "\n${GRE}/!\ IMPROVEMENT /!\:\t${NC} ${CMD} \n"
-		"${SLP}" -M "${SMS}" <<< "${TST}"
-	    fi
-	    CMD="${var}:=${rav}-${avr};";
-	    # echo "${var} : ${rav} : ${avr} : ${CMD}"
-	    TST="${TSR}"`echo -e "\n${CMD}"`
-	    # Show TST
 
-	    if ("${SLP}" -M "${SMS}" <<< "${TST}" 2> /dev/null); then
-		echo -e "\n${GRE}/!\ IMPROVEMENT /!\:\t${NC} ${CMD} \n"
-		"${SLP}" -M "${SMS}" <<< "${TST}"
-	    fi
-	done
-	stdbuf -o0 printf '+'
-    done
-    echo ""
+
+#############################################################
+## Temporary file names
+
+function Show() {
+    local NAM=$1
+    >&2 echo -e "----- BEG: ${NAM} -----\n${!NAM}\n----- END: ${NAM} -----"
+}
+function ShowQuiet() {
+    local NAM=$1
+    echo -e "${!NAM}"
+}
+
+NAM="chartreuse"
+BOD="${NAM}_bod-$$.slp"
+RES="${NAM}-$$.slp"
+FND="${NAM}-$$.log"
+
+
+#############################################################
+## Define output and input variables of the subprogram
+##     together with replacement names
+
+CHARS=(`sed 's/:=/ /;s/+/ /g;s/:=/ /;s/+/ /g;s/-/ /g;s/;.*/ /;s/\*[0-9]* / /g;s/\/[0-9]* / /g;s/)//g;s/(//g' ${FIL} | tr ' ' '\n' | sed 's/[0-9]//g;/^$/d' | sort -u| tr '\n' ' '`)
+# echo "CHARS: ${CHARS[@]}"
+
+NCHAR="a"
+while grep -q ${NCHAR} <<< ${CHARS[@]}; do
+    NCHAR=`echo ${NCHAR} | tr "a-z" "b-za"`
+done
+# echo "NCHAR: ${NCHAR}"
+
+CHARS+=(${NCHAR})
+OCHAR=${NCHAR}
+while grep -q ${OCHAR} <<< ${CHARS[@]}; do
+    OCHAR=`echo ${OCHAR} | tr "a-z" "b-za"`
+done
+# echo "OCHAR: ${OCHAR}"
+
+
+sed "s/i/${NCHAR}/g;s/o/${OCHAR}/g" ${FIL} > ${BOD}
+
+
+INP=`sed 's/:=.*/\[\^0-9\]|/g' ${BOD} | tr '\n' ' '|sed 's/ //g;s/|$//'`
+# echo "INP: ${INP}"
+
+HEA=$(sed 's/.*:=//;s/+/ /g;s/-/ /g;s/;.*/ /;s/\*[0-9]*/ /g;s/\/[0-9]*/ /g;s/)//g;s/(//g' ${BOD} | tr -s '[:space:]' | tr ' ' '\n'|sort -u| sed 's/$/;/'|egrep -v "(^;$|^i|${INP})"|sed 's/;.*//'|awk 'BEGIN {s=0} {print $1":=i"s";";s++}')
+
+echo -e "${HEA}" > ${RES}
+cat ${BOD} >> ${RES}
+
+TSDO=$(cat ${BOD} | cut -d':' -f1 | sort -r| awk 'BEGIN {s=0} {print "s/"$1"/o"s"/g";s++}' |tac|tr '\n' ';')
+
+# Show TSDO
+
+cat ${BOD} | cut -d':' -f1 | sort -r| awk 'BEGIN {s=0} {print "o"s":="$1";";s++}' >> ${RES}
+
+###### sed -i -f ${SDO} ${RES}
+SDO=$(sed 's/s\/\([^\/]*\)\/\([^\/]*\)\/g/s\/\2\/\1\/g/g' <<< "${TSDO}")
+SDO=${SDO}"s/${OCHAR}/o/g;s/${NCHAR}/i/g"
+# Show SDO
+
+#############################################################
+
+SDI=$(tac <<< "${HEA}" | sed 's/:=/ /;s/;.*//' | awk '{print "s/"$2"/"$1"/g"}'|tr '\n' ';')
+# Show SDI
+  
+
+# COMBS=$(${SLPCHK} ${RES} | ${DEPND} 2> /dev/null)
+COMBS=$(${SLPCHK} ${RES} | ${DEPND} -c ${COE})
+
+# echo "#### SDI ## ${SDI}"
+# echo "#### SDO ## ${SDO}"
+
+# Show COMBS
+
+COMBR=$(echo ${COMBS} | sed "${SDI};${SDO}"|tr ' ' '\n')
+
+# Show COMBR
+
+
+for ovr in ${OVARS[@]}; do
+    
+    OVRC=(`echo "${ovr}" | sed 's/[<,>]/ /g'`)
+    OFND=$(egrep "(${OVRC[0]}[^0-9])" <<< "${COMBR}")
+    SFND=$(awk -v onr="${OVRC[1]}" -v onv="${OVRC[0]}" '{orig=$0;gsub("[^+-]", ""); l=length+1;if (length>0 && l<onr) print orig," # "onv" "onr" --> "l," \033[1;32m\t\t/!\\ IMPROVEMENT /!\\\033[0m"}' <<< "${OFND}")
+    ShowQuiet SFND
+    
+#     echo -e ${SFND}
 done
 
-\rm -rf ${SMS}
+#############################################################
+## Clean-up tyemporary files
+
+\rm -rf ${RES} ${BOD} # ${RUN} ${SDO} ${SDI} ${HEA}
