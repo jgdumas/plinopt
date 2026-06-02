@@ -61,7 +61,7 @@ function ShowQuiet() {
 
 OVARS=$(sed -r "s/([:+-])/ /g" ${FIL}|awk '{if (NF>3) print "<"$1","NF"> "}')
 LOARS=(`echo "${OVARS}"`)
->&2 echo "# VARS>3 (${#LOARS[@]}): ${LOARS[@]}"
+>&2 echo "# [CHTRS] VARS>3 (${#LOARS[@]}): ${LOARS[@]}"
 
 #############################################################
 ## Temporary file names
@@ -142,4 +142,4 @@ done
 #############################################################
 ## Clean-up tyemporary files
 
-\rm -rf ${RES}
+#\rm -rf ${RES}
