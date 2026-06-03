@@ -16,32 +16,32 @@
 
 namespace PLinOpt {
 
-bool isZero(const QRat& QQ, const QArray& v) {
+  bool isZero(const QRat& QQ, const QArray& v) {
     for(const auto& it: v) {
-        if (! QQ.isZero(it))
-            return false;
+      if (! QQ.isZero(it))
+        return false;
     }
     return true;
-}
+  }
 
-std::ostream& showOut(std::ostream& out, const QRat& QQ,
-                      const size_t& i, const Givaro::Rational& r) {
+  std::ostream& showOut(std::ostream& out, const QRat& QQ,
+                        const size_t& i, const Givaro::Rational& r) {
     out << (Fsign(QQ,r)<0?'-':'+') << 'o' << i;
     if (notAbsOne(QQ,r)) {
-        if (isAbsOne(QQ,r.nume())) {
-            out << '/' << Fabs(QQ,r.deno());
-        } else {
-            out << '*' << Fabs(QQ,r);
-        }
+      if (isAbsOne(QQ,r.nume())) {
+        out << '/' << Fabs(QQ,r.deno());
+      } else {
+        out << '*' << Fabs(QQ,r);
+      }
     }
     return out;
-}
+  }
 
 
 // ============================================================
 //
-int Depender(std::istream& input, const FileFormat& matformat,
-             const size_t maxnumcoeff) {
+  int Depender(std::istream& input, const FileFormat& matformat,
+               const size_t maxnumcoeff, const size_t level) {
 
         // ============================================================
         // Read Matrix of Linear Transformation
@@ -61,12 +61,12 @@ int Depender(std::istream& input, const FileFormat& matformat,
     std::vector<Givaro::Rational> Coeffs{1, -1};
     for( auto indices = M.IndexedBegin();
          (indices != M.IndexedEnd()) ; ++indices ) {
-        augment(Coeffs, indices.value().nume(), QQ);
-        augment(Coeffs, indices.value().deno(), QQ);
+      augment(Coeffs, indices.value().nume(), QQ);
+      augment(Coeffs, indices.value().deno(), QQ);
     }
 
     for(size_t i=2; Coeffs.size() < maxnumcoeff; ++i) {
-        augment(Coeffs, Givaro::Integer(i), QQ);
+      augment(Coeffs, Givaro::Integer(i), QQ);
     }
         // ========================================
         // reduce to at most maxnumcoeff
@@ -79,87 +79,119 @@ int Depender(std::istream& input, const FileFormat& matformat,
 
     QArray W(M.coldim(),QQ.zero);
     for(size_t i(0); i<M.rowdim(); ++i) {
-        std::cout << 'o' << i << std::flush;
-        for(const auto& el:M[i]) QQ.assign(W[el.first],el.second);
-        for(size_t j(i+1); j<M.rowdim(); ++j) {
-            Givaro::Rational prevk(QQ.zero), currk(QQ.zero);
-            for(size_t k(0); k<Coeffs.size(); ++k) {
-                currk = Coeffs[k]-prevk;
-                prevk = Coeffs[k];
-                for(const auto& el:M[j]) {
-                    QQ.axpyin(W[el.first],currk,el.second);
-                }
-                for(size_t l(j+1); l<M.rowdim(); ++l) {
-                    Givaro::Rational prevt(QQ.zero), currt(QQ.zero);
-                    for(size_t t(0); t<Coeffs.size(); ++t) {
-                        currt = Coeffs[t]-prevt;
-                        prevt = Coeffs[t];
-                        for(const auto& el:M[l]) {
-                            QQ.axpyin(W[el.first],currt,el.second);
-                        }
-                        if (isZero(QQ,W)) {
+      std::cout << 'o' << i << std::flush;
+      for(const auto& el:M[i]) QQ.assign(W[el.first],el.second);
+      for(size_t j(i+1); j<M.rowdim(); ++j) {
+        Givaro::Rational prevk(QQ.zero), currk(QQ.zero);
+        for(size_t k(0); k<Coeffs.size(); ++k) {
+          currk = Coeffs[k]-prevk;
+          prevk = Coeffs[k];
+          for(const auto& el:M[j]) {
+            QQ.axpyin(W[el.first],currk,el.second);
+          }
+          for(size_t l(j+1); l<M.rowdim(); ++l) {
+            Givaro::Rational prevt(QQ.zero), currt(QQ.zero);
+            for(size_t t(0); t<Coeffs.size(); ++t) {
+              currt = Coeffs[t]-prevt;
+              prevt = Coeffs[t];
+              for(const auto& el:M[l]) {
+                QQ.axpyin(W[el.first],currt,el.second);
+              }
+              if (isZero(QQ,W)) {
 #ifdef VERBATIM_PARSING
-                            std::clog << "# W3 " << i << ' '
-                                      << j << ' ' << Coeffs[k] << ' '
-                                      << l << ' ' << Coeffs[t]
-                                      << ':' << isZero(QQ,W) << " --> ";
+                std::clog << "# W3 " << i << ' '
+                          << j << ' ' << Coeffs[k] << ' '
+                          << l << ' ' << Coeffs[t]
+                          << ':' << isZero(QQ,W) << " --> ";
 #endif
-                            showOut(std::cout, QQ, j, Coeffs[k]);
-                            showOut(std::cout, QQ, l, Coeffs[t]);
-                            std::cout << ';'  << std::endl
-                                      << 'o' << i << std::flush;
+                showOut(std::cout, QQ, j, Coeffs[k]);
+                showOut(std::cout, QQ, l, Coeffs[t]);
+                std::cout << ';'  << std::endl
+                          << 'o' << i << std::flush;
 #ifdef VERBATIM_PARSING
-                            std::clog << '\n';
+                std::clog << '\n';
 #endif
-                        }
-                        for(size_t m(l+1); m<M.rowdim(); ++m) {
-                            Givaro::Rational prevu(QQ.zero), curru(QQ.zero);
-                            for(size_t u(0); u<Coeffs.size(); ++u) {
-                                curru = Coeffs[u]-prevu;
-                                prevu = Coeffs[u];
-                                for(const auto& el:M[m]) {
-                                    QQ.axpyin(W[el.first],curru,el.second);
-                                }
-                                if (isZero(QQ,W)) {
+              }
+              if (level>3) for(size_t m(l+1); m<M.rowdim(); ++m) {
+                Givaro::Rational prevu(QQ.zero), curru(QQ.zero);
+                for(size_t u(0); u<Coeffs.size(); ++u) {
+                  curru = Coeffs[u]-prevu;
+                  prevu = Coeffs[u];
+                  for(const auto& el:M[m]) {
+                    QQ.axpyin(W[el.first],curru,el.second);
+                  }
+                  if (isZero(QQ,W)) {
 #ifdef VERBATIM_PARSING
-                                    std::clog << "# W4 " << i << ' '
-                                              << j << ' ' << Coeffs[k] << ' '
-                                              << l << ' ' << Coeffs[t] << ' '
-                                              << m << ' ' << Coeffs[u]
-                                              << ':' << isZero(QQ,W) << " --> ";
+                    std::clog << "# W4 " << i << ' '
+                              << j << ' ' << Coeffs[k] << ' '
+                              << l << ' ' << Coeffs[t] << ' '
+                              << m << ' ' << Coeffs[u]
+                              << ':' << isZero(QQ,W) << " --> ";
 #endif
-                                    showOut(std::cout, QQ, j, Coeffs[k]);
-                                    showOut(std::cout, QQ, l, Coeffs[t]);
-                                    showOut(std::cout, QQ, m, Coeffs[u]);
-                                    std::cout << ';' << std::endl
-                                              << 'o' << i << std::flush;
+                    showOut(std::cout, QQ, j, Coeffs[k]);
+                    showOut(std::cout, QQ, l, Coeffs[t]);
+                    showOut(std::cout, QQ, m, Coeffs[u]);
+                    std::cout << ';' << std::endl
+                              << 'o' << i << std::flush;
 #ifdef VERBATIM_PARSING
-                                    std::clog << '\n';
+                    std::clog << '\n';
 #endif
-                                }
-                            }
-                            for(const auto& el:M[m]) {
-                                QQ.maxpyin(W[el.first],prevu,el.second);
-                            }
-                        }
+                  }
+                  if (level>4) for(size_t q(m+1); q<M.rowdim(); ++q) {
+                    Givaro::Rational prevv(QQ.zero), currv(QQ.zero);
+                    for(size_t v(0); v<Coeffs.size(); ++v) {
+                      currv = Coeffs[v]-prevv;
+                      prevv = Coeffs[v];
+                      for(const auto& el:M[q]) {
+                        QQ.axpyin(W[el.first],currv,el.second);
+                      }
+                      if (isZero(QQ,W)) {
+#ifdef VERBATIM_PARSING
+                        std::clog << "# W5 " << i << ' '
+                                  << j << ' ' << Coeffs[k] << ' '
+                                  << l << ' ' << Coeffs[t] << ' '
+                                  << m << ' ' << Coeffs[u] << ' '
+                                  << q << ' ' << Coeffs[v]
+                                  << ':' << isZero(QQ,W) << " --> ";
+#endif
+                        showOut(std::cout, QQ, j, Coeffs[k]);
+                        showOut(std::cout, QQ, l, Coeffs[t]);
+                        showOut(std::cout, QQ, m, Coeffs[u]);
+                        showOut(std::cout, QQ, q, Coeffs[v]);
+                        std::cout << ';' << std::endl
+                                  << 'o' << i << std::flush;
+#ifdef VERBATIM_PARSING
+                        std::clog << '\n';
+#endif
+                      }
                     }
-                    for(const auto& el:M[l]) {
-                        QQ.maxpyin(W[el.first],prevt,el.second);
+                    for(const auto& el:M[q]) {
+                      QQ.maxpyin(W[el.first],prevv,el.second);
                     }
+                  }
                 }
+                for(const auto& el:M[m]) {
+                  QQ.maxpyin(W[el.first],prevu,el.second);
+                }
+              }
             }
-            for(const auto& el:M[j]) {
-                QQ.maxpyin(W[el.first],prevk,el.second);
+            for(const auto& el:M[l]) {
+              QQ.maxpyin(W[el.first],prevt,el.second);
             }
+          }
         }
-        for(const auto& el:M[i]) QQ.assign(W[el.first],QQ.zero);
-        std::cout << ';' << std::endl;
+        for(const auto& el:M[j]) {
+          QQ.maxpyin(W[el.first],prevk,el.second);
+        }
+      }
+      for(const auto& el:M[i]) QQ.assign(W[el.first],QQ.zero);
+      std::cout << ';' << std::endl;
     }
 
     elapsed.stop();
     std::clog << "# [DEPND]: " << elapsed << std::endl;
     return 0;
-}
+  }
 
 
 } // End of namespace PLinOpt
@@ -173,36 +205,38 @@ int Depender(std::istream& input, const FileFormat& matformat,
 //       -b #: states the blocking dimension
 //       -U [1|0]: uses an initial LU factorization | or not
 int main(int argc, char** argv) {
-    using PLinOpt::FileFormat;
+  using PLinOpt::FileFormat;
 
-    FileFormat matformat = FileFormat::Pretty;
-    std::string filename;
-    size_t maxnumcoeff(COEFFICIENT_SEARCH); // default max coefficients
+  FileFormat matformat = FileFormat::Pretty;
+  std::string filename;
+  size_t maxnumcoeff(COEFFICIENT_SEARCH); // default max coefficients
+  size_t level(4);
 
-    for (int i = 1; i<argc; ++i) {
-        std::string args(argv[i]);
-        if (args == "-h") {
-            std::clog << "Usage: " << argv[0]
-                      << " [-h|-M|-P|-S|-c #] [stdin|matfile.sms]\n"
-                      << "  -c #: max number of coefficients per iteration\n"
-                      << "  -M/-P/-S: selects the ouput format\n";
+  for (int i = 1; i<argc; ++i) {
+    std::string args(argv[i]);
+    if (args == "-h") {
+      std::clog << "Usage: " << argv[0]
+                << " [-h|-M|-P|-S|-c #] [stdin|matfile.sms]\n"
+                << "  -c #: max number of coefficients per iteration\n"
+                << "  -M/-P/-S: selects the ouput format\n";
 
-            exit(-1);
-        }
-        else if (args == "-M") { matformat = FileFormat(1); } // Maple
-        else if (args == "-S") { matformat = FileFormat(5); } // SMS
-        else if (args == "-P") { matformat = FileFormat(8); } // Pretty
-        else if (args == "-c") { maxnumcoeff = atoi(argv[++i]); }
-        else { filename = args; }
+      exit(-1);
     }
+    else if (args == "-M") { matformat = FileFormat(1); } // Maple
+    else if (args == "-S") { matformat = FileFormat(5); } // SMS
+    else if (args == "-P") { matformat = FileFormat(8); } // Pretty
+    else if (args == "-c") { maxnumcoeff = atoi(argv[++i]); }
+    else if (args == "-l") { level = atoi(argv[++i]); }
+    else { filename = args; }
+  }
 
-    if (filename == "") {
-        return PLinOpt::Depender(std::cin, matformat, maxnumcoeff);
-    } else {
-        std::ifstream inputmatrix(filename);
-        return PLinOpt::Depender(inputmatrix, matformat, maxnumcoeff);
-    }
+  if (filename == "") {
+    return PLinOpt::Depender(std::cin, matformat, maxnumcoeff, level);
+  } else {
+    std::ifstream inputmatrix(filename);
+    return PLinOpt::Depender(inputmatrix, matformat, maxnumcoeff, level);
+  }
 
-    return -1;
+  return -1;
 }
 // ============================================================
