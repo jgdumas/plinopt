@@ -80,7 +80,7 @@ END=$((STR+NBD-1))
 SED=`echo "${RDS}" | sed -r "s/${CHR}/${ZHR}/g;s/:=.*//" | sort -u | tac | awk -v chr=${CHR} -v str=${END} 'BEGIN{s=str;ORS=""} {print "s/"$1"/"chr""s"/g;";s--}'`
 
 # Show SED
->&2 echo "# [SNGLVR] (${NBV})  -->  ${CHR}${STR} .. ${CHR}${END}"
+>&2 echo " (${NBV})  -->  ${CHR}${STR} .. ${CHR}${END}"
 
 # echo "ZHR: ${ZHR}"
 # echo "SED: ${SED}"
