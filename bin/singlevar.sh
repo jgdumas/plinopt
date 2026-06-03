@@ -39,6 +39,11 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+function Show() {
+    local NAM=$1
+    >&2 echo -e "----- BEG: ${NAM} -----\n${!NAM}\n----- END: ${NAM} -----"
+}
+
 SLP=
 if [[ "$FIL" == "" ]]; then
   INP=0
@@ -68,12 +73,14 @@ while grep -q ${ZHR} <<< ${VARS[@]}; do
     ZHR=`echo ${ZHR} | tr "a-z" "b-za"`
 done
 
+# Show RDS
+NBD=`echo "${RDS}" | wc -l`
+END=$((STR+NBD-1))
 
-SED=`echo "${RDS}" | sed -r "s/${CHR}/${ZHR}/g;s/:=.*//" | sort -u | tac | awk -v chr=${CHR} -v str=${STR} 'BEGIN{s=str;ORS=""} {print "s/"$1"/"chr""s"/g;";s++}'`
+SED=`echo "${RDS}" | sed -r "s/${CHR}/${ZHR}/g;s/:=.*//" | sort -u | tac | awk -v chr=${CHR} -v str=${END} 'BEGIN{s=str;ORS=""} {print "s/"$1"/"chr""s"/g;";s--}'`
 
-LSV=$(echo ${SED} | sed "s/.*${CHR}//;s/\/.*//")
-NBV=$((LSV-STR+1))
->&2 echo " (${NBV})  -->  ${CHR}${STR} .. ${CHR}${LSV}"
+# Show SED
+>&2 echo "# [SNGLVR] (${NBV})  -->  ${CHR}${STR} .. ${CHR}${END}"
 
 # echo "ZHR: ${ZHR}"
 # echo "SED: ${SED}"

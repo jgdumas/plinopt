@@ -74,20 +74,20 @@ RES="${NAM}-$$.slp"
 ##     together with replacement names
 
 CHARS=(`sed 's/:=/ /;s/+/ /g;s/:=/ /;s/+/ /g;s/-/ /g;s/;.*/ /;s/\*[0-9]* / /g;s/\/[0-9]* / /g;s/)//g;s/(//g' ${FIL} | tr ' ' '\n' | sed 's/[0-9]//g;/^$/d' | sort -u| tr '\n' ' '`)
-# echo "# CHARS: ${CHARS[@]}"
+# >&2 echo "# CHARS: ${CHARS[@]}"
 
 NCHAR="a"
 while grep -q ${NCHAR} <<< ${CHARS[@]}; do
     NCHAR=`echo ${NCHAR} | tr "a-z" "b-za"`
 done
-# echo "# NCHAR: ${NCHAR}"
+# >&2 echo "# NCHAR: ${NCHAR}"
 
 CHARS+=(${NCHAR})
 OCHAR=${NCHAR}
 while grep -q ${OCHAR} <<< ${CHARS[@]}; do
     OCHAR=`echo ${OCHAR} | tr "a-z" "b-za"`
 done
-# echo "# OCHAR: ${OCHAR}"
+# >&2 echo "# OCHAR: ${OCHAR}"
 
 
 #############################################################
@@ -98,7 +98,7 @@ BOD=$(sed "s/i/${NCHAR}/g;s/o/${OCHAR}/g" ${FIL})
 
 SINP=$(sed 's/:=.*/\[\^0-9\]|/g' <<< ${BOD} | tr '\n' ' '|sed 's/ //g;s/|$//')
 INP=`echo "${SINP}"`
-# echo "# INP: ${INP}"
+# >&2 echo "# INP: ${INP}"
 
 HEA=$(sed 's/.*:=//;s/+/ /g;s/-/ /g;s/;.*/ /;s/\*[0-9]*/ /g;s/\/[0-9]*/ /g;s/)//g;s/(//g' <<< "${BOD}" | tr -s '[:space:]' | tr ' ' '\n'|sort -u| sed 's/$/;/'|egrep -v "(^;$|^i|${INP})"|sed 's/;.*//'|awk 'BEGIN {s=0} {print $1":=i"s";";s++}')
 
@@ -129,7 +129,7 @@ COMBS=$(${SLPCHK} ${RES} | ${DEPND} -c ${COE})
 # Show COMBS
 
 COMBR=$(echo ${COMBS} | sed "${SDI};${SDO}"|tr ' ' '\n')
-# echo "# All linear combinations:"
+# >&2 echo "# All linear combinations:"
 # Show COMBR
 
 for ovr in ${OVARS[@]}; do

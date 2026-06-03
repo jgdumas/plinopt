@@ -55,11 +55,11 @@ NC='\033[0m'    # No Color
 
 VAR=${VARS[0]}
 VARP=`echo ${VARS[@]}|sed 's/ /|/g'`
-# echo "VARS: ${VARS[@]}"
+# >&2 echo "VARS: ${VARS[@]}"
 
 function Show() {
     local NAM=$1
-    echo -e "----- BEG: ${NAM} -----\n${!NAM}\n----- END: ${NAM} -----"
+    >&2 echo -e "----- BEG: ${NAM} -----\n${!NAM}\n----- END: ${NAM} -----"
 }
 
 NAM="mirabelle_${VAR}"
@@ -78,7 +78,7 @@ for vari in ${VARS[@]}; do
     FROS="${FROS}${FRO}"
 done
 FROS="${FROS}${VARP})"
-# echo "FROS: ${FROS}"
+# >&2 echo "FROS: ${FROS}"
 
 egrep ${FROS} ${FIL} > ${BOD}
 
@@ -87,27 +87,27 @@ egrep ${FROS} ${FIL} > ${BOD}
 ##     together with replacement names
 
 CHARS=(`sed 's/:=/ /;s/+/ /g;s/:=/ /;s/+/ /g;s/-/ /g;s/;.*/ /;s/\*[0-9]* / /g;s/\/[0-9]* / /g;s/)//g;s/(//g' ${BOD} | tr ' ' '\n' | sed 's/[0-9]//g;/^$/d' | sort -u| tr '\n' ' '`)
-# echo "CHARS: ${CHARS[@]}"
+# >&2 echo "CHARS: ${CHARS[@]}"
 
 NCHAR="a"
 while grep -q ${NCHAR} <<< ${CHARS[@]}; do
     NCHAR=`echo ${NCHAR} | tr "a-z" "b-za"`
 done
-# echo "NCHAR: ${NCHAR}"
+# >&2 echo "NCHAR: ${NCHAR}"
 
 CHARS+=(${NCHAR})
 OCHAR=${NCHAR}
 while grep -q ${OCHAR} <<< ${CHARS[@]}; do
     OCHAR=`echo ${OCHAR} | tr "a-z" "b-za"`
 done
-# echo "OCHAR: ${OCHAR}"
+# >&2 echo "OCHAR: ${OCHAR}"
 
 
 sed -i "s/i/${NCHAR}/g;s/o/${OCHAR}/g" ${BOD}
 
 
 INP=`sed 's/:=.*/\[\^0-9\]|/g' ${BOD} | tr '\n' ' '|sed 's/ //g;s/|$//'`
-# echo "INP: ${INP}"
+# >&2 echo "INP: ${INP}"
 
 HEA=$(sed 's/.*:=//;s/+/ /g;s/-/ /g;s/;.*/ /;s/\*[0-9]*/ /g;s/\/[0-9]*/ /g;s/)//g;s/(//g' ${BOD} | tr -s '[:space:]' | tr ' ' '\n'|sort -u| sed 's/$/;/'|egrep -v "(^;$|^i|${VAR}|${INP})"|sed 's/;.*//'|awk 'BEGIN {s=0} {print $1":=i"s";";s++}')
 
@@ -126,16 +126,16 @@ SDO=${SDO}"s/${OCHAR}/o/g;s/${NCHAR}/i/g"
 ## Compute original subprogram number of operations
 
 BEF=(`(${SLPCHK} ${RES} |& egrep '(additions|multiplications)' | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g'| awk '{print $2}') 2> /dev/null`)
-#echo ${BEF[*]}
+#>&2 echo ${BEF[*]}
 
 #############################################################
 ## Function comparing the subprogram and an optimized version
 function Compare() {
   AFT=(`egrep '(additions|multiplications)' ${COM} | tail -2 | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g'| awk '{print $2}'`)
-#echo ${AFT[*]}
+#>&2 echo ${AFT[*]}
 
   DIF=$((BEF[0]+BEF[1]-AFT[0]-AFT[1]))
-#echo $DIF
+#>&2 echo $DIF
 
   if [[ "$DIF" -gt 0 ]]; then
       >&2 echo -e "${GRE}> ${AFT[*]}\t\t/!\ IMPROVEMENT /!\ ${NC}"
