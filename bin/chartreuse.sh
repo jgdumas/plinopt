@@ -131,12 +131,12 @@ SDI=$(tac <<< "${HEA}" | sed 's/:=/ /;s/;.*//' | awk '{print "s/"$2"/"$1"/g"}'|t
 #############################################################
 ## Compute the dependencies
 
-COMBS=$(${SLPCHK} ${RES} | ${DEPND} -c ${COE} -l {LVL})
+COMBS=$(${SLPCHK} ${RES} | ${DEPND} -c ${COE} -l ${LVL})
 # Show COMBS
 
 COMBR=$(echo ${COMBS} | sed "${SDI};${SDO}"|tr ' ' '\n')
-# >&2 echo "# All linear combinations:"
-# Show COMBR
+>&2 echo "# All linear combinations:"
+Show COMBR
 
 for ovr in ${OVARS[@]}; do
     OVRC=(`echo "${ovr}" | sed 's/[<,>]/ /g'`)
@@ -148,4 +148,4 @@ done
 #############################################################
 ## Clean-up tyemporary files
 
-#\rm -rf ${RES}
+\rm -rf ${RES}
