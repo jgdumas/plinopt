@@ -10,11 +10,17 @@
 DIR=`dirname $0`
 MOD=""
 COE=2
+LVL=4
 
 while [[ $# -gt 0 ]]; do
   case $1 in
     -c|-n|--coeffs)
     COE="$2"
+    shift # past argument
+    shift # past value
+    ;;
+    -l|--level)
+    LVL="$2"
     shift # past argument
     shift # past value
     ;;
@@ -24,9 +30,9 @@ while [[ $# -gt 0 ]]; do
     shift # past value
     ;;
     -h|--h|-help|--help|-*|--*)
-    echo "Usage: $0 [-c #] [-q #] P.slp"
-      exit 1
-      ;;
+    echo "Usage: $0 [-c #] [-q #] [-l #] P.slp"
+    exit 1
+    ;;
     *)
     FIL=$1
     shift # past argument
@@ -125,7 +131,7 @@ SDI=$(tac <<< "${HEA}" | sed 's/:=/ /;s/;.*//' | awk '{print "s/"$2"/"$1"/g"}'|t
 #############################################################
 ## Compute the dependencies
 
-COMBS=$(${SLPCHK} ${RES} | ${DEPND} -c ${COE})
+COMBS=$(${SLPCHK} ${RES} | ${DEPND} -c ${COE} -l {LVL})
 # Show COMBS
 
 COMBR=$(echo ${COMBS} | sed "${SDI};${SDO}"|tr ' ' '\n')

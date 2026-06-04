@@ -216,10 +216,10 @@ int main(int argc, char** argv) {
     std::string args(argv[i]);
     if (args == "-h") {
       std::clog << "Usage: " << argv[0]
-                << " [-h|-M|-P|-S|-c #] [stdin|matfile.sms]\n"
+                << " [-h|-M|-P|-S|-c #|-l #] [stdin|matfile.sms]\n"
                 << "  -c #: max number of coefficients per iteration\n"
+                << "  -l #: maximal number of monomials in the combination\n"
                 << "  -M/-P/-S: selects the ouput format\n";
-
       exit(-1);
     }
     else if (args == "-M") { matformat = FileFormat(1); } // Maple
