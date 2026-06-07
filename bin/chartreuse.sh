@@ -141,7 +141,7 @@ Show COMBR
 for ovr in ${OVARS[@]}; do
     OVRC=(`echo "${ovr}" | sed 's/[<,>]/ /g'`)
     OFND=$(egrep "(${OVRC[0]}[^0-9])" <<< "${COMBR}")
-    SFND=$(awk -v onr="${OVRC[1]}" -v onv="${OVRC[0]}" '{orig=$0;gsub("[^+-]", ""); l=length+1;if (length>0 && l<onr) print orig,"\t# "onv" "onr" --> "l," \033[1;32m\t\t/!\\ IMPROVEMENT /!\\\033[0m"}' <<< "${OFND}")
+    SFND=$(awk -v onr="${OVRC[1]}" -v onv="${OVRC[0]}" '{orig=$0;gsub("[^+-]", ""); l=length+1;if (length>0 && l<=onr) print orig,"\t# "onv" "onr" --> "(l-1)," \033[1;32m\t\t/!\\ IMPROVEMENT /!\\\033[0m"}' <<< "${OFND}")
     ShowQuiet SFND
 done
 
