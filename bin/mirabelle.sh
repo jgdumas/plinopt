@@ -55,6 +55,7 @@ NC='\033[0m'    # No Color
 
 VAR=${VARS[0]}
 VARP=`echo ${VARS[@]}|sed 's/ /|/g'`
+VART=`echo ${VARS[@]}|sed 's/ /-/g'`
 # >&2 echo "VARS: ${VARS[@]}"
 
 function Show() {
@@ -62,7 +63,7 @@ function Show() {
     >&2 echo -e "----- BEG: ${NAM} -----\n${!NAM}\n----- END: ${NAM} -----"
 }
 
-NAM="mirabelle_${VAR}"
+NAM="mirabelle_${VART}"
 BOD="${NAM}_bod-$$.slp"
 OPT="${NAM}_opt-$$.slp"
 COM="${NAM}-$$.com"
