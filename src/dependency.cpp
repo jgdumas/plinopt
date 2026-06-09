@@ -11,17 +11,26 @@
  *     ISSAC 2024, Raleigh, NC USA, pp. 254-263.
  *     (https://hal.science/hal-04441653) ]
  ****************************************************************/
-
+#include <set>
 #include "plinopt_sparsify.h"
 
 namespace PLinOpt {
 
-bool isZero(const QRat& QQ, const QArray& v) {
+template<typename Field, typename _Arr>
+bool isZero(const Field& F, const _Arr& v) {
     for(const auto& it: v) {
-        if (! QQ.isZero(it))
+        if (! F.isZero(it))
             return false;
     }
     return true;
+}
+
+template<typename Field>
+std::ostream& showOut(std::ostream& out, const Field& QQ,
+                      const size_t& i, const typename Field::Element & r) {
+    out << (Fsign(QQ,r)<0?'-':'+') << 'o' << i;
+    if (notAbsOne(QQ,r)) out << '*' << Fabs(QQ,r);
+    return out;
 }
 
 std::ostream& showOut(std::ostream& out, const QRat& QQ,
@@ -37,19 +46,22 @@ std::ostream& showOut(std::ostream& out, const QRat& QQ,
     return out;
 }
 
-std::ostream& showLC(std::ostream& out, const QRat& QQ, const Matrix::Row& LC) {
+template<typename Field, typename Row_t>
+std::ostream& showLC(std::ostream& out, const Field& QQ, const Row_t& LC) {
     for(const auto& it: LC) {
         showOut(out, QQ, it.first, it.second);
     }
     return out << ';' << std::endl;
 }
 
-bool Explore(Matrix::Row& LC, QArray& W, const Matrix& M, const size_t m,
-             const std::vector<Givaro::Rational>& Coeffs, const size_t level) {
+template<typename _Mat, typename _Arr>
+bool Explore(typename _Mat::Row& LC, _Arr& W, const _Mat& M, const size_t m,
+             const _Arr&Coeffs, const size_t level) {
+    typedef typename _Mat::Element _Elt;
     const auto& QQ(M.field());
     if (level>0) {
         for(size_t q(m+1); q<M.rowdim(); ++q) {
-            Givaro::Rational prevv(QQ.zero), currv(QQ.zero);
+            _Elt prevv,currv; QQ.assign(prevv, QQ.zero); QQ.assign(currv, QQ.zero);
             for(size_t v(0); v<Coeffs.size(); ++v) {
                 currv = Coeffs[v]-prevv; prevv = Coeffs[v];
                 LC.emplace_back(q,prevv);
@@ -68,14 +80,19 @@ bool Explore(Matrix::Row& LC, QArray& W, const Matrix& M, const size_t m,
 
 // ============================================================
 //
-int Depender(std::istream& input, const FileFormat& matformat,
-             const size_t maxnumcoeff, const size_t level) {
+template<typename Field>
+int Depender(std::istream& input, const size_t maxnumcoeff,
+             const size_t level, const Field& F) {
 
+    using FMatrix=typename Matrix::template rebind<Field>::other;
+    using _Elt=typename Field::Element;
+    using FArray=std::vector<_Elt>;
         // ============================================================
         // Read Matrix of Linear Transformation
     QRat QQ;
     QMstream ms(QQ,input);
-    Matrix M(ms); M.resize(M.rowdim(),M.coldim());
+    Matrix B(ms); B.resize(B.rowdim(),B.coldim());
+    FMatrix M(B,F);
 
 #ifdef VERBATIM_PARSING
     M.write(std::clog,FileFormat::Pretty);
@@ -86,9 +103,9 @@ int Depender(std::istream& input, const FileFormat& matformat,
 
         // ========================================
         // Try 1, -1 and some coefficients in M
-    std::vector<Givaro::Rational> Coeffs{1, -1};
-    for( auto indices = M.IndexedBegin();
-         (indices != M.IndexedEnd()) ; ++indices ) {
+    QArray Coeffs{1, -1};
+    for( auto indices = B.IndexedBegin();
+         (indices != B.IndexedEnd()) ; ++indices ) {
         augment(Coeffs, indices.value().nume(), QQ);
         augment(Coeffs, indices.value().deno(), QQ);
     }
@@ -100,19 +117,28 @@ int Depender(std::istream& input, const FileFormat& matformat,
         // reduce to at most maxnumcoeff
     if (Coeffs.size()>maxnumcoeff) Coeffs.resize(maxnumcoeff);
 
-#ifdef VERBATIM_PARSING
-    std::clog << "# [DEPND] linear combination coefficients: " << Coeffs
-              << std::endl;
-#endif
+    std::vector<_Elt> FCoeffs;
+    for(const auto& e: Coeffs) {
+        _Elt num,den; F.init(num,e.nume()); F.init(den,e.deno());
+        F.divin(num,den);
+        if (! F.isZero(num)) {
+            if(std::find(FCoeffs.begin(), FCoeffs.end(), num) == FCoeffs.end()) {
+                FCoeffs.push_back(num);
+            }
+        }
+    }
 
-    Matrix::Row LC;
-    QArray W(M.coldim(),QQ.zero);
+    std::clog << "# [DEPND] linear combination coefficients: " << FCoeffs
+              << std::endl;
+
+    typename FMatrix::Row LC;
+    FArray W(M.coldim(),F.zero);
     for(size_t i(0); i<M.rowdim(); ++i) {
         std::clog << "# [DEPND] o" << i << std::endl;
-        LC.emplace_back(i,QQ.one);
-        for(const auto& el:M[i]) QQ.assign(W[el.first],el.second);
-        Explore(LC, W, M, i, Coeffs, level-1);
-        for(const auto& el:M[i]) QQ.assign(W[el.first],QQ.zero);
+        LC.emplace_back(i,F.one);
+        for(const auto& el:M[i]) F.assign(W[el.first],el.second);
+        Explore(LC, W, M, i, FCoeffs, level-1);
+        for(const auto& el:M[i]) F.assign(W[el.first],F.zero);
         LC.pop_back();
     }
 
@@ -126,6 +152,22 @@ int Depender(std::istream& input, const FileFormat& matformat,
 // ============================================
 
 
+
+// ============================================================
+//
+int DependerQ(std::istream& input, const size_t maxnumcoeff,
+             const size_t level, const Givaro::Integer& q) {
+    if (Givaro::isZero(q)) {
+        PLinOpt::QRat QQ;
+        return PLinOpt::Depender(input, maxnumcoeff, level, QQ);
+    } else {
+        Givaro::Modular<Givaro::Integer> FF(q);
+        return PLinOpt::Depender(input, maxnumcoeff, level, FF);
+    }
+}
+
+
+
 // ============================================================
 // Main: select between file / std::cin
 //       -c #: sets the max number of coefficients per iteration
@@ -134,8 +176,8 @@ int Depender(std::istream& input, const FileFormat& matformat,
 int main(int argc, char** argv) {
     using PLinOpt::FileFormat;
 
-    FileFormat matformat = FileFormat::Pretty;
     std::string filename;
+    Givaro::Integer q(0u);
     size_t maxnumcoeff(COEFFICIENT_SEARCH); // default max coefficients
     size_t level(4);
 
@@ -146,22 +188,20 @@ int main(int argc, char** argv) {
                       << " [-h|-M|-P|-S|-c #|-l #] [stdin|matfile.sms]\n"
                       << "  -c #: max number of coefficients per iteration\n"
                       << "  -l #: maximal number of monomials in the combination\n"
-                      << "  -M/-P/-S: selects the ouput format\n";
+                      << "  -q #: modular generation/check (default is Rationals)\n";
             exit(-1);
         }
-        else if (args == "-M") { matformat = FileFormat(1); } // Maple
-        else if (args == "-S") { matformat = FileFormat(5); } // SMS
-        else if (args == "-P") { matformat = FileFormat(8); } // Pretty
+        else if (args == "-q") { q = Givaro::Integer(argv[++i]); }
         else if (args == "-c") { maxnumcoeff = atoi(argv[++i]); }
         else if (args == "-l") { level = atoi(argv[++i]); }
         else { filename = args; }
     }
 
     if (filename == "") {
-        return PLinOpt::Depender(std::cin, matformat, maxnumcoeff, level);
+        return DependerQ(std::cin, maxnumcoeff, level, q);
     } else {
         std::ifstream inputmatrix(filename);
-        return PLinOpt::Depender(inputmatrix, matformat, maxnumcoeff, level);
+        return DependerQ(inputmatrix, maxnumcoeff, level, q);
     }
 
     return -1;

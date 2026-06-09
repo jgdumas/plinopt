@@ -54,53 +54,53 @@ int SLPcheck(const std::string& prgname, const std::string& matname,
     Pair<size_t> Ops;
 
     if (prgname == "") {
-	Ops = SLPbuilder(A, std::cin);
+        Ops = SLPbuilder(A, std::cin);
     } else {
-	std::ifstream ifile(prgname);
-	if ( ifile ) {
-	    Ops = SLPbuilder(A, ifile);
-	    ifile.close();
-	}
+        std::ifstream ifile(prgname);
+        if ( ifile ) {
+            Ops = SLPbuilder(A, ifile);
+            ifile.close();
+        }
     }
 
     if (matname != "") {
-	std::ifstream matfile(matname);
-	QRat QQ;
-	QMstream ms(QQ, matfile);
-	Matrix M(ms);
-	const Pair<size_t> nbelts(naiveOps(M));
+        std::ifstream matfile(matname);
+        QRat QQ;
+        QMstream ms(QQ, matfile);
+        Matrix M(ms);
+        const Pair<size_t> nbelts(naiveOps(M));
 
-	const size_t m(std::max(M.rowdim(),A.rowdim()));
-	const size_t n(std::max(M.coldim(),A.coldim()));
-	M.resize(m,n); A.resize(m,n);
-	FMatrix B(M,F);
-	LinBox::DenseMatrix<Field> dB(F,m,n),dA(F,m,n),R(F,m,n);
-	any2dense(dA,A); any2dense(dB,B);
-	LinBox::MatrixDomain<Field> BMD(F);
-	BMD.sub(R,dB,dA);
+        const size_t m(std::max(M.rowdim(),A.rowdim()));
+        const size_t n(std::max(M.coldim(),A.coldim()));
+        M.resize(m,n); A.resize(m,n);
+        FMatrix B(M,F);
+        LinBox::DenseMatrix<Field> dB(F,m,n),dA(F,m,n),R(F,m,n);
+        any2dense(dA,A); any2dense(dB,B);
+        LinBox::MatrixDomain<Field> BMD(F);
+        BMD.sub(R,dB,dA);
 
-	if (BMD.isZero (R))
-	    std::clog <<"# \033[1;32mSUCCESS: correct SLP for "
-		      << m << 'x' << n
-		      << " (" << nbelts.first << '+'
-		      << '|' << nbelts.second << 'x'
-		      << ") : " << Ops
-		      << " Matrix-Vector multiplication!\033[0m" << std::endl;
-	else {
-	    std::cerr << "# \033[1;31m****** ERROR, not a "
-		      << m << 'x' << n
-		      << " m-v algorithm******\033[0m"
-		      << std::endl;
+        if (BMD.isZero (R)) {
+            std::clog <<"# \033[1;32mSUCCESS: correct SLP for "
+                      << m << 'x' << n
+                      << " (" << nbelts.first << '+'
+                      << '|' << nbelts.second << 'x'
+                      << ") : " << Ops
+                      << " Matrix-Vector multiplication!\033[0m" << std::endl;
+        } else {
+            std::cerr << "# \033[1;31m****** ERROR, not a "
+                      << m << 'x' << n
+                      << " m-v algorithm******\033[0m"
+                      << std::endl;
 
-	    A.write(std::clog<<"# Program:\n", FileFormat::Pretty);
-	    B.write(std::clog<<"\n# Matrix:\n", FileFormat::Pretty);
-	    R.write(std::clog<<"\n# diff:\n", FileFormat::Pretty) << std::endl;
+            A.write(std::clog<<"# Program:\n", FileFormat::Pretty);
+            B.write(std::clog<<"\n# Matrix:\n", FileFormat::Pretty);
+            R.write(std::clog<<"\n# diff:\n", FileFormat::Pretty) << std::endl;
 
-	    return 1;
-	}
-    } else
-	A.write(std::cout, FileFormat(5)) << std::endl;
-
+            return 1;
+        }
+    } else {
+        A.write(std::cout, FileFormat(5)) << std::endl;
+    }
     return 0;
 }
 
@@ -131,12 +131,12 @@ int main(int argc, char** argv) {
 	else { prgname = args; }
     }
 
-    if (! Givaro::isZero(q)) {
-	Givaro::Modular<Givaro::Integer> FF(q);
-	return PLinOpt::SLPcheck(prgname, matname, FF);
+    if (Givaro::isZero(q)) {
+        PLinOpt::QRat QQ;
+        return PLinOpt::SLPcheck(prgname, matname, QQ);
     } else {
-	PLinOpt::QRat QQ;
-	return PLinOpt::SLPcheck(prgname, matname, QQ);
+        Givaro::Modular<Givaro::Integer> FF(q);
+        return PLinOpt::SLPcheck(prgname, matname, FF);
     }
 }
 // ============================================================

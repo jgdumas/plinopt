@@ -49,7 +49,7 @@ NC='\033[0m'    # No Color
 ## PLinOpt programs
 
 SLPCHK="${DIR}/SLPchecker${MOD}"
-DEPND="${DIR}/dependency"
+DEPND="${DIR}/dependency${MOD}"
 #############################################################
 ## Show here-strings
 
