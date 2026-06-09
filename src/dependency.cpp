@@ -25,6 +25,21 @@ bool isZero(const Field& F, const _Arr& v) {
     return true;
 }
 
+template<typename Field, typename _Arr>
+int isCano(const Field& F, const _Arr& v) {
+    int loc(-1);
+    for(size_t i(0); i<v.size(); ++i) {
+        if (! F.isZero(v[i])) {
+            if (loc != -1) {
+                return -1;
+            } else {
+                loc = i;
+            }
+        }
+    }
+    return loc;
+}
+
 template<typename Field>
 std::ostream& showOut(std::ostream& out, const Field& QQ,
                       const size_t& i, const typename Field::Element & r) {
@@ -58,19 +73,23 @@ template<typename _Mat, typename _Arr>
 bool Explore(typename _Mat::Row& LC, _Arr& W, const _Mat& M, const size_t m,
              const _Arr&Coeffs, const size_t level) {
     typedef typename _Mat::Element _Elt;
-    const auto& QQ(M.field());
+    const auto& F(M.field());
     if (level>0) {
         for(size_t q(m+1); q<M.rowdim(); ++q) {
-            _Elt prevv,currv; QQ.assign(prevv, QQ.zero); QQ.assign(currv, QQ.zero);
+            _Elt prevv,currv; F.assign(prevv, F.zero); F.assign(currv, F.zero);
             for(size_t v(0); v<Coeffs.size(); ++v) {
                 currv = Coeffs[v]-prevv; prevv = Coeffs[v];
                 LC.emplace_back(q,prevv);
-                for(const auto& el:M[q]) QQ.axpyin(W[el.first],currv,el.second);
-                if (isZero(QQ,W)) showLC(std::cout, QQ, LC);
+                for(const auto& el:M[q]) F.axpyin(W[el.first],currv,el.second);
+                if (isZero(F,W))  showLC(std::cout, F, LC);
+                else {
+                    const int i(isCano(F,W));
+                    if (i != -1) showLC(std::cout << "+i" << i, F, LC);
+                }
                 Explore(LC,W,M,q,Coeffs,level-1);
                 LC.pop_back();
             }
-            for(const auto& el:M[q]) QQ.maxpyin(W[el.first],prevv,el.second);
+            for(const auto& el:M[q]) F.maxpyin(W[el.first],prevv,el.second);
         }
         return true;
     } else
