@@ -44,6 +44,7 @@ SLPCHK="${DIR}/SLPchecker${MOD}"
 OPTMZR="${DIR}/optimizer${OPTFLAGS}${MOD}"
 MATTRP="${DIR}/matrix-transpose"
 TRSPZR="${DIR}/transpozer"
+CMPCTR="${DIR}/compacter"
 
 GRE='\033[1;32m'
 RED='\033[0;41m'
@@ -188,7 +189,7 @@ Compare
 ## Optimize its transposition
 
 echo -n "${VARS[@]}T: ${BEF[*]} "
-((${SLPCHK} ${RES} | ${MATTRP} | ${OPTMZR} | ${TRSPZR} ) > ${OPT}) 2> ${COM}
+((${SLPCHK} ${RES} | ${MATTRP} | ${OPTMZR} | ${CMPCTR} | ${TRSPZR} ) > ${OPT}) 2> ${COM}
 FND="${NAM}t-$$.log"
 Compare
 
