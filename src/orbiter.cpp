@@ -78,7 +78,7 @@ inline _Mat& zoiRandomMatrix(_Mat& M) {
 #if defined(ACTION_FULL_PLUQ)
         // Random det 1 matrix
     _Mat L(FF,M.rowdim(),M.coldim());
-    for(size_t i=0; i<L.rowdim(); ++i) xL.setEntry(i,i, D[i] ? FF.one : FF.mOne);
+    for(size_t i=0; i<L.rowdim(); ++i) L.setEntry(i,i, D[i] ? FF.one : FF.mOne);
     Element tmp; FF.init(tmp);
     for(size_t i=0;i<L.rowdim();++i) {
         for(size_t j=0;j<i;++j) {
