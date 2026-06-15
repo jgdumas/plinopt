@@ -45,8 +45,11 @@ int Transpozer(std::istream& input) {
     PLinOpt::VProgram_t progV; PLinOpt::programParser(progV, ssin);
     char next('d'); PLinOpt::parenthesisExpand(progV, next);
     std::clog << std::string(40,'#') << std::endl;
-    std::clog << "# Transpozing " << PLinOpt::progSize(progV) << " elements"
-              << std::endl;
+
+    const size_t ps(PLinOpt::progSize(progV));
+    std::clog << "# Transpozing " << ps << " elements" << std::endl;
+
+    if (ps == 0) return -1;
 
     std::stringstream ssout;
     for(const auto& line: progV) {
