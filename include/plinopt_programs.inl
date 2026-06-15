@@ -992,6 +992,9 @@ Iterator endGroup(const Iterator& start, const Iterator& end) {
 // Removes leading minus from parenthesis if possible:
 //         -(a-b) --> +(b-a)
 std::vector<std::string>& parenthesisMinusLine(std::vector<std::string>& line) {
+#ifdef VERBATIM_PARSING
+        std::clog << "# [pML] of " << line << std::endl;
+#endif
     bool swapped(false);
     std::vector<std::string> newline;
     for (auto startl(line.begin()); startl != line.end(); ++startl) {
@@ -1056,8 +1059,8 @@ std::vector<std::string>& parenthesisMinusLine(std::vector<std::string>& line) {
     uselessPlus(newline); // remove :=+
     if (swapped) {
 #ifdef VERBATIM_PARSING
-        std::clog << "# Replaced " << line << std::endl
-                  << "#     with " << newline << std::endl;
+        std::clog << "# [pML] Replaced " << line << std::endl
+                  << "#           with " << newline << std::endl;
 #endif
         line.assign(newline.begin(), newline.end());
     }
@@ -1072,9 +1075,11 @@ std::vector<std::string>& parenthesisMinusLine(std::vector<std::string>& line) {
 template<typename Iterator>
 std::vector<std::string> swapParenthesisMinus(const Iterator& start,
                                               const Iterator& endl) {
-// std::clog << "## BEF sPM: ";
-// for(auto it(start); it != endl; ++it) std::clog << *it << ' ';
-// std::clog << std::endl;
+#ifdef VERBATIM_PARSING
+        std::clog << "# [sPM] of ";
+        for(auto it(start); it != endl; ++it) std::clog << *it << ' ';
+        std::clog << std::endl;
+#endif
 
     std::vector<std::string> newline;
     for (auto startl(start); startl != endl;) {
@@ -1104,7 +1109,25 @@ std::vector<std::string> swapParenthesisMinus(const Iterator& start,
                 newgroup = negateLine(newgroup);
             }
 // std::clog << "## transform: " << newgroup << std::endl;
+        } else if (newgroup.back() == ")") {
+                    // Look for useless parenthesis
+            if (newgroup[1] == "(") {
+                if (newgroup[0] == "-") {
+                    newgroup = negateLine(newgroup);
+                    size_t remPar(1);
+                    if ((newgroup[2] == "+") || (newgroup[2] == "-")) --remPar;
+                    newgroup.pop_back();
+                    newgroup.erase(newgroup.begin()+remPar,newgroup.begin()+2);
+//                     std::clog << "# [sPM] rUS: " << newgroup << std::endl;
+                }
+                if ((newgroup[0] == "+") || (newgroup[0] == ":=")) {
+                    newgroup.pop_back();
+                    newgroup.erase(newgroup.begin()+1,newgroup.begin()+2);
+//                     std::clog << "# [sPM] rUA: " << newgroup << std::endl;
+                }
+            }
         }
+
         newline.insert(newline.end(),newgroup.begin(),newgroup.begin()+offset);
 
         std::vector<std::string> newblock(
@@ -1114,9 +1137,7 @@ std::vector<std::string> swapParenthesisMinus(const Iterator& start,
 
         startl = closp;
     }
-
     uselessPlus(newline); // remove :=+
-// std::clog << "## AFT sPM: " << newline << std::endl;
     return newline;
 }
 
@@ -1255,7 +1276,7 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
         }
     }
 
-       // Need to sort map by (front of) values (first occurence of that var)
+        // Need to sort map by (front of) values (first occurence of that var)
         // Thus rewriting is done in the program order
     std::vector<std::pair<std::string, std::vector<size_t>>> ordsUse;
     for (const auto& [variable, occurences] : varsUse)
