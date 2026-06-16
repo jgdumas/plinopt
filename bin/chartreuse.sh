@@ -57,9 +57,9 @@ function Show() {
     local NAM=$1
     >&2 echo -e "# ----- BEG: ${NAM} -----\n${!NAM}\n# ----- END: ${NAM} -----"
 }
-function ShowQuiet() {
+function ShowQuietUniq() {
     local NAM=$1
-    echo -e "${!NAM}"| egrep -v '($^)'
+    echo -e "${!NAM}"| egrep -v '($^)'| sort -k1,1 -t';' --stable --unique
 }
 
 #############################################################
@@ -73,7 +73,6 @@ LOARS=(`echo "${OVARS}"`)
 ## Temporary file names
 
 NAM="chartreuse"
-RES="${NAM}-$$.slp"
 
 #############################################################
 ## Define output and input variables of the subprogram
@@ -101,6 +100,8 @@ done
 
 BOD=$(sed "s/i/${NCHAR}/g;s/o/${OCHAR}/g" ${FIL})
 # Show BOD
+TSDO=$(cat <<< "${BOD}" | cut -d':' -f1 | sort -r| awk 'BEGIN {s=0} {print "s/"$1"/o"s"/g";s++}' |tac|tr '\n' ';')
+# Show TSDO
 
 SINP=$(sed 's/:=.*/\[\^0-9\]|/g' <<< ${BOD} | tr '\n' ' '|sed 's/ //g;s/|$//')
 INP=`echo "${SINP}"`
@@ -108,14 +109,11 @@ INP=`echo "${SINP}"`
 
 HEA=$(sed 's/.*:=//;s/+/ /g;s/-/ /g;s/;.*/ /;s/\*[0-9]*/ /g;s/\/[0-9]*/ /g;s/)//g;s/(//g' <<< "${BOD}" | tr -s '[:space:]' | tr ' ' '\n'|sort -u| sed 's/$/;/'|egrep -v "(^;$|^i|${INP})"|sed 's/;.*//'|awk 'BEGIN {s=0} {print $1":=i"s";";s++}')
 
-echo -e "${HEA}" > ${RES}
-echo -e "${BOD}" >> ${RES}
+REST=$(echo -e "${HEA}")
+REST+=$(echo -e "\n${BOD}")
+REST+=$(echo -e "${BOD}" | cut -d':' -f1 | sort -r| awk 'BEGIN {s=0;print} {print "o"s":="$1";";s++}')
+# Show REST
 
-TSDO=$(cat <<< "${BOD}" | cut -d':' -f1 | sort -r| awk 'BEGIN {s=0} {print "s/"$1"/o"s"/g";s++}' |tac|tr '\n' ';')
-
-# Show TSDO
-
-echo -e "${BOD}" | cut -d':' -f1 | sort -r| awk 'BEGIN {s=0} {print "o"s":="$1";";s++}' >> ${RES}
 
 #############################################################
 ## Replacements to go back to original variable names
@@ -127,25 +125,40 @@ SDO=${SDO}"s/${OCHAR}/o/g;s/${NCHAR}/i/g"
 SDI=$(tac <<< "${HEA}" | sed 's/:=/ /;s/;.*//' | awk '{print "s/"$2"/"$1"/g"}'|tr '\n' ';')
 # Show SDI
 
-
 #############################################################
 ## Compute the dependencies
 
-COMBS=$(${SLPCHK} ${RES} | ${DEPND} -c ${COE} -l ${LVL})
-# Show COMBS
+DPNDL=$(${SLPCHK} <<< "${REST}" | ${DEPND} -c ${COE} -l ${LVL})
 
-COMBR=$(echo ${COMBS} | sed "${SDI};${SDO}"|tr ' ' '\n')
+function SortLine() {
+    while read line
+      do
+      echo "$line" | sed 's/[+-]/ &/g;s/;//' | tr ' ' '\n' | sort | tr '\n' ' ' | sed -E 's/ //g;s/$/;\n/'
+    done
+}
+
+## Rewrite back the original variable names and sort the dependencies
+COMBR=$(echo ${DPNDL} | sed "${SDI};${SDO}"|tr ' ' '\n')
+Combinations=$(SortLine <<< "${COMBR}" |sort -u)
 >&2 echo "# All linear combinations:"
-Show COMBR
+Show Combinations
 
+## Write and sort the dependencies within the original program
+RELPL=$(sed -r 's/(.*):=(.*);/+\2-\1;/' "${FIL}")
+RELPS=$(SortLine <<< "${RELPL}" | awk '{orig=$0;gsub(/\+/,"PLUSPLUS");gsub(/\-/,"+");gsub(/PLUSPLUS/,"-");print orig; print}' |sort -u)
+
+## Select only not known dependencies
+ONLYN=$(comm -23 <(cat <<< "${Combinations}") <(cat <<< "${RELPS}"))
+
+## Select improving dependencies (counting only add/sub)
+TOTAL=()
 for ovr in ${OVARS[@]}; do
     OVRC=(`echo "${ovr}" | sed 's/[<,>]/ /g'`)
-    OFND=$(egrep "(${OVRC[0]}[^0-9])" <<< "${COMBR}")
+    OFND=$(egrep "(${OVRC[0]}[^0-9])" <<< "${ONLYN}")
     SFND=$(awk -v onr="${OVRC[1]}" -v onv="${OVRC[0]}" '{orig=$0;gsub("[^+-]", ""); l=length+1;if (length>0 && l<=onr) print orig,"\t# "onv" "onr" --> "(l-1)," \033[1;32m\t\t/!\\ IMPROVEMENT /!\\\033[0m"}' <<< "${OFND}")
-    ShowQuiet SFND
+#     Show SFND
+    TOTAL+='\n'
+    TOTAL+=${SFND}
 done
 
-#############################################################
-## Clean-up tyemporary files
-
-\rm -rf ${RES}
+ShowQuietUniq TOTAL
