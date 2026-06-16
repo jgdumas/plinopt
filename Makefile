@@ -1,5 +1,5 @@
 ####################################################################
-# PLinOpt: a collection of C++ routines handling linear programs
+# PLinOpt: a collection of C++ routines for straight-line programs
 # Authors: J-G. Dumas, C. Pernet, A. Sedoglavic
 ####################################################################
 
@@ -55,7 +55,7 @@ clean:
 #######
 
 SHELL=/bin/bash
-check: ${BIN} pmcheck mmcheck opcheck slpcheck
+check: ${BIN} trspcheck pmcheck mmcheck opcheck slpcheck
 
 mmcheck: ./bin/MMchecker
 	$< data/2x2x2_7_Strassen_{L,R,P}.sms
@@ -69,6 +69,15 @@ pmcheck: ./bin/PMchecker
 	$< data/4o4o4_F243-11-44_{L,R,P}.sms -q 3 -P "1-X+X^5"
 	$< data/4o4o4_F243-Montgomery-13-42_{L,R,P}.sms -q 3 -P "X^5+X^4-X^3-X^2-1"
 
+
+TEMPFILE := $(shell mktemp)
+
+trspcheck: ./bin/compacter ./bin/transpozer ./bin/SLPchecker data/test-prg.sms 
+	./bin/transpozer data/test-prg.slp | ./bin/compacter | ./bin/transpozer | ./bin/compacter | ./bin/SLPchecker -M data/test-prg.sms
+
+
+%.sms:%.slp
+	./bin/compacter $< | ./bin/SLPchecker > $@
 
 opcheck: ./bin/GDT.sh ${BIN}
 	./bin/GDT.sh

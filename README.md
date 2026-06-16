@@ -1,5 +1,5 @@
 --------------------------------------------------------------------------------
-# PLinOpt: C++ routines handling linear, bilinear & trilinear programs
+# PLinOpt: C++ routines for linear, bilinear & trilinear straight-line programs
 --------------------------------------------------------------------------------
 
 **Authors**:  Jean-Guillaume Dumas, Bruno Grenet, Clément Pernet, Alexandre Sedoglavic
@@ -24,10 +24,10 @@
 - `make check`, will run correctness programs on the examples files in the `data` directory
 
 
-**From matrices to programs**:
+**From matrices to straight-line programs**:
 |  |  |
 | :--------- | :------ |
-|`bin/optimizer`| produces a small program computing a linear transformation|
+|`bin/optimizer`| produces a small straight-line program computing a linear transformation|
 |`bin/sparsifier`| factors an MxN matrix into a sparser one, times an NxN matrix |
 |`bin/factorizer`| factors an MxN matrix into a sparser MxK, times an KxN matrix |
 |`bin/inplacer`| produces an in-place program from a linear transformation|
@@ -36,7 +36,7 @@
 
 
 
-**Optimizing programs**:
+**Optimizing straight-line programs**:
 |  |  |
 | :--------- | :------ |
 |`bin/compacter`| rewrites a simple program using less variables |
@@ -69,7 +69,7 @@
 
 
 
-**Program Syntax**:
+**Straight-Line Program (SLP) Syntax**:
 - Line by line
 - Operators are: `:=`, `+`, `-`, `*`, `/`, `;`
 - Each line not containing `:=` is ignored
@@ -89,8 +89,8 @@
 - `./bin/MMchecker data/2x2x2_7_DPS-accurate_{L,R,P}.sms -b 32 -m 1026166`: probabilistically checking matrix-multiplication algorithm using 32 bits random elements and 1013 as a placeholder for sqrt(3) (1026166=1013^2-3)
 - `./bin/optimizer data/cyclic.sms`: a program computing that matrix-vector product
 - `./bin/optimizer data/2x2x2_7_DPS-smallrat-12.2034_R.sms -q 3`: a program computing that matrix-vector product modulo 3
-- `./bin/transpozer data/test.prg`: a program computing the transposed program
-- `./bin/compacter data/test.prg`: a more compact program
+- `./bin/transpozer data/test-prg.slp`: a straight-line program computing the transposed program
+- `./bin/compacter data/test-prg.slp`: a more compact program
 - `./bin/optimizer -D data/2x2x2_7_DPS-integral-12.0662_P.sms`: a program computing that matrix-vector product
 - `./bin/optimizer data/2x2x2_7_DPS-integral-12.0662_L.sms | ./bin/compacter -s`: a compact program computing that matrix-vector product
 - `./bin/matrix-transpose data/2x2x2_7_DPS-integral-12.0662_P.sms | ./bin/optimizer -K | ./bin/transpozer`: a program computing that matrix-vector product

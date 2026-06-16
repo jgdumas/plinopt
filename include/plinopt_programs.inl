@@ -529,7 +529,7 @@ int Tellegen(std::istream& input, const char cchar /* = 'c'*/,
                 } else {
                     line[prev]=zchar; // 'o' is replaced by 'z' in computations
                 }
-            } else if (line[prev] != ichar) {
+            } else if ((line[prev] != cchar) && (line[prev] != ichar)) {
                 if (modSet.find(param) == modSet.end()) {
 #ifdef VERBATIM_PARSING
                     std::clog << "# Useless usage of uninitalized: "
