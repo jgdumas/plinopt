@@ -159,7 +159,7 @@ TOTAL=()
 for ovr in ${OVARS[@]}; do
     OVRC=(`echo "${ovr}" | sed 's/[<,>]/ /g'`)
     OFND=$(egrep "(${OVRC[0]}[^0-9])" <<< "${ONLYN}")
-    SFND=$(awk -v onr="${OVRC[1]}" -v onv="${OVRC[0]}" -v lea="${LESAD}" -v imp="${IMPRO}" '{orig=$0;gsub("[^+-]",""); l=length+1;if (length>0 && l<=onr) {$0=orig;gsub(/[^*]/,""); if (length) {msg=lea} else {msg=imp}; print orig,"\t# "onv" "onr" --> "(l-1),msg}}' <<< "${OFND}")
+    SFND=$(awk -v onr="${OVRC[1]}" -v onv="${OVRC[0]}" -v lea="${LESAD}" -v imp="${IMPRO}" '{orig=$0;gsub("[^+-]",""); l=length+1;if (length>0 && l<=onr) {$0=orig;gsub(/[^*/]/,""); if (length) {msg=lea} else {msg=imp}; print orig,"\t# "onv" "onr" --> "(l-1),msg}}' <<< "${OFND}")
 #     Show SFND
     TOTAL+='\n'
     TOTAL+=${SFND}
