@@ -42,7 +42,7 @@ done
 
 GRE='\033[1;32m'
 RED='\033[0;41m'
-BLU='\033[0;36m'
+BLU='\033[0;96m'
 NC='\033[0m'    # No Color
 
 #############################################################
@@ -65,7 +65,7 @@ function ShowQuietUniq() {
 #############################################################
 ## Variables to optimize
 
-OVARS=$(sed -r "s/([:+-])/ /g" ${FIL}|awk '{if (NF>3) print "<"$1","NF"> "}')
+OVARS=$(sed -r "s/([:=+-])/ /g" ${FIL}|awk '{var=$1;nbm=NF;b=nbm>3;if (!b){gsub(/[^*]/,""); b=length}; if (b) print "<"var","nbm"> "}')
 LOARS=(`echo "${OVARS}"`)
 >&2 echo "# [CHTRS] VARS>3 (${#LOARS[@]}): ${LOARS[@]}"
 
@@ -151,11 +151,15 @@ RELPS=$(SortLine <<< "${RELPL}" | awk '{orig=$0;gsub(/\+/,"PLUSPLUS");gsub(/\-/,
 ONLYN=$(comm -23 <(cat <<< "${Combinations}") <(cat <<< "${RELPS}"))
 
 ## Select improving dependencies (counting only add/sub)
+
+LESAD="${BLU}\t\t/!\\\ less additions /!\\\\${NC}"
+IMPRO="${GRE}\t\t/!\\\  IMPROVEMENTS  /!\\\\${NC}"
+
 TOTAL=()
 for ovr in ${OVARS[@]}; do
     OVRC=(`echo "${ovr}" | sed 's/[<,>]/ /g'`)
     OFND=$(egrep "(${OVRC[0]}[^0-9])" <<< "${ONLYN}")
-    SFND=$(awk -v onr="${OVRC[1]}" -v onv="${OVRC[0]}" '{orig=$0;gsub("[^+-]", ""); l=length+1;if (length>0 && l<=onr) print orig,"\t# "onv" "onr" --> "(l-1)," \033[1;32m\t\t/!\\ IMPROVEMENT /!\\\033[0m"}' <<< "${OFND}")
+    SFND=$(awk -v onr="${OVRC[1]}" -v onv="${OVRC[0]}" -v lea="${LESAD}" -v imp="${IMPRO}" '{orig=$0;gsub("[^+-]",""); l=length+1;if (length>0 && l<=onr) {$0=orig;gsub(/[^*]/,""); if (length) {msg=lea} else {msg=imp}; print orig,"\t# "onv" "onr" --> "(l-1),msg}}' <<< "${OFND}")
 #     Show SFND
     TOTAL+='\n'
     TOTAL+=${SFND}
