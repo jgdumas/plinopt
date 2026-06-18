@@ -146,7 +146,7 @@ function Compare() {
 #       Show SDI
       sed "s/${OCHAR}/o/g;s/${NCHAR}/i/g" ${BOD} > ${FND}
       uniq ${COM} &>> ${FND}
-      ((compacter ${OPT} | egrep -v '(:=0;)' | sed "${SDI}${SDO}") >> ${FND}) 2> /dev/null
+       ((${CMPCTR} ${OPT} | egrep -v '(:=0;)' | sed "${SDI}${SDO}") >> ${FND}) 2> /dev/null
   else
       ADD=$((BEF[0]-AFT[0]))
       MUL=$((BEF[1]-AFT[1]))
@@ -165,7 +165,7 @@ function Compare() {
 #       Show SDI
 	  sed "s/${OCHAR}/o/g;s/${NCHAR}/i/g" ${BOD} > ${FND}
 	  uniq ${COM} &>> ${FND}
-	  ((compacter ${OPT} | egrep -v '(:=0;)' | sed "${SDI};${SDO}") >> ${FND}) 2> /dev/null
+ 	  ((${CMPCTR} ${OPT} | egrep -v '(:=0;)' | sed "${SDI};${SDO}") >> ${FND}) 2> /dev/null
       else
 	  if [[ "$DIF" -eq 0 ]]; then
 	      >&2 echo "== ${AFT[*]}"
