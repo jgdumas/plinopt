@@ -5,11 +5,18 @@
 
 # Change FILE for algorithm prefix to check
 FILE=4x4x4_48_rational
-
+#PM=1
 ##################"
 MATS=$(shell echo ${FILE}_{L,R,P}.sms)
-SHELL:=/bin/bash
+##################"
 PLODIR=../bin
+ifdef PM
+  CHKPRG=${PLODIR}/PMchecker
+else
+  CHKPRG=${PLODIR}/MMchecker
+endif
+
+SHELL:=/bin/bash
 PREFIX=${patsubst %_L.sms,%,${firstword ${notdir ${MATS}}}}
 
 OPT=1000
@@ -33,7 +40,7 @@ count: ${ALGO}
 check: docheck count
 
 docheck: ${CHKS}
-	@ ${PLODIR}/MMchecker ${MOD} ${MATS}
+	@ ${CHKPRG} ${MOD} ${MATS}
 
 prune_%.log: ${FILE}_%.slp
 	(time ${PLODIR}/prune.sh -O ${OPT} $< ) &> $@
