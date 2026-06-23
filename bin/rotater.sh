@@ -10,21 +10,44 @@
 # ==========================================================================
 
 DIR=`dirname $0`
+SUFF=left
+FILS=()
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -d|--direction)
+    SUFF="$2"
+    shift # past argument
+    shift # past value
+    ;;
+    -l|--left)
+    SUFF=left
+    shift # past argument
+    ;;
+    -r|--right)
+    SUFF=right
+    shift # past argument
+    ;;
+    -h|--h|-help|--help|-*|--*)
+    echo "Usage: $0 [-d left/right] [-r|-l] L.sms R.sms P.sms"
+    exit 1
+    ;;
+    *)
+    FILS+=($1)
+    shift # past argument
+    ;;
+    esac
+done
+
 
 TR=${DIR}/matrix-transpose
 CS=${DIR}/columns-swap
 
-L=$1
-R=$2
-P=$3
+L=${FILS[0]}
+R=${FILS[1]}
+P=${FILS[2]}
 
-SUFF=left
-
-if [ "$#" -ge 4 ]; then
-    SUFF=$4
-fi
-
-
+echo "MMchecker $L $R $P: "
 MMchecker $L $R $P
 
 Lr=`basename $L| sed -e "s/_[LRP]\./_${SUFF}&/"`
