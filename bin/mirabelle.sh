@@ -30,7 +30,7 @@ while [[ $# -gt 0 ]]; do
     shift # past value
     ;;
     -h|--h|-help|--help|-*|--*)
-    echo "Usage: $0 [-O #] [-v var[|var]*] P.slp"
+    echo "Usage: $0 [-O|-q #] [-v var[|var]*] P.slp"
       exit 1
       ;;
     *)
@@ -162,10 +162,10 @@ function Compare() {
 	  >&2 echo -e "== ${BLU}${AFT[*]}\t\t less ${MSG} ...${NC}"
 
 	  SDI=$(tac <<< "${HEA}" | sed 's/:=/ /;s/;.*//' | awk '{print "s/"$2"/"$1"/g;"}' |tr '\n' ';')
-#       Show SDI
+#	  Show SDI
 	  sed "s/${OCHAR}/o/g;s/${NCHAR}/i/g" ${BOD} > ${FND}
 	  uniq ${COM} &>> ${FND}
- 	  ((${CMPCTR} ${OPT} | egrep -v '(:=0;)' | sed "${SDI};${SDO}") >> ${FND}) 2> /dev/null
+	  ((${CMPCTR} ${OPT} | egrep -v '(:=0;)' | sed "${SDI};${SDO}") >> ${FND}) 2> /dev/null
       else
 	  if [[ "$DIF" -eq 0 ]]; then
 	      >&2 echo "== ${AFT[*]}"
