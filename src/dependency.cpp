@@ -41,16 +41,16 @@ int isCano(const Field& F, const _Arr& v) {
 }
 
 template<typename Field>
-std::ostream& showOut(std::ostream& out, const Field& QQ,
+std::ostream& showOut(std::ostream& out, const Field& QQ, const char v,
                       const size_t& i, const typename Field::Element & r) {
-    out << (Fsign(QQ,r)<0?'-':'+') << 'o' << i;
+    out << (Fsign(QQ,r)<0?'-':'+') << v << i;
     if (notAbsOne(QQ,r)) out << '*' << Fabs(QQ,r);
     return out;
 }
 
-std::ostream& showOut(std::ostream& out, const QRat& QQ,
+std::ostream& showOut(std::ostream& out, const QRat& QQ, const char v,
                       const size_t& i, const Givaro::Rational& r) {
-    out << (Fsign(QQ,r)<0?'-':'+') << 'o' << i;
+    out << (Fsign(QQ,r)<0?'-':'+') << v << i;
     if (notAbsOne(QQ,r)) {
         if (isAbsOne(QQ,r.nume())) {
             out << '/' << Fabs(QQ,r.deno());
@@ -64,7 +64,7 @@ std::ostream& showOut(std::ostream& out, const QRat& QQ,
 template<typename Field, typename Row_t>
 std::ostream& showLC(std::ostream& out, const Field& QQ, const Row_t& LC) {
     for(const auto& it: LC) {
-        showOut(out, QQ, it.first, it.second);
+        showOut(out, QQ, 'o', it.first, it.second);
     }
     return out << ';' << std::endl;
 }
@@ -84,7 +84,10 @@ bool Explore(typename _Mat::Row& LC, _Arr& W, const _Mat& M, const size_t m,
                 if (isZero(F,W))  showLC(std::cout, F, LC);
                 else {
                     const int i(isCano(F,W));
-                    if (i != -1) showLC(std::cout << "+i" << i, F, LC);
+                    if (i != -1) {
+                        showOut(std::cout, F, 'i', i, -W[i]);
+                        showLC(std::cout, F, LC);
+                    }
                 }
                 Explore(LC,W,M,q,Coeffs,level-1);
                 LC.pop_back();
@@ -147,7 +150,7 @@ int Depender(std::istream& input, const size_t maxnumcoeff,
         }
     }
 
-    std::clog << "# [DEPND] linear combination coefficients: " << FCoeffs
+    std::clog << "# [DEPND] level " << level << ", coefficients: " << FCoeffs
               << std::endl;
 
     typename FMatrix::Row LC;
