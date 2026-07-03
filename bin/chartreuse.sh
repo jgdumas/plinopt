@@ -140,7 +140,7 @@ function SortLine() {
 ## Rewrite back the original variable names and sort the dependencies
 COMBR=$(echo ${DPNDL} | sed "${SDI};${SDO}"|tr ' ' '\n')
 Combinations=$(SortLine <<< "${COMBR}" |sort -u)
->&2 echo "# All linear combinations:"
+>&2 echo "# [CHRTS] All linear combinations:"
 Show Combinations
 
 ## Write and sort the dependencies within the original program
