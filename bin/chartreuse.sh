@@ -11,11 +11,17 @@ DIR=`dirname $0`
 MOD=""
 COE=2
 LVL=4
+VEC=""
 
 while [[ $# -gt 0 ]]; do
   case $1 in
     -c|-n|--coeffs)
     COE="$2"
+    shift # past argument
+    shift # past value
+    ;;
+    -v|--vector)
+    VEC="$(printf ' %q' $2)" # use printf %q, to pass the string as is to DEPND
     shift # past argument
     shift # past value
     ;;
@@ -30,7 +36,7 @@ while [[ $# -gt 0 ]]; do
     shift # past value
     ;;
     -h|--h|-help|--help|-*|--*)
-    echo "Usage: $0 [-c #] [-q #] [-l #] P.slp"
+    echo "Usage: $0 [-c|-q|-l #] [-v \"# ... #\"] P.slp"
     exit 1
     ;;
     *)
@@ -127,8 +133,7 @@ SDI=$(tac <<< "${HEA}" | sed 's/:=/ /;s/;.*//' | awk '{print "s/"$2"/"$1"/g"}'|t
 
 #############################################################
 ## Compute the dependencies
-
-DPNDL=$(${SLPCHK} <<< "${REST}" | ${DEPND} -c ${COE} -l ${LVL})
+DPNDL=$(${SLPCHK} <<< "${REST}" | ${DEPND} -c ${COE} -v "${VEC}" -l ${LVL})
 
 function SortLine() {
     while read line
