@@ -148,17 +148,16 @@ function Compare() {
       uniq ${COM} &>> ${FND}
        ((${CMPCTR} ${OPT} | egrep -v '(:=0;)' | sed "${SDI}${SDO}") >> ${FND}) 2> /dev/null
   else
-      ADD=$((BEF[0]-AFT[0]))
-      MUL=$((BEF[1]-AFT[1]))
-      MSG=
-      if [[ "$ADD" -gt 0 ]]; then
-	  MSG="additions"
-      fi
-      if [[ "$MUL" -gt 0 ]]; then
-	  MSG="multiplications"
-      fi
-      if [[ "$MSG" != "" ]]; then
-
+      if [[ "$DIF" -eq 0 ]]; then
+	  ADD=$((BEF[0]-AFT[0]))
+	  MUL=$((BEF[1]-AFT[1]))
+	  MSG=
+	  if [[ "$ADD" -gt 0 ]]; then
+	      MSG="additions"
+	  fi
+	  if [[ "$MUL" -gt 0 ]]; then
+	      MSG="multiplications"
+	  fi
 	  >&2 echo -e "== ${BLU}${AFT[*]}\t\t less ${MSG} ...${NC}"
 
 	  SDI=$(tac <<< "${HEA}" | sed 's/:=/ /;s/;.*//' | awk '{print "s/"$2"/"$1"/g;"}' |tr '\n' ';')
@@ -167,11 +166,7 @@ function Compare() {
 	  uniq ${COM} &>> ${FND}
 	  ((${CMPCTR} ${OPT} | egrep -v '(:=0;)' | sed "${SDI};${SDO}") >> ${FND}) 2> /dev/null
       else
-	  if [[ "$DIF" -eq 0 ]]; then
-	      >&2 echo "== ${AFT[*]}"
-	  else
-	      >&2 echo "≤ ${AFT[*]}"
-	  fi
+	  >&2 echo "≤ ${AFT[*]}"
       fi
   fi
 }
