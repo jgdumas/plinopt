@@ -158,13 +158,17 @@ function Compare() {
 	  if [[ "$MUL" -gt 0 ]]; then
 	      MSG="multiplications"
 	  fi
-	  >&2 echo -e "== ${BLU}${AFT[*]}\t\t less ${MSG} ...${NC}"
+	  if [[ "$MSG" != "" ]]; then
+	      >&2 echo -e "== ${BLU}${AFT[*]}\t\t less ${MSG} ...${NC}"
 
-	  SDI=$(tac <<< "${HEA}" | sed 's/:=/ /;s/;.*//' | awk '{print "s/"$2"/"$1"/g;"}' |tr '\n' ';')
+	      SDI=$(tac <<< "${HEA}" | sed 's/:=/ /;s/;.*//' | awk '{print "s/"$2"/"$1"/g;"}' |tr '\n' ';')
 #	  Show SDI
-	  sed "s/${OCHAR}/o/g;s/${NCHAR}/i/g" ${BOD} > ${FND}
-	  uniq ${COM} &>> ${FND}
-	  ((${CMPCTR} ${OPT} | egrep -v '(:=0;)' | sed "${SDI};${SDO}") >> ${FND}) 2> /dev/null
+	      sed "s/${OCHAR}/o/g;s/${NCHAR}/i/g" ${BOD} > ${FND}
+	      uniq ${COM} &>> ${FND}
+	      ((${CMPCTR} ${OPT} | egrep -v '(:=0;)' | sed "${SDI};${SDO}") >> ${FND}) 2> /dev/null
+	  else
+	      >&2 echo "== ${AFT[*]}"
+	  fi
       else
 	  >&2 echo "≤ ${AFT[*]}"
       fi
