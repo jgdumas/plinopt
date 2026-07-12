@@ -48,11 +48,22 @@
 **Tools**:
 |  |  |
 | :--------- | :------ |
-|`bin/matrix-transpose` | transposes a matrix from an SMS file |
 |`bin/sms2pretty` | pretty prints a matrix from a file |
+|`bin/matrix-transpose` | transposes a matrix from an SMS file |
 |`bin/SLPchecker` | asserts correctness of program, with respect to a matrix |
 |`bin/MMchecker` | asserts correctness of trilinear program for matrix-multiplication |
 |`bin/PMchecker` | asserts correctness of trilinear program for polynomial-multiplication |
+|`bin/dependency` | finds linear dependencies between rows |
+|`bin/orbiter` | explores DeGroote orbits |
+|  |  |
+
+
+**Scipts**:
+|  |  |
+| :--------- | :------ |
+|`bin/mirabelle.sh` | tries to remove or to reduce temporary variables in an SLP |
+|`bin/prune.sh` | runs `mirabelle` on every (pair of) temporary SLP variables |
+|`bin/chartreuse.sh` | finds linear dependencies between SLP variables |
 |  |  |
 
 
@@ -100,3 +111,6 @@
 - `./bin/trilplacer data/2x2x2_7_Winograd_{L,R,P}.sms`: in-place version of Strassen-Winograd's fast 2x2 accumulating multiplication
 - `./bin/trilplacer data/1o1o2_3_Karatsuba_{L,R,P}.sms -e`: in-place version of Karatsuba's fast accumulating polynomial multiplication
 - `./bin/optimizer -q 17 data/2x2x2_7_DPS-accurate_L.sms | ./bin/compacter -s | ./bin/SLPchecker -q 17 -M data/2x2x2_7_DPS-accurate_L.sms`: creates a program for `2x2x2_7_DPS-accurate_L.sms` modulo 17, compacts it with less variables, then checks consistency
+- `./bin/mirabelle.sh -O 1000 -v "j5|b9" data/3x4x7_63_rational_R.slp`: tries to remove or reduce the combined cost of temporary variables "j5" and "b9"
+- `./bin/prune.sh -p -O 1000 data/3x4x7_63_rational_R.slp`: tries to remove or reduce all pairs of  temporary variables in this SLP
+- `./bin/chartreuse.sh -l 3 -c 6 -v "2 3 1/2 -5" data/3x4x7_63_rational_R.slp`: computes linear dependencies between 3 SLP variables with coefficients "1 -1 2 3 1/2 -5"
