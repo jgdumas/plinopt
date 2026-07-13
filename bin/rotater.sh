@@ -48,7 +48,13 @@ R=${FILS[1]}
 P=${FILS[2]}
 
 echo "MMchecker $L $R $P: "
-MMchecker $L $R $P
+MMC=$(MMchecker $L $R $P 2>&1)
+echo -e "${MMC}"
+
+MMD=$(sed 's/x/ /g' <<< ${MMC} | cut -d' ' -f4,5,6)
+m=$(cut -d' ' -f1 <<< ${MMD})
+k=$(cut -d' ' -f2 <<< ${MMD})
+n=$(cut -d' ' -f3 <<< ${MMD})
 
 Lr=`basename $L| sed -e "s/_[LRP]\./_${SUFF}&/"`
 Rr=`basename $R| sed -e "s/_[LRP]\./_${SUFF}&/"`
@@ -67,14 +73,13 @@ fi
 if [[ "$GROT" -eq 1 ]]; then
     # Do generate the rotation
     if [[ "${SUFF}" == "right" ]]; then
-	${TR} $P | ${CS} > ${Lr}
+	${TR} $P | ${CS} -m ${n} > ${Lr}
 	cat $L > ${Rr}
-	${CS} $R | ${TR} > ${Pr}
+	${CS} -m ${n} $R | ${TR} > ${Pr}
     else
 	cat $R > ${Lr}
-	${TR} $P | ${CS} > ${Rr}
-	${CS} $L | ${TR} > ${Pr}
+	${TR} $P | ${CS} -m ${n} > ${Rr}
+	${CS} -m ${k} $L | ${TR} > ${Pr}
     fi
-
-    MMchecker ${Lr} ${Rr} ${Pr}
+    MMchecker -b 3 ${Lr} ${Rr} ${Pr}
 fi

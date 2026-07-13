@@ -52,8 +52,8 @@ int InputTranspose(std::istream& input,
 
     chrono.stop();
     std::clog << "# [SWAP]: \033[1;32m" << As.rowdim() << 'x' << As.coldim()
-              << ' ' << As.rowdim() << '(' << m << 'x' << n << ')'
-              << "^T: " << As.rowdim() << '(' << n << 'x' << m << ')'
+              << ',' << As.rowdim() << '(' << n << 'x' << m << ')'
+              << "^T --> " << As.rowdim() << '(' << m << 'x' << n << ')'
               << "\033[0m " << chrono << std::endl;
 
     chrono.start();
