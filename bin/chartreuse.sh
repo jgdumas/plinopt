@@ -149,7 +149,7 @@ Combinations=$(SortLine <<< "${COMBR}" |sort -u)
 Show Combinations
 
 ## Write and sort the dependencies within the original program
-RELPL=$(sed -r 's/(.*):=(.*);/+\2-\1;/' "${FIL}")
+RELPL=$(sed -r 's/(.*):=(-.*);/\2-\1;/;s/(.*):=(.*);/+\2-\1;/' "${FIL}")
 RELPS=$(SortLine <<< "${RELPL}" | awk '{orig=$0;gsub(/\+/,"PLUSPLUS");gsub(/\-/,"+");gsub(/PLUSPLUS/,"-");print orig; print}' |sort -u)
 
 ## Select only not known dependencies
