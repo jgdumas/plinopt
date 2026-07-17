@@ -41,7 +41,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 SLPCHK="${DIR}/SLPchecker${MOD}"
-OPTMZR="${DIR}/optimizer${OPTFLAGS}${MOD}"
+OPTMZR="${DIR}/optimizer${OPTFLAGS}${MOD} -F" # Force KernelFullIdentity
 MATTRP="${DIR}/matrix-transpose"
 TRSPZR="${DIR}/transpozer"
 CMPCTR="${DIR}/compacter"

@@ -143,7 +143,7 @@ Pair<size_t> RecOptimizer(outstream& sout, _Mat& M,
 
 // Precondition _Matrix A is upper triangular
 template<typename outstream, typename _Mat>
-Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
+Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A, const bool KFI,
                              const bool mostCSE=false);
 
 template<typename outstream, typename _Mat>
@@ -178,9 +178,8 @@ Pair<size_t>& AllCSEOpt(Pair<size_t>& nbops, std::ostringstream& sout,
 // Optimizing a linear program (kernel method)
 template<typename Field>
 Pair<size_t>& KernelOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
-                              const Field& F, const Matrix& T,
-                              Givaro::Timer& global, const size_t randomloops,
-                              const int verbose=0);
+                              const Field& F, const Matrix& T, Givaro::Timer& global,
+                              const size_t randomloops, const bool KFI, const int verbose=0);
 
 // ============================================================
 // Optimizing a linear program (kernel method, all permutations)
@@ -197,8 +196,8 @@ Pair<size_t>& OptMethods(Pair<size_t>& nbops, std::ostringstream& ssout,
                          const Field& F, const Matrix& M, const Matrix& T,
                          Givaro::Timer& global, const size_t randomloops,
                          const bool printMaple, const bool printPretty,
-                         const bool tryDirect, const bool tryKernel,
-                         const bool mostCSE, const bool allkernels, const int verbose=0);
+                         const bool tryDirect, const bool tryKernel, const bool mostCSE,
+                         const bool allkernels, const bool KFI, const int verbose=0);
 
 } // End of namespace PLinOpt
 // ============================================

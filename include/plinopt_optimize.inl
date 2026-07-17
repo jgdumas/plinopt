@@ -635,53 +635,53 @@ Pair<size_t> Optimizer(outstream& sout, _Mat& M,
 	// Postcondition _Matrix A is nullified
 template<typename outstream, typename _Mat>
 Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
-                             const bool mostCSE) {
+                             const bool KFI, const bool mostCSE) {
 	std::vector<size_t> l;
-#if defined(KERNEL_FULL_IDENTITY)
-    const auto& FF(A.field());
-    const size_t Ni(A.rowdim());
-    const size_t Nj(A.coldim());
+    if (KFI) {
+        const auto& FF(A.field());
+        const size_t Ni(A.rowdim());
+        const size_t Nj(A.coldim());
 
-        // Add identity to goals
-    x.resize(x.rowdim()+A.rowdim(),x.coldim());
-    A.resize(A.rowdim(),Nj+A.rowdim());
-    for(size_t i=0; i<A.rowdim(); ++i)
-        A.setEntry(i,Nj+i,FF.one);
+            // Add identity to goals
+        x.resize(x.rowdim()+A.rowdim(),x.coldim());
+        A.resize(A.rowdim(),Nj+A.rowdim());
+        for(size_t i=0; i<A.rowdim(); ++i)
+            A.setEntry(i,Nj+i,FF.one);
 
-    auto Pops = nullspacedecomp(sout, x, A, l, 'q', 'i', mostCSE);
+        auto Pops = nullspacedecomp(sout, x, A, l, 'q', 'i', mostCSE);
 
-    std::vector<std::string> iVars(A.rowdim());
-    for(size_t i=0; i<A.rowdim(); ++i) {
-        iVars[i]="q"+std::to_string(Nj+i);
+        std::vector<std::string> iVars(A.rowdim());
+        for(size_t i=0; i<A.rowdim(); ++i) {
+            iVars[i]="q"+std::to_string(Nj+i);
+        }
+
+        std::stringstream ssin; ssin << sout.str();
+        VProgram_t progV; programParser(progV, ssin);
+        bool isreduced(false);
+        while( OpOnVars(progV, iVars) ) {
+            isreduced = true;
+            RemoveVars(progV, Pops, iVars);
+        }
+
+        if (isreduced) {
+            sout.clear(); sout.str(std::string());
+            char next(0u); parenthesisExpand(progV, next);
+                // Make output suitable for potential transpose
+            input2Temps(sout, Ni, 'i', next);
+            for(auto& line: progV) for(auto& word: line)
+                if (word[0]=='i') word[0]=next;
+            sout << progV;
+        }
+
+            // out all goals, except the added identity
+            // Warning: the identity goals could now use unnecessary ops
+        for(size_t j=0; j<Nj; ++j)
+            sout << 'o' << j << ":=" << 'q' << j << ';' << std::endl;
+
+        return Pops;
+    } else {
+        return nullspacedecomp(sout, x, A, l, 'o', 'i', mostCSE);
     }
-
-    std::stringstream ssin; ssin << sout.str();
-    VProgram_t progV; programParser(progV, ssin);
-    bool isreduced(false);
-    while( OpOnVars(progV, iVars) ) {
-        isreduced = true;
-        RemoveVars(progV, Pops, iVars);
-    }
-
-    if (isreduced) {
-        sout.clear(); sout.str(std::string());
-        char next(0u); parenthesisExpand(progV, next);
-            // Make output suitable for potential transpose
-        input2Temps(sout, Ni, 'i', next);
-        for(auto& line: progV) for(auto& word: line)
-            if (word[0]=='i') word[0]=next;
-        sout << progV;
-    }
-
-        // out all goals, except the added identity
-        // Warning: the identity goals could now use unnecessary ops
-    for(size_t j=0; j<Nj; ++j)
-        sout << 'o' << j << ":=" << 'q' << j << ';' << std::endl;
-
-    return Pops;
-#else
-    return nullspacedecomp(sout, x, A, l, 'o', 'i', mostCSE);
-#endif
 }
 
 	// Postcondition _Matrix A is nullified
@@ -790,14 +790,20 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
 
             // ============================================
             // Remove (randomly chosen) dependent rows from FreePart
-#if defined(RANDOM_TIES) || defined(KERNEL_FULL_IDENTITY)
+#if defined(RANDOM_TIES)
+        const bool restrictNotIndep(true);
+#else
+        const bool restrictNotIndep(KFI);
+#endif
+        size_t FreePartKept(nullity), NotIndep(0u);
+        if (restrictNotIndep) {
             static thread_local Givaro::GivRandom
                 generator(Givaro::BaseTimer::seed());
-            const size_t NotIndep(generator() % nullity);
-#else
-            const size_t NotIndep(0u);
-#endif
-        for(size_t i=0; i+NotIndep<nullity; ++i) {
+            NotIndep = (generator() % nullity);
+            FreePartKept -= NotIndep;
+        }
+
+        for(size_t i=0; i<FreePartKept; ++i) {
             FreePart[P.getStorage()[ Rank+i ]].resize(0);
         }
 
@@ -862,7 +868,7 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
             // Recover final output of NullSpace
             // Applying both permutations, P then Q
             // back into 'o' variables
-        for(size_t i=0; i+NotIndep<nullity; ++i) {
+        for(size_t i=0; i<FreePartKept; ++i) {
             sout << ouv << Q[ P.getStorage()[ Rank+i ] ] << ":="
                  << 'x' << i << ';' << std::endl;
         }
@@ -1280,8 +1286,8 @@ Pair<size_t>& AllCSEOpt(Pair<size_t>& nbops, std::ostringstream& sout,
 // Optimizing a linear program (kernel method)
 template<typename Field>
 Pair<size_t>& KernelOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
-                              const Field& F, const Matrix& T,
-                              Givaro::Timer& global, const size_t randomloops, const int verbose) {
+                              const Field& F, const Matrix& T, Givaro::Timer& global,
+                              const size_t randomloops, const bool KFI, const int verbose) {
         // ============================================================
         // Rebind matrix type over sub field matrix type
     typedef typename Matrix::template rebind<Field>::other FMatrix;
@@ -1296,7 +1302,7 @@ Pair<size_t>& KernelOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
             FMatrix lT(T, F);
             std::ostringstream lkout;
             FMatrix NullSpace(F,lT.coldim(),lT.coldim());
-            auto lnbops( nullspacedecomp(lkout, NullSpace, lT) );
+            auto lnbops( nullspacedecomp(lkout, NullSpace, lT, KFI) );
 
             if (lnbops == Pair<size_t>{-1,-1}) {
 #pragma omp critical
@@ -1318,7 +1324,7 @@ Pair<size_t>& KernelOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
                 kout << lkout.str();
                 if (better) {
                     if (verbose>0) {
-                        std::clog << "# Found K: "
+                        std::clog << "# Found " << (KFI?'F':'K') << ": "
                                   << lnbops.first << '|' << lnbops.second
                                   << " instead of "
                                   << kops.first << '|' << kops.second
@@ -1420,8 +1426,8 @@ Pair<size_t> OptMethods(const Pair<size_t> opsinit,
                         Givaro::Timer& global, const size_t randomloops,
                         const bool printMaple, const bool printPretty,
                         const bool tryDirect, const bool tryKernel,
-                        const bool tryLU, bool tryAB,
-                        const bool mostCSE, const bool allkernels, const int verbose) {
+                        const bool tryLU, bool tryAB, const bool mostCSE,
+                        const bool allkernels, const bool KFI, const int verbose) {
 
     Pair<size_t> nbops(opsinit);
 
@@ -1443,7 +1449,7 @@ Pair<size_t> OptMethods(const Pair<size_t> opsinit,
         // ============================================================
         // Separate independent and dependent rows
     if (tryKernel) {
-        KernelOptimiser(nbops, sout, F, T, global, randomloops,verbose);
+        KernelOptimiser(nbops, sout, F, T, global, randomloops, KFI, verbose);
     }
 
         // ============================================================

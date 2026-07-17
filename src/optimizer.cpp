@@ -50,7 +50,7 @@ int FOptimiser(std::istream& input, const size_t randomloops,
                const bool printMaple, const bool printPretty,
                const bool tryDirect, const bool tryKernel, const bool tryLU,
                const bool tryAB, const bool mostCSE, const bool allkernels,
-               const Field& F, const int verbose) {
+               const bool KFI, const Field& F, const int verbose) {
 
         // ============================================================
         // Read Matrix of Linear Transformation
@@ -82,7 +82,7 @@ int FOptimiser(std::istream& input, const size_t randomloops,
     Pair<size_t> nbops( OptMethods(opsinit, ssout, F, M, T, global, randomloops,
                                    printMaple, printPretty,
                                    tryDirect, tryKernel, tryLU, tryAB,
-                                   mostCSE, allkernels, verbose) );
+                                   mostCSE, allkernels, KFI, verbose) );
 
     std::cout << ssout.str() << std::flush;
 
@@ -125,16 +125,16 @@ int FOptimiser(std::istream& input, const size_t randomloops,
 int Selector(std::istream& input, const size_t randomloops,
              const bool printMaple, const bool printPretty,
              const bool tryDirect, const bool tryKernel, const bool tryLU,
-             const bool tryAB, const bool mostCSE, const bool allkernels,
+             const bool tryAB, const bool mostCSE, const bool allkernels, const bool KFI,
              const Givaro::Integer& q, const int verbose) {
     if (! Givaro::isZero(q)) {
         Givaro::Modular<Givaro::Integer> FF(q);
         return FOptimiser(input, randomloops, printMaple, printPretty, tryDirect,
-                          tryKernel, tryLU, tryAB, mostCSE, allkernels, FF, verbose);
+                          tryKernel, tryLU, tryAB, mostCSE, allkernels, KFI, FF, verbose);
     } else {
         QRat QQ;
         return FOptimiser(input, randomloops, printMaple, printPretty, tryDirect,
-                          tryKernel, tryLU, tryAB, mostCSE, allkernels, QQ, verbose);
+                          tryKernel, tryLU, tryAB, mostCSE, allkernels, KFI, QQ, verbose);
     }
 }
 
@@ -145,20 +145,18 @@ int Selector(std::istream& input, const size_t randomloops,
 
 // ============================================================
 // Main: select between file / std::cin
-// -D/-K options select direct/kernel methods only (default is both)
-// -P/-M option choose the printing format
-// -E option for exhaustive greedy CSE search
-// -N option for exhaustive nullspace permutation search
-// -q # search for linear map modulo # (default is over the rationals)
 // -O # search for reduced number of additions and/then multiplications
 //      i.e. min of random # tries (requires definition of RANDOM_TIES)
 int main(int argc, char** argv) {
 
-        // ============================================================
-        // Linear Transformation
     bool printMaple(false), printPretty(false), mostCSE(false),
         tryKernel(false), tryLU(false), tryAB(false),
         tryDirect(false), allkernels(false);
+#if defined(KERNEL_FULL_IDENTITY)
+    bool KFI(true);
+#else
+    bool KFI(false);
+#endif
 
     int verbose(1);
     size_t randomloops(DORANDOMSEARCH?DEFAULT_RANDOM_LOOPS:1);
@@ -174,6 +172,7 @@ int main(int argc, char** argv) {
 
             std::clog
                 << "  -D/-K/-G: direct/kernel/LU methods (default is all)\n"
+                << "  -F: Kernel Full Identity (default is " << (KFI?"yes":"no") << ")\n"
                 << "  -A: factoring method (default is not)\n"
                 << "  -E: exhaustive greedy CSE search (default is not)\n"
                 << "  -N: exhaustive nullspace permutations (default is not)\n"
@@ -190,6 +189,7 @@ int main(int argc, char** argv) {
         else if (args == "-A") { tryAB = true; }
         else if (args == "-D") { tryDirect = true; }
         else if (args == "-K") { tryKernel = true; }
+        else if (args == "-F") { KFI = true; }
         else if (args == "-E") { mostCSE = true; }
         else if (args == "-N") { allkernels = true; }
         else if (args == "-q") { prime = Givaro::Integer(argv[++i]); }
@@ -213,13 +213,13 @@ int main(int argc, char** argv) {
     if (filename == "") {
         return PLinOpt::Selector(std::cin, randomloops, printMaple,
                                  printPretty, tryDirect, tryKernel, tryLU,
-                                 tryAB, mostCSE, allkernels, prime, verbose);
+                                 tryAB, mostCSE, allkernels, KFI, prime, verbose);
     } else {
         std::ifstream inputmatrix(filename);
         if ( inputmatrix ) {
             int s=PLinOpt::Selector(inputmatrix, randomloops, printMaple,
                                     printPretty, tryDirect, tryKernel, tryLU,
-                                    tryAB, mostCSE, allkernels, prime, verbose);
+                                    tryAB, mostCSE, allkernels, KFI, prime, verbose);
             inputmatrix.close();
             return s;
         }
