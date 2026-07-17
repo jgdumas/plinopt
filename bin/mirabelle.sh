@@ -41,7 +41,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 SLPCHK="${DIR}/SLPchecker${MOD}"
-OPTMZR="${DIR}/optimizer${OPTFLAGS}${MOD} -F" # Force KernelFullIdentity
+OPTMZR="${DIR}/optimizer${OPTFLAGS}${MOD}"
 MATTRP="${DIR}/matrix-transpose"
 TRSPZR="${DIR}/transpozer"
 CMPCTR="${DIR}/compacter"
@@ -184,12 +184,25 @@ echo -n "${VARS[@]}D: ${BEF[*]} "
 ((${SLPCHK} ${RES} | ${OPTMZR}) > ${OPT}) 2> ${COM}
 Compare
 
+
+echo -n "${VARS[@]}F: ${BEF[*]} "
+((${SLPCHK} ${RES} | ${MATTRP} | ${OPTMZR} -F | ${CMPCTR} | ${TRSPZR} ) > ${OPT}) 2> ${COM}
+FND="${NAM}f-$$.log"
+Compare
+
+
 #############################################################
 ## Optimize its transposition
 
 echo -n "${VARS[@]}T: ${BEF[*]} "
 ((${SLPCHK} ${RES} | ${MATTRP} | ${OPTMZR} | ${CMPCTR} | ${TRSPZR} ) > ${OPT}) 2> ${COM}
 FND="${NAM}t-$$.log"
+Compare
+
+
+echo -n "${VARS[@]}U: ${BEF[*]} "
+((${SLPCHK} ${RES} | ${MATTRP} | ${OPTMZR} -F | ${CMPCTR} | ${TRSPZR} ) > ${OPT}) 2> ${COM}
+FND="${NAM}u-$$.log"
 Compare
 
 
