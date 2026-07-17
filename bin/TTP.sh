@@ -38,13 +38,14 @@ else
     fics=(${fics[@]//*-X_*})
 fi
 
-BINDRS=(./ ./bin)
+BINDRS=(./ ./bin `dirname $0` `which $0| xargs dirname`)
 
 for dir in ${BINDRS[@]}
 do
   if [ -x ${dir}/trilplacer ]; then
       echo "Found executables in ${dir}"
       BINDIR=${dir}
+      break
   fi
 done
 
