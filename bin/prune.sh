@@ -16,7 +16,7 @@ VARS=()
 MOD=""	# modular search
 LIM=""	# subset of variables containing LIM
 ALL=0	# Mirabelle on all variables at once, (with reduced -O $2)
-SQR=0	# Try all *pairs* of variables
+SQR=1	# Try all *pairs* of variables
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -43,6 +43,10 @@ while [[ $# -gt 0 ]]; do
     SQR=1
     shift # past argument
     ;;
+    -v|--no-pairs)
+    SQR=0
+    shift # past argument
+    ;;
     -n|-nl|--no-limit)
     LIM=""
     ALL=0
@@ -55,7 +59,7 @@ while [[ $# -gt 0 ]]; do
     shift # past value
     ;;
     -h|--h|-help|--help|-*|--*)
-    echo "Usage: $0 [-O|-a #] [-q|-r|-m #] [-l pattern] [-n|-nl] [-p] f.slp"
+    echo "Usage: $0 [-O|-a #] [-q|-r|-m #] [-l pattern] [-n|-nl] [-p|-v] f.slp"
       exit 1
       ;;
     *)
