@@ -477,6 +477,7 @@ size_t SparseFactor(_Mat& TICoB, _Mat& TM,
 #ifdef DEBUG
     using Field = typename _Mat::Field;
     using DenseFMatrix = LinBox::DenseMatrix<Field>;
+    const Field& FF(TM.field());
     LinBox::MatrixDomain<Field> BMD(FF);
     DenseFMatrix TR(FF,TM.rowdim(),TM.coldim());
     applyInverse(TR, TICoB, TM, BMD);	// TM == TICoB . TR

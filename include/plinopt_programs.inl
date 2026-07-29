@@ -859,12 +859,11 @@ bool minLine(std::vector<std::string>& varline, const size_t index,
                             for(size_t l=k+1; l<nP.size(); ++l) {
                                 std::vector<std::string> negline;
                                 const int blm( (nP[l][2] == "-") ? 1 : 0 );
-                                bool linmod(negatingVariable(negline, nP[l],
-                                                             variable));
                                 rotateMinus(negline);
                                 nP[l] = std::move(negline);
                                 const int dlm( ((nP[l][2]=="-")?1:0) - blm);
                                 cm += dlm;
+// const bool linmod(negatingVariable(negline, nP[l],variable));
 // if (linmod) std::clog << "## impa. line[" << l << "]: " << nP[l] << " --> lminus " << dlm << '/' << cm << std::endl;
                                 if (nP[l].front() == variable) break;
                             }
@@ -938,7 +937,7 @@ size_t swapMinus(VProgram_t & P, const char outchar) {
             const auto& variable(mP[i][0]);
             for( ; ++i < P.size() ; ) {
                 std::vector<std::string> line; line.reserve(P[i].size());
-                bool linmod(negatingVariable(line, P[i], variable));
+                const bool linmod(negatingVariable(line, P[i], variable));
                 if (linmod) {
                     rotateMinus(line);
                     mP[i] = line;

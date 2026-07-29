@@ -63,7 +63,6 @@ inline _Mat& zoiRandomMatrix(_Mat& M) {
     const auto& FF(M.field());
     using Field = typename _Mat::Field;
     using Element=typename Field::Element;
-    typedef LinBox::DenseVector<Field> FVector;
 
     std::vector<size_t> P(M.rowdim()),Q(M.coldim());
     std::iota(P.begin(), P.end(), 0); // Select a random permutation
@@ -86,6 +85,7 @@ inline _Mat& zoiRandomMatrix(_Mat& M) {
                 L.setEntry(i,j, tmp);
         }
     }
+    typedef LinBox::DenseVector<Field> FVector;
     FVector U(FF,M.coldim(),FF.zero), Row(FF,M.rowdim());
     for(size_t i=0;i<L.rowdim();++i) {
         FF.assign(U[Q[i]],FF.one);
@@ -205,7 +205,6 @@ template<int Measure> struct Orbiter {
     typedef LinBox::SparseMatrix<Base,
         LinBox::SparseMatrixFormat::SparseSeq > BMatrix;
     using FMatrix=typename BMatrix::template rebind<Field>::other;
-    using Element=typename Field::Element;
     typedef LinBox::DenseMatrix<Field> DMatrix;
     using PLinOpt::FileFormat;
 
@@ -285,15 +284,13 @@ template<int Measure> struct Orbiter {
         if (lbopt<=bestopt) {
             const auto lbnz(PLinOpt::nonzeroes(Lj,Rg,hP));
             if ((lbopt<bestopt) || (lbnz.first<bestnz.first) || (lbnz.second<bestnz.second)) {
-#ifdef VERBATIM_PARSING
-                    U.write(std::clog << "U:=",FileFormat::Maple) << ';' << std::endl;
-                    V.write(std::clog << "V:=",FileFormat::Maple) << ';' << std::endl;
-                    W.write(std::clog << "W:=",FileFormat::Maple) << ';' << std::endl;
-                    J.write(std::clog << "J:=",FileFormat::Maple) << ';' << std::endl;
-                    G.write(std::clog << "G:=",FileFormat::Maple) << ';' << std::endl;
-                    H.write(std::clog << "H:=",FileFormat::Maple) << ';' << std::endl;
-                    std::clog << "# Curr. nnz: " << lbnnz << '=' << nnzlj << '+'
-                              << nnzrg << '+' << nnzhp << std::endl;
+#ifdef DEBUG
+U.write(std::clog << "U:=",FileFormat::Maple) << ';' << std::endl;
+V.write(std::clog << "V:=",FileFormat::Maple) << ';' << std::endl;
+W.write(std::clog << "W:=",FileFormat::Maple) << ';' << std::endl;
+J.write(std::clog << "J:=",FileFormat::Maple) << ';' << std::endl;
+G.write(std::clog << "G:=",FileFormat::Maple) << ';' << std::endl;
+H.write(std::clog << "H:=",FileFormat::Maple) << ';' << std::endl;
 #endif
 
                 std::clog << "# Found opt: " << lbopt << (lbopt<bestopt?'<':'=') << bestopt
