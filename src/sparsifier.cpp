@@ -27,7 +27,7 @@ int Selector(std::istream& input, const FileFormat& matformat,
     QMstream ms(QQ,input);
     Matrix M(ms); M.resize(M.rowdim(),M.coldim());
     size_t sc,sb,sr;
-    densityProfile(std::clog << "# Initial profile: ", sc, M)
+    densityProfile(std::clog << "# [SPRF] Initial profile: ", sc, M)
                              << std::endl;
 
 #ifdef VERBATIM_PARSING
@@ -44,13 +44,13 @@ int Selector(std::istream& input, const FileFormat& matformat,
         // Print resulting matrices
 
         // change of basis to stdout
-    densityProfile(std::clog << "# Alternate basis profile: \033[1;36m",
+    densityProfile(std::clog << "# [SPRF] Alternate basis profile: \033[1;36m",
                    sb, CoB) << "\033[0m" << std::endl;
     CoB.write(std::cout, matformat) << std::endl;
 
 
         // residuum sparse matrix to stdlog
-    densityProfile(std::clog << "# Sparse residuum profile: \033[1;36m",
+    densityProfile(std::clog << "# [SPRF] Sparse residuum profile: \033[1;36m",
                    sr, Res) << "\033[0m" << std::endl;
     Res.write(std::clog, matformat)<< std::endl;
 

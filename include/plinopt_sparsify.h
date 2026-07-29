@@ -57,14 +57,16 @@ int Factorizer(_Mat& Alt, _Mat& CoB, const _Mat& M,
 //   uses a limited number of coefficients for the linear comb.
 //   (that is at most: COEFFICIENT_SEARCH)
 //   Returns the (inverse) change of basis and the sparsified M
-Matrix& Sparsifier(Matrix& TC, Matrix& TM);
+template<typename _Mat>
+_Mat& Sparsifier(_Mat& TC, _Mat& TM);
 // ============================================================
 
 
 // ============================================================
 // Factoring out some coefficients:
 //    from a row of TM, towards a column of TC
-Matrix& FactorDiagonals(Matrix& TC, Matrix& TM);
+template<typename _Mat>
+_Mat& FactorDiagonals(_Mat& TC, _Mat& TM);
 // ============================================================
 
 // ============================================================
@@ -72,7 +74,8 @@ Matrix& FactorDiagonals(Matrix& TC, Matrix& TM);
 //   starting with only start coefficents (at least -1,0,1) ...
 //   ... increasing this number by increment ...
 //   ... until threshold.
-size_t SparseFactor(Matrix& TICoB, Matrix& TM,
+template<typename _Mat>
+size_t SparseFactor(_Mat& TICoB, _Mat& TM,
                     const size_t start=3u, const size_t increment=4u,
                     const size_t threshold=COEFFICIENT_SEARCH);
 // ============================================================
@@ -81,16 +84,18 @@ size_t SparseFactor(Matrix& TICoB, Matrix& TM,
 // First:  FactorDiagonal
 // Second: SparseFactor with default parameters
 // Third:  SparseFactor with maxnumcoeff, 1, maxnumcoeff
-Givaro::Timer& sparseAlternate(Givaro::Timer& chrono, Matrix& CoB, Matrix& Res,
-                               const Matrix& M, const size_t maxnumcoeff);
+template<typename _Mat>
+Givaro::Timer& sparseAlternate(Givaro::Timer& chrono, _Mat& CoB, _Mat& Res,
+                               const _Mat& M, const size_t maxnumcoeff);
 // ============================================================
 
 
 // ============================================================
 // Sparsifying and reducing coefficient diversity of a matrix
 // by sparse QLUP elimination, followed by block sparsification
-int blockSparsifier(Givaro::Timer& elapsed, Matrix& CoB, Matrix& Res,
-                    const Matrix& M, const size_t blocksize,
+template<typename _Mat>
+int blockSparsifier(Givaro::Timer& elapsed, _Mat& CoB, _Mat& Res,
+                    const _Mat& M, const size_t blocksize,
                     const FileFormat& matformat, const size_t maxnumcoeff);
 
 
@@ -106,8 +111,9 @@ Tricounter backSolver(_Mat& Res, _Mat& CoB, const _Mat& iM);
 // Utilities
 
     // Testing afor a potential better sparsity
-bool testLinComb(Pair<int>& weight, Matrix& LCoB, Matrix& Cand,
-                 const size_t num, const QArray& w, const Matrix& TM);
+template<typename _Mat, typename _Array>
+bool testLinComb(Pair<int>& weight, _Mat& LCoB, _Mat& Cand,
+                 const size_t num, const _Array& w, const _Mat& TM);
 
 
     // Consistency check of M == R.C
@@ -138,16 +144,17 @@ _Mat1& inverseTranspose(_Mat1& TI, const _Mat2& A);
 
     // ==========================
     // Compute R, s.t. A == T . R
-template<typename _Mat1, typename _Mat2>
-DenseMatrix& applyInverse(DenseMatrix& R, const _Mat1& T, const _Mat2& A,
-                          const LinBox::MatrixDomain<QRat>& BMD);
+template<typename _Mat1, typename _Mat2, typename _DMat>
+_DMat& applyInverse(_DMat& R, const _Mat1& T, const _Mat2& A,
+                    const LinBox::MatrixDomain<typename _Mat1::Field>& BMD);
 
 // ============================================================
 // QLUP Gaussian elimination of A
 //    A  <-- (QL)^{-1} . A
 //    QL <-- Q.L
 // Updates QL and A only if resulting A = UP is sparser
-inline bool sparseLU(Matrix& QL, Matrix& A, const size_t sparsity);
+template<typename _Mat>
+inline bool sparseLU(_Mat& QL, _Mat& A, const size_t sparsity);
 
 
 // ============================================================
@@ -155,20 +162,23 @@ inline bool sparseLU(Matrix& QL, Matrix& A, const size_t sparsity);
 //    A  <--  UP = (QL)^{-1} . A
 //    TC <--  (QL)^{-1} . TC
 // Updates TC and A only if resulting A is sparser
-inline bool sparseILU(Matrix& TC, Matrix& A, const size_t sparsity);
+template<typename _Mat>
+inline bool sparseILU(_Mat& TC, _Mat& A, const size_t sparsity);
 
 
 
     // Cut matrix by blocks of columns
-std::vector<Matrix>& separateColumnBlocks(std::vector<Matrix>&,
-                                          const Matrix&, const size_t);
+template<typename _Mat>
+std::vector<_Mat>& separateColumnBlocks(std::vector<_Mat>&,
+                                          const _Mat&, const size_t);
 
 	// Build block diagonal matrix from vector of blocks
-Matrix& diagonalMatrix(Matrix& M, const std::vector<Matrix>& V);
+template<typename _Mat>
+_Mat& diagonalMatrix(_Mat& M, const std::vector<_Mat>& V);
 
     // Append columns by blocks of columns
-template<typename _Mat>
-Matrix& augmentedMatrix(Matrix&, const std::vector<_Mat>&);
+template<typename _Mat, typename _Mat2>
+_Mat& augmentedMatrix(_Mat&, const std::vector<_Mat2>&);
 
     // Find most frequent Rational between begin and end
     // element is suppoded to be the second in a pair
