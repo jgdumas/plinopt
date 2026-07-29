@@ -26,7 +26,7 @@ int Selector(std::istream& input, const FileFormat& matformat,
     QRat QQ;
     QMstream ms(QQ,input);
     Matrix M(ms); M.resize(M.rowdim(),M.coldim());
-    size_t sc,sb,sr;
+    size_t sc;
     densityProfile(std::clog << "# [SPRF] Initial profile: ", sc, M)
                              << std::endl;
 
@@ -42,25 +42,8 @@ int Selector(std::istream& input, const FileFormat& matformat,
 
         // ============================================================
         // Print resulting matrices
-
-        // change of basis to stdout
-    densityProfile(std::clog << "# [SPRF] Alternate basis profile: \033[1;36m",
-                   sb, CoB) << "\033[0m" << std::endl;
-    CoB.write(std::cout, matformat) << std::endl;
-
-
-        // residuum sparse matrix to stdlog
-    densityProfile(std::clog << "# [SPRF] Sparse residuum profile: \033[1;36m",
-                   sr, Res) << "\033[0m" << std::endl;
-    Res.write(std::clog, matformat)<< std::endl;
-
-
-        // Final check that we computed a factorization M=Res.CoB
-    std::clog << std::string(30,'#') << std::endl;
-    consistency(std::clog, M, Res, CoB)
-        << " \033[1;36m"
-        << sr << " non-zeroes (" << sb << " alt.) instead of " << sc
-        << "\033[0m:" << ' ' << elapsed << std::endl;
+    const std::string fctz{"[SPRF]"};
+    profileConsistency(matformat, elapsed, M, sc, fctz, Res, -1, CoB, 1);
 
     return 0;
 }
@@ -88,18 +71,22 @@ int main(int argc, char** argv) {
     for (int i = 1; i<argc; ++i) {
         std::string args(argv[i]);
         if (args == "-h") {
-            std::clog << "Usage: " << argv[0]
-                      << " [-h|-M|-P|-S|-c #|-U [1|0]] [stdin|matfile.sms]\n"
-                      << "  -c #: max number of coefficients per iteration\n"
-                      << "  -b #: states the blocking dimension\n"
-                      << "  -U [1|0]: initial LU factorization | or not\n"
-                      << "  -M/-P/-S: selects the ouput format\n";
+            std::clog
+                << "Usage: " << argv[0]
+                << " [-h|-M|-P|-S|-L|-c #|-U [1|0]] [stdin|matfile.sms]\n"
+                << "  -c #: max number of coefficients per iteration (default "
+                << maxnumcoeff << ")\n"
+                << "  -b #: states the blocking dimension (default "
+                << blocksize << ")\n"
+                << "  -U [1|0]: initial LU factorization (default) or not\n"
+                << "  -M/-P/-S/-L: selects the ouput format\n";
 
             exit(-1);
         }
         else if (args == "-M") { matformat = FileFormat(1); } // Maple
         else if (args == "-S") { matformat = FileFormat(5); } // SMS
         else if (args == "-P") { matformat = FileFormat(8); } // Pretty
+        else if (args == "-L") { matformat = FileFormat(12); }// Linalg
         else if (args == "-c") { maxnumcoeff = atoi(argv[++i]); }
         else if (args == "-b") { blocksize = atoi(argv[++i]); }
         else if (args == "-U") { initialElimination = atoi(argv[++i]); }

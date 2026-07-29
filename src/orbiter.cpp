@@ -206,7 +206,6 @@ template<int Measure> struct Orbiter {
         LinBox::SparseMatrixFormat::SparseSeq > BMatrix;
     using FMatrix=typename BMatrix::template rebind<Field>::other;
     using Element=typename Field::Element;
-    typedef LinBox::DenseVector<Field> FVector;
     typedef LinBox::DenseMatrix<Field> DMatrix;
     using PLinOpt::FileFormat;
 

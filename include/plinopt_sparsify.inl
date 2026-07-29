@@ -16,7 +16,6 @@ auto zeroTest { [](const auto& e) { return isZero(e);} };
 auto sizeSup { [](const auto& a, const auto& b) { return a.size() > b.size();} };
 auto secondInf {[](const auto& a, const auto& b) { return a.second < b.second;}};
 
-
 	// v is augmented by i, -i, 1/i and -1/i
 template<typename Vector, typename _Field>
 inline Vector& augment(Vector& v, const typename _Field::Element& i,
@@ -92,9 +91,6 @@ inline std::vector<_Mat>& separateColumnBlocks(std::vector<_Mat>& V,
                                                const size_t blocksize) {
     using FMatrix = _Mat;
     using Field = typename FMatrix::Field;
-    using Element = typename Field::Element;
-    using DenseFMatrix = LinBox::DenseMatrix<Field>;
-    using FVector = LinBox::DenseVector<Field>;
     const Field& FF(A.field());
 
     const size_t numlargeblocks(A.coldim()/blocksize);
@@ -130,6 +126,36 @@ std::ostream& densityProfile(std::ostream& out, size_t& ss, const _Mat& M) {
 }
 
 
+// Show profile & test for consistency
+// show 1 --> std::cout, show 0 --> noshow, show # --> std::clog
+template<typename _Mat>
+size_t profileConsistency(const FileFormat& matformat, Givaro::Timer& elapsed,
+                          const _Mat& C, size_t sc, const std::string& fcode,
+                          const _Mat& A, int showA,
+                          const _Mat& B, int showB) {
+    size_t sa,sb;
+    densityProfile(std::clog << "# " << fcode
+                   << " chgobase profile: \033[1;36m",
+                   sb, B) << "\033[0m" << std::endl;
+    if (showB != 0) {
+        B.write( showB==1? std::cout : std::clog, matformat) << std::endl;
+    }
+    densityProfile(std::clog << "# " << fcode
+                   << " residuum profile: \033[1;36m",
+                   sa, A) << "\033[0m" << std::endl;
+    if (showA != 0) {
+        A.write( showA==1? std::cout : std::clog, matformat) << std::endl;
+    }
+    consistency(std::clog, C, A, B)
+        << " \033[1;36m" << A.rowdim() << 'x' << A.coldim()
+        << " by " << B.rowdim() << 'x' << B.coldim() << " with "
+        << sa << " non-zeroes (" << sb << " alt.) instead of " << sc
+        << "\033[0m:" << ' ' << elapsed << std::endl;
+
+    return sa;
+}
+
+
 
 // ============================================================
 // Testing whether w produces a sparsest row of TM
@@ -140,13 +166,6 @@ std::ostream& densityProfile(std::ostream& out, size_t& ss, const _Mat& M) {
 template<typename _Mat, typename _Array>
 inline bool testLinComb(Pair<int>& weight, _Mat& LCoB, _Mat& Cand,
                         const size_t num, const _Array& w, const _Mat& TM) {
-    using FMatrix = _Mat;
-    using Field = typename FMatrix::Field;
-    using Element = typename Field::Element;
-    using DenseFMatrix = LinBox::DenseMatrix<Field>;
-    using FVector = LinBox::DenseVector<Field>;
-    const Field& FF(TM.field());
-
     _Array v(TM.coldim()); v.resize(TM.coldim());
 
         // Check independency
@@ -190,7 +209,6 @@ _Mat& Sparsifier(_Mat& TCoB, _Mat& TM, const size_t maxnumcoeff) {
     using Element = typename Field::Element;
     using DenseFMatrix = LinBox::DenseMatrix<Field>;
     using FArray = std::vector<Element>;
-    using FVector = LinBox::DenseVector<Field>;
     const Field& FF(TM.field());
 
     LinBox::GaussDomain<Field> GD(FF);
@@ -451,16 +469,14 @@ template<typename _Mat>
 size_t SparseFactor(_Mat& TICoB, _Mat& TM,
                     const size_t start, const size_t increment,
                     const size_t threshold) {
-    using Field = typename _Mat::Field;
-    using DenseFMatrix = LinBox::DenseMatrix<Field>;
-    const Field& FF(TM.field());
-
         // ============================================================
         // Prints and computes density profile of TM
     size_t s2;
     densityProfile(std::clog << "# [SpFc] Columns profile: ", s2, TM) << std::endl;
 
 #ifdef DEBUG
+    using Field = typename _Mat::Field;
+    using DenseFMatrix = LinBox::DenseMatrix<Field>;
     LinBox::MatrixDomain<Field> BMD(FF);
     DenseFMatrix TR(FF,TM.rowdim(),TM.coldim());
     applyInverse(TR, TICoB, TM, BMD);	// TM == TICoB . TR
