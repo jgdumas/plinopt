@@ -859,11 +859,12 @@ bool minLine(std::vector<std::string>& varline, const size_t index,
                             for(size_t l=k+1; l<nP.size(); ++l) {
                                 std::vector<std::string> negline;
                                 const int blm( (nP[l][2] == "-") ? 1 : 0 );
+                                const bool linmod(negatingVariable(negline, nP[l],
+                                                                   variable));
                                 rotateMinus(negline);
                                 nP[l] = std::move(negline);
                                 const int dlm( ((nP[l][2]=="-")?1:0) - blm);
                                 cm += dlm;
-// const bool linmod(negatingVariable(negline, nP[l],variable));
 // if (linmod) std::clog << "## impa. line[" << l << "]: " << nP[l] << " --> lminus " << dlm << '/' << cm << std::endl;
                                 if (nP[l].front() == variable) break;
                             }
