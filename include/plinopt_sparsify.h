@@ -44,22 +44,22 @@
 namespace PLinOpt {
 
 // ============================================================
-// Factorizing into an Alternate basis time a CoB
+// Factorizing into an Alternate basis times a CoB
 template<typename _Mat>
 int Factorizer(_Mat& Alt, _Mat& CoB, const _Mat& M,
-               const size_t randomloops, const size_t selectinnerdim=0,
-               const bool progressreport=true);
+	       const size_t randomloops, const size_t selectinnerdim=0,
+	       const bool progressreport=true);
 // ============================================================
 
-
 // ============================================================
-// Sparsifying a Matrix M, in-place
-//   uses a limited number of coefficients for the linear comb.
-//   (that is at most: COEFFICIENT_SEARCH)
-//   Returns the (inverse) change of basis and the sparsified M
+// Sparsifying and reducing coefficient diversity of a matrix
+// by sparse QLUP elimination, followed by block sparsification
 template<typename _Mat>
-_Mat& Sparsifier(_Mat& TC, _Mat& TM);
+int blockSparsifier(Givaro::Timer& elapsed, _Mat& CoB, _Mat& Res,
+		    const _Mat& M, const size_t blocksize,
+		    const FileFormat& matformat, const size_t maxnumcoeff);
 // ============================================================
+
 
 
 // ============================================================
@@ -76,8 +76,17 @@ _Mat& FactorDiagonals(_Mat& TC, _Mat& TM);
 //   ... until threshold.
 template<typename _Mat>
 size_t SparseFactor(_Mat& TICoB, _Mat& TM,
-                    const size_t start=3u, const size_t increment=4u,
-                    const size_t threshold=COEFFICIENT_SEARCH);
+		    const size_t start=3u, const size_t increment=4u,
+		    const size_t threshold=COEFFICIENT_SEARCH);
+// ============================================================
+
+// ============================================================
+// Sparsifying a Matrix M, in-place
+//   uses a limited number of coefficients for the linear comb.
+//   (that is at most: COEFFICIENT_SEARCH)
+//   Returns the (inverse) change of basis and the sparsified M
+template<typename _Mat>
+_Mat& localSparsifier(_Mat& TC, _Mat& TM);
 // ============================================================
 
 // ============================================================
@@ -86,18 +95,8 @@ size_t SparseFactor(_Mat& TICoB, _Mat& TM,
 // Third:  SparseFactor with maxnumcoeff, 1, maxnumcoeff
 template<typename _Mat>
 Givaro::Timer& sparseAlternate(Givaro::Timer& chrono, _Mat& CoB, _Mat& Res,
-                               const _Mat& M, const size_t maxnumcoeff);
+			       const _Mat& M, const size_t maxnumcoeff);
 // ============================================================
-
-
-// ============================================================
-// Sparsifying and reducing coefficient diversity of a matrix
-// by sparse QLUP elimination, followed by block sparsification
-template<typename _Mat>
-int blockSparsifier(Givaro::Timer& elapsed, _Mat& CoB, _Mat& Res,
-                    const _Mat& M, const size_t blocksize,
-                    const FileFormat& matformat, const size_t maxnumcoeff);
-
 
 // ============================================================
 // Decomposing the matrix into:
@@ -113,13 +112,13 @@ Tricounter backSolver(_Mat& Res, _Mat& CoB, const _Mat& iM);
     // Testing afor a potential better sparsity
 template<typename _Mat, typename _Array>
 bool testLinComb(Pair<int>& weight, _Mat& LCoB, _Mat& Cand,
-                 const size_t num, const _Array& w, const _Mat& TM);
+		 const size_t num, const _Array& w, const _Mat& TM);
 
 
     // Consistency check of M == R.C
 template<typename _Mat1, typename _Mat2, typename _DMat>
 std::ostream& consistency(std::ostream& out, const _Mat1& M,
-                          const _Mat2& R, const _DMat& C);
+			  const _Mat2& R, const _DMat& C);
 
 	// Operations upper bound for matrix-vector multiplication
 template<typename _Mat>
@@ -146,7 +145,7 @@ _Mat1& inverseTranspose(_Mat1& TI, const _Mat2& A);
     // Compute R, s.t. A == T . R
 template<typename _Mat1, typename _Mat2, typename _DMat>
 _DMat& applyInverse(_DMat& R, const _Mat1& T, const _Mat2& A,
-                    const LinBox::MatrixDomain<typename _Mat1::Field>& BMD);
+		    const LinBox::MatrixDomain<typename _Mat1::Field>& BMD);
 
 // ============================================================
 // QLUP Gaussian elimination of A
@@ -170,7 +169,7 @@ inline bool sparseILU(_Mat& TC, _Mat& A, const size_t sparsity);
     // Cut matrix by blocks of columns
 template<typename _Mat>
 std::vector<_Mat>& separateColumnBlocks(std::vector<_Mat>&,
-                                          const _Mat&, const size_t);
+					  const _Mat&, const size_t);
 
 	// Build block diagonal matrix from vector of blocks
 template<typename _Mat>

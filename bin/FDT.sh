@@ -43,7 +43,8 @@ FCTZR=${BINDIR}/factorizer
 INPLR=${BINDIR}/inplacer
 SPSFR=${BINDIR}/sparsifier
 
-let tries=8*${#fics[@]}
+let numtests=9
+let tries=${numtests}*${#fics[@]}
 let current=0
 
 for fic in ${fics[@]}
@@ -59,6 +60,8 @@ do
     ((${MTRSP} $fic | ${OPTIM} -q ${modulus} -O ${numopt} ${optflg} | ${TELLG} | ${CMPCT} -s | ${SLPCK}  -q ${modulus} -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
 
     ((${MTRSP} $fic | ${OPTIM} -O ${numopt} ${optflg} | ${TELLG} | ${CMPCT} -s | ${SLPCK} -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
+
+    ((OMP_NUM_THREADS=1 ${SPSFR} -q ${modulus} -c ${coeffs} $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
 
     ((OMP_NUM_THREADS=1 ${SPSFR} -c ${coeffs} $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
 
@@ -76,7 +79,7 @@ do
 
     ((${MTRSP} $fic | ${INPLR} -t -O ${numopt} | ${SLPCK} -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
 
-let current=8+${current}
+let current=${numtests}+${current}
 success=`grep SUCCESS ${tmpfile} | wc -l`
 echo -ne "\033[1;93mSUCCESS: "
 if [ ${success} -ne ${current} ]; then

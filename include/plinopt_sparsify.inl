@@ -16,7 +16,7 @@ auto zeroTest { [](const auto& e) { return isZero(e);} };
 auto sizeSup { [](const auto& a, const auto& b) { return a.size() > b.size();} };
 auto secondInf {[](const auto& a, const auto& b) { return a.second < b.second;}};
 
-	// v is augmented by i, -i, 1/i and -1/i
+    // v is augmented by i, -i, 1/i and -1/i
 template<typename Vector, typename _Field>
 inline Vector& augment(Vector& v, const typename _Field::Element& i,
                        const _Field& FF) {
@@ -34,7 +34,7 @@ inline Vector& augment(Vector& v, const typename _Field::Element& i,
     return v;
 }
 
-	// Computes the rank of A
+    // Computes the rank of A
 template<typename _Mat>
 inline size_t& rank(size_t& r, const _Mat& A) {
     using Field = typename _Mat::Field;
@@ -45,7 +45,7 @@ inline size_t& rank(size_t& r, const _Mat& A) {
 }
 
 
-	// Build block diagonal matrix from vector of blocks
+    // Build block diagonal matrix from vector of blocks
 template<typename _Mat>
 inline _Mat& diagonalMatrix(_Mat& M, const std::vector<_Mat>& V) {
     M.resize(0,0);
@@ -203,7 +203,7 @@ inline bool testLinComb(Pair<int>& weight, _Mat& LCoB, _Mat& Cand,
 //   uses a limited number of coefficients for the linear comb.
 //   (that is at most: maxnumcoeff)
 template<typename _Mat>
-_Mat& Sparsifier(_Mat& TCoB, _Mat& TM, const size_t maxnumcoeff) {
+_Mat& localSparsifier(_Mat& TCoB, _Mat& TM, const size_t maxnumcoeff) {
     using FMatrix = _Mat;
     using Field = typename FMatrix::Field;
     using Element = typename Field::Element;
@@ -228,23 +228,25 @@ _Mat& Sparsifier(_Mat& TCoB, _Mat& TM, const size_t maxnumcoeff) {
         FMatrix N(FF,TM.coldim(),TM.rowdim()); Transpose(N, TM);
         std::sort(N.rowBegin(), N.rowEnd(), sizeSup);	// get denser rows
         size_t r; while( (N.rowdim()>0) && (rank(r,N) == N.coldim())) {
-            N.resize(N.rowdim()-1,N.coldim());          // select rank-1
+            N.resize(N.rowdim()-1,N.coldim());			// select rank-1
         }
         if (N.rowdim()>0) {
             FMatrix x(FF, n, n), Tx(FF,n,n);
-            GD.nullspacebasisin(x, N);						// nullspace vector
+            GD.nullspacebasisin(x, N);					// nullspace vector
             for(size_t i=0; i<n; ++i) {
                 const auto& value( x.refEntry(i,0) );
                 if (! FF.isZero(value)) LCoB.setEntry(0,i,value);
             }
             FArray v(TM.coldim());
-            TM.applyTranspose(v, LCoB[0]);					// result Hamming weight
+            TM.applyTranspose(v, LCoB[0]);				// result Hamming weight
             cnHw = LCoB[0].size();
             rnHw = std::count_if(v.begin(), v.end(), zeroTest );
 
 #ifdef VERBATIM_PARSING
-            std::clog << "# [SPRF] nullspace vector (" << cnHw << "): " << LCoB[0] << std::endl;
-            std::clog << "# [SPRF] reduces residuum (" << rnHw << "): " << v << std::endl;
+            std::clog << "# [SPRF] nullspace vector (" << cnHw << "): "
+                      << LCoB[0] << std::endl;
+            std::clog << "# [SPRF] reduces residuum (" << rnHw << "): "
+                      << v << std::endl;
 #endif
         }
     }
@@ -255,7 +257,7 @@ _Mat& Sparsifier(_Mat& TCoB, _Mat& TM, const size_t maxnumcoeff) {
     for(auto row=TM.rowBegin(); row != TM.rowEnd(); ++row) {
         for(auto it=row->begin(); it != row->end(); ++it) {
             augment(Coeffs, it->second, FF);
-         }
+        }
     }
 
     for(size_t i=2; Coeffs.size() < maxnumcoeff; ++i) {
@@ -264,7 +266,8 @@ _Mat& Sparsifier(_Mat& TCoB, _Mat& TM, const size_t maxnumcoeff) {
         // ========================================
         // reduce to at most maxnumcoeff
     if (Coeffs.size()>maxnumcoeff) Coeffs.resize(maxnumcoeff);
-    std::clog << "# [SPRF] linear combination coefficients: " << Coeffs << std::endl;
+    std::clog << "# [SPRF] linear combination coefficients: "
+              << Coeffs << std::endl;
 
         // ========================================
         // Try first 4 rows of TCoB, one at a time
@@ -294,20 +297,21 @@ _Mat& Sparsifier(_Mat& TCoB, _Mat& TM, const size_t maxnumcoeff) {
                 // ========================================
                 // Each row has 4 coefficients
             for(size_t i=0; i<Coeffs.size(); ++i) {
-            for(size_t j=0; j<Coeffs.size(); ++j) {
-            for(size_t k=0; k<Coeffs.size(); ++k) {
-            for(size_t l=0; l<Coeffs.size(); ++l) {
-                    // Try linear combination
+                for(size_t j=0; j<Coeffs.size(); ++j) {
+                    for(size_t k=0; k<Coeffs.size(); ++k) {
+                        for(size_t l=0; l<Coeffs.size(); ++l) {
+                                // Try linear combination
 
-                w.resize(multiple);
-                w[0+(offsetblock)] = Coeffs[i];
-                w[1+(offsetblock)] = Coeffs[j];
-                w[2+(offsetblock)] = Coeffs[k];
-                w[3+(offsetblock)] = Coeffs[l];
+                            w.resize(multiple);
+                            w[0+(offsetblock)] = Coeffs[i];
+                            w[1+(offsetblock)] = Coeffs[j];
+                            w[2+(offsetblock)] = Coeffs[k];
+                            w[3+(offsetblock)] = Coeffs[l];
 
-                w.resize(TM.rowdim());
-                found |= testLinComb(weight, LCoB, A, num+(offsetblock), w, TM);
-            }}}}
+                            w.resize(TM.rowdim());
+                            found |= testLinComb(weight, LCoB, A,
+                                                 num+(offsetblock), w, TM);
+                        }}}}
 
                 // If not enough lin. comb. just add an indep. canonical one
             for(size_t p=0; ! found; ++p) {
@@ -316,7 +320,8 @@ _Mat& Sparsifier(_Mat& TCoB, _Mat& TM, const size_t maxnumcoeff) {
                 w[p]=1;
                 found |= testLinComb(weight, LCoB, A, num+(offsetblock), w, TM);
 #ifdef VERBATIM_PARSING
-                if (found) std::clog << "# [SPRF] Using canonical " << p << std::endl;
+                if (found)
+                    std::clog << "# [SPRF] Using canonical " << p << std::endl;
 #endif
             }
 
@@ -371,7 +376,7 @@ inline _Mat& FactorDiagonals(_Mat& TCoB, _Mat& TM) {
 
 
 
-	// Computes the inverse of A
+    // Computes the inverse of A
 template<typename _Mat1, typename _Mat2>
 inline _Mat1& inverse(_Mat1& T, const _Mat2& A) {
     assert(A.rowdim() == A.coldim());
@@ -422,7 +427,7 @@ _DMat& applyInverse(_DMat& R, const _Mat1& TICoB, const _Mat2& A,
     return BMD.mul(R,TCoB,A);     // A == TICoB . R
 }
 
-	// Computes the transposed inverse of A
+    // Computes the transposed inverse of A
 template<typename _Mat1, typename _Mat2>
 inline _Mat1& inverseTranspose(_Mat1& TI, const _Mat2& A) {
     assert(A.rowdim() == A.coldim());
@@ -472,7 +477,8 @@ size_t SparseFactor(_Mat& TICoB, _Mat& TM,
         // ============================================================
         // Prints and computes density profile of TM
     size_t s2;
-    densityProfile(std::clog << "# [SpFc] Columns profile: ", s2, TM) << std::endl;
+    densityProfile(std::clog << "# [SpFc] Columns profile: ", s2, TM)
+                             << std::endl;
 
 #ifdef DEBUG
     using Field = typename _Mat::Field;
@@ -490,9 +496,10 @@ size_t SparseFactor(_Mat& TICoB, _Mat& TM,
         // Main loop, alternating sparsification and column factoring
     do {
         ss = s2;
-        Sparsifier(TICoB, TM, numcoeffs);
+        localSparsifier(TICoB, TM, numcoeffs);
         FactorDiagonals(TICoB, TM);
-        densityProfile(std::clog << "# [SpFc] Density profile: ", s2, TM) << std::endl;
+        densityProfile(std::clog << "# [SpFc] Density profile: ", s2, TM)
+                                 << std::endl;
         if (numcoeffs<threshold) numcoeffs += increment;
 
 #ifdef DEBUG
@@ -553,9 +560,9 @@ inline bool sparseLU(_Mat& QL, _Mat& A, const size_t sparsity) {
     }
 
 #ifdef DEBUG
-            // Check that the factorization is preserved
-            //              via TR = QL.A
-        consistency(std::clog, TR, QL, A) << std::endl;
+        // Check that the factorization is preserved
+        //              via TR = QL.A
+    consistency(std::clog, TR, QL, A) << std::endl;
 #endif
     return sparser;
 }
@@ -589,9 +596,9 @@ inline bool sparseILU(_Mat& TC, _Mat& A, const size_t sparsity) {
     }
 
 #ifdef DEBUG
-            // Check that the factorization is preserved
-            //              via A = TC.TR
-        consistency(std::clog, A, TC, TR) << std::endl;
+        // Check that the factorization is preserved
+        //              via A = TC.TR
+    consistency(std::clog, A, TC, TR) << std::endl;
 #endif
     return sparser;
 }
@@ -624,8 +631,10 @@ Givaro::Timer& sparseAlternate(Givaro::Timer& chrono, _Mat& CoB, _Mat& Res,
     bool reduced = sparseILU(TICoB, TM, density(TM));
     if (reduced) {
         size_t sl,su;
-        densityProfile(std::clog << "# [sALT] GaussLo profile: ", sl, TICoB) << std::endl;
-        densityProfile(std::clog << "# [sALT] GaussUp profile: ", su, TM) << std::endl;
+        densityProfile(std::clog << "# [sALT] GaussLo profile: ", sl, TICoB)
+                                 << std::endl;
+        densityProfile(std::clog << "# [sALT] GaussUp profile: ", su, TM)
+                                 << std::endl;
     }
         //    default alternate to sparsify/factor simple things first
     SparseFactor(TICoB, TM);
@@ -637,7 +646,8 @@ Givaro::Timer& sparseAlternate(Givaro::Timer& chrono, _Mat& CoB, _Mat& Res,
         // Res = TM^T
     inverseTranspose(CoB, TICoB);
     size_t sc;
-    densityProfile(std::clog << "# [sALT] CoBasis profile: ", sc, CoB) << std::endl;
+    densityProfile(std::clog << "# [sALT] CoBasis profile: ", sc, CoB)
+                             << std::endl;
 
     Transpose(Res, TM);
     chrono.stop();
@@ -681,8 +691,10 @@ int blockSparsifier(Givaro::Timer& elapsed, _Mat& CoB, _Mat& Res,
             reduced = sparseLU(L, U, density(U));
 
             size_t sl,su;
-            densityProfile(std::clog << "# [bSpr] IGaussL profile: ", sl, L) << std::endl;
-            densityProfile(std::clog << "# [bSpr] IGaussU profile: ", su, U) << std::endl;
+            densityProfile(std::clog << "# [bSpr] IGaussL profile: ", sl, L)
+                                     << std::endl;
+            densityProfile(std::clog << "# [bSpr] IGaussU profile: ", su, U)
+                                     << std::endl;
         }
 
         FMatrix TU(F,m,n);
@@ -705,7 +717,8 @@ int blockSparsifier(Givaro::Timer& elapsed, _Mat& CoB, _Mat& Res,
             elapsed += chrono;
 #ifdef DEBUG
             std::clog << std::string(30,'#') << std::endl;
-            consistency(std::clog, mat, vR.back(), vC.back()) << ' ' << chrono << std::endl;
+            consistency(std::clog, mat, vR.back(), vC.back())
+                << ' ' << chrono << std::endl;
 #endif
         }
 
@@ -799,8 +812,10 @@ Tricounter backSolver(_Mat& CoB, _Mat& Res, const _Mat& iM) {
 
 #ifdef VERBATIM_PARSING
     T.write(std::clog   << "# [bSol] Initial perm.: ") << std::endl;
-    CoB.write(std::clog << "# [bSol] Full row rank: ",FileFormat::Pretty) << std::endl;
-    A2.write(std::clog  << "# [bSol] Free profile : ",FileFormat::Pretty) << std::endl;
+    CoB.write(std::clog << "# [bSol] Full row rank: ",FileFormat::Pretty)
+                        << std::endl;
+    A2.write(std::clog  << "# [bSol] Free profile : ",FileFormat::Pretty)
+                        << std::endl;
 #endif
 
     FMatrix U(FF,n,k); Transpose(U, CoB); // U is (n x k)
@@ -903,7 +918,7 @@ auto tricOpCount {[](const auto& a, const auto& b) {
         || ( (std::get<0>(a) == std::get<0>(b))
              && (std::get<1>(a) == std::get<1>(b))
              && (std::get<2>(a) < std::get<2>(b)) )
-; } };
+        ; } };
 
 
 template<typename _Mat>
@@ -921,7 +936,8 @@ int Factorizer(_Mat& Alt, _Mat& CoB, const _Mat& M,
     const size_t innerdim(selectinnerdim == 0 ? M.coldim() : selectinnerdim);
     if ( (innerdim > M.rowdim()) ||
          (innerdim < M.coldim()) ) {
-        std::cerr << "# \033[1;36mFail: inner dimension has to be between " << M.coldim() << " and " << M.rowdim() << ".\033[0m\n";
+        std::cerr << "# \033[1;36mFail: inner dimension has to be between "
+                  << M.coldim() << " and " << M.rowdim() << ".\033[0m\n";
         return -1;
     }
 
@@ -940,7 +956,7 @@ int Factorizer(_Mat& Alt, _Mat& CoB, const _Mat& M,
 
     const auto sc(nonzeroes(M));
 
-	// Start with M and Identity
+        // Start with M and Identity
     Tricounter nbops{ sc.first, sc.second, M.coldim()};
 
 #pragma omp parallel for shared(Alt,CoB,M,F,nbops,innerdim,progressreport)
@@ -951,19 +967,19 @@ int Factorizer(_Mat& Alt, _Mat& CoB, const _Mat& M,
 
 #pragma omp critical
         {
-        if (tricOpCount(bSops, nbops)) {
+            if (tricOpCount(bSops, nbops)) {
 #ifdef VERBATIM_PARSING
-            std::clog << "# Alt/CoB profile[" << i << "]: "
-                      << bSops << std::endl;
-#endif
-            nbops = bSops;
-            sparse2sparse(CoB, lCoB);
-            sparse2sparse(Alt, lAlt);
-
-            if (progressreport)
-                std::clog << "# Found [" << i << "], R/CB profile: "
+                std::clog << "# Alt/CoB profile[" << i << "]: "
                           << bSops << std::endl;
-        }
+#endif
+                nbops = bSops;
+                sparse2sparse(CoB, lCoB);
+                sparse2sparse(Alt, lAlt);
+
+                if (progressreport)
+                    std::clog << "# Found [" << i << "], R/CB profile: "
+                              << bSops << std::endl;
+            }
         }
     }
 

@@ -17,31 +17,37 @@
 namespace PLinOpt {
 // ============================================================
 // Sparsifying and reducing coefficient diversity of a matrix
-int Selector(std::istream& input, const FileFormat& matformat,
-             const size_t blocksize, const size_t maxnumcoeff,
-             const bool initialElimination) {
+template<typename _Mat>
+int TSparsifier(const _Mat& M, const FileFormat& matformat,
+	     const size_t blocksize, const size_t maxnumcoeff,
+	     const bool initialElimination) {
 
-        // ============================================================
-        // Read Matrix of Linear Transformation
-    QRat QQ;
-    QMstream ms(QQ,input);
-    Matrix M(ms); M.resize(M.rowdim(),M.coldim());
+    using FMatrix = _Mat;
+    using Field = typename _Mat::Field;
+    const Field& FF(M.field());
+	// ============================================================
+	// Initial profile
     size_t sc;
     densityProfile(std::clog << "# [SPRF] Initial profile: ", sc, M)
-                             << std::endl;
+			     << std::endl;
+    std::clog << std::string(30,'#') << std::endl;
 
 #ifdef VERBATIM_PARSING
     M.write(std::clog,FileFormat::Pretty);
 #endif
 
-    Givaro::Timer elapsed;
-    Matrix CoB(QQ,M.coldim(), M.coldim());
-    Matrix Res(QQ,M.rowdim(), M.coldim());
-    blockSparsifier(elapsed, CoB, Res, M, blocksize,
-                    matformat, maxnumcoeff, initialElimination);
+	// ============================================================
+	// block Sparsification
 
-        // ============================================================
-        // Print resulting matrices
+    Givaro::Timer elapsed;
+    FMatrix CoB(FF,M.coldim(), M.coldim());
+    FMatrix Res(FF,M.rowdim(), M.coldim());
+    blockSparsifier(elapsed, CoB, Res, M, blocksize,
+		    matformat, maxnumcoeff, initialElimination);
+
+	// ============================================================
+	// Print resulting matrices
+    std::clog << std::string(30,'#') << std::endl;
     const std::string fctz{"[SPRF]"};
     profileConsistency(matformat, elapsed, M, sc, fctz, Res, -1, CoB, 1);
 
@@ -52,6 +58,27 @@ int Selector(std::istream& input, const FileFormat& matformat,
 } // End of namespace PLinOpt
 // ============================================
 
+int Fmain(std::istream& input, const Givaro::Integer& q,
+	  const PLinOpt::FileFormat& matformat, const size_t blocksize,
+	  const size_t maxnumcoeff, const bool initialElimination) {
+
+    PLinOpt::QRat QQ;
+    PLinOpt::QMstream ms(QQ,input);
+    PLinOpt::Matrix rM(ms); rM.resize(rM.rowdim(),rM.coldim());
+    if (! Givaro::isZero(q)) {
+            // ============================================================
+            // Rebind matrix type over sub field matrix type
+        using Field = Givaro::Modular<Givaro::Integer>;
+        using FMatrix=typename PLinOpt::Matrix::template rebind<Field>::other;
+        const Field FF(q);
+        FMatrix fM(rM, FF);
+        return PLinOpt::TSparsifier(fM, matformat, blocksize, maxnumcoeff,
+                                    initialElimination);
+    } else {
+        return PLinOpt::TSparsifier(rM, matformat, blocksize, maxnumcoeff,
+                                    initialElimination);
+    }
+}
 
 // ============================================================
 // Main: select between file / std::cin
@@ -67,39 +94,41 @@ int main(int argc, char** argv) {
     size_t maxnumcoeff(COEFFICIENT_SEARCH); // default max coefficients
     size_t blocksize(4u);                   // default column block size
     bool initialElimination(true);
+    Givaro::Integer q(0u);
 
     for (int i = 1; i<argc; ++i) {
-        std::string args(argv[i]);
-        if (args == "-h") {
-            std::clog
-                << "Usage: " << argv[0]
-                << " [-h|-M|-P|-S|-L|-c #|-U [1|0]] [stdin|matfile.sms]\n"
-                << "  -c #: max number of coefficients per iteration (default "
-                << maxnumcoeff << ")\n"
-                << "  -b #: states the blocking dimension (default "
-                << blocksize << ")\n"
-                << "  -U [1|0]: initial LU factorization (default) or not\n"
-                << "  -M/-P/-S/-L: selects the ouput format\n";
+	std::string args(argv[i]);
+	if (args == "-h") {
+	    std::clog
+		<< "Usage: " << argv[0]
+		<< " [-h|-q|-M|-P|-S|-L|-c #|-U [1|0]] [stdin|matfile.sms]\n"
+		<< "  -c #: max number of coefficients per iteration (default "
+		<< maxnumcoeff << ")\n"
+		<< "  -b #: states the blocking dimension (default "
+		<< blocksize << ")\n"
+		<< "  -U [1|0]: initial LU factorization (default) or not\n"
+		<< "  -M/-P/-S/-L: selects the ouput format\n";
 
-            exit(-1);
-        }
-        else if (args == "-M") { matformat = FileFormat(1); } // Maple
-        else if (args == "-S") { matformat = FileFormat(5); } // SMS
-        else if (args == "-P") { matformat = FileFormat(8); } // Pretty
-        else if (args == "-L") { matformat = FileFormat(12); }// Linalg
-        else if (args == "-c") { maxnumcoeff = atoi(argv[++i]); }
-        else if (args == "-b") { blocksize = atoi(argv[++i]); }
-        else if (args == "-U") { initialElimination = atoi(argv[++i]); }
-        else { filename = args; }
+	    exit(-1);
+	}
+	else if (args == "-q") { q = Givaro::Integer(argv[++i]); }
+	else if (args == "-M") { matformat = FileFormat(1); } // Maple
+	else if (args == "-S") { matformat = FileFormat(5); } // SMS
+	else if (args == "-P") { matformat = FileFormat(8); } // Pretty
+	else if (args == "-L") { matformat = FileFormat(12); }// Linalg
+	else if (args == "-c") { maxnumcoeff = atoi(argv[++i]); }
+	else if (args == "-b") { blocksize = atoi(argv[++i]); }
+	else if (args == "-U") { initialElimination = atoi(argv[++i]); }
+	else { filename = args; }
     }
 
     if (filename == "") {
-        return PLinOpt::Selector(std::cin, matformat,
-                                 blocksize, maxnumcoeff, initialElimination);
+	return Fmain(std::cin, q, matformat, blocksize, maxnumcoeff,
+		     initialElimination);
     } else {
-        std::ifstream inputmatrix(filename);
-        return PLinOpt::Selector(inputmatrix, matformat,
-                                 blocksize, maxnumcoeff, initialElimination);
+	std::ifstream inputmatrix(filename);
+	return Fmain(inputmatrix, q, matformat, blocksize, maxnumcoeff,
+		     initialElimination);
     }
 
     return -1;
