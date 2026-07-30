@@ -473,7 +473,6 @@ template<typename Field, typename _Matrix>
 int MMchecker(const Field& FF, const size_t bitsize,
               const _Matrix& L, const _Matrix& R, const _Matrix& P) {
     using PLinOpt::FileFormat;
-    using FMatrix=_Matrix;
     typedef LinBox::DenseVector<Field> FVector;
 
     PLinOpt::Tricounter mkn(PLinOpt::LRP2MM(L,R,P));

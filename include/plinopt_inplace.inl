@@ -342,7 +342,7 @@ void pushvariables(AProgram_t& Program, size_t numout) {
                     }
                 } else {
                         // findex_ope is MUL
-                    if (iter->_des == i) {
+                    if (iter->_des == (long)i) {
                             // f_des is modified, cannot push
                         found = false; continue;
                     } else {
@@ -513,7 +513,6 @@ Tricounter TransposedDoubleAlgorithm(AProgram_t& Program, const Matrix& T,
     const size_t m(T.rowdim());		// should be even
     for(size_t l=0; l<m; ++l) {
         const auto& UpperRow(T[l]);
-        const auto& LowerRow(T[++l]);
         if (UpperRow.size()>0) {
 
                 // choose matrix <<a|c>,<0|a>>

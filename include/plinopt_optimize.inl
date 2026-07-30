@@ -1126,7 +1126,7 @@ Pair<size_t>& ABOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
     FMatrix Alt(F, FM.rowdim(), selectinnerdim);
     FMatrix CoB(F, selectinnerdim, FM.coldim());
 
-    const size_t factoloops(1+randomloops>>3);
+    const size_t factoloops(1+(randomloops>>3));
     Factorizer(Alt, CoB, FM, factoloops, selectinnerdim, false);
 
     const size_t sa(density(Alt)), sc(density(CoB));

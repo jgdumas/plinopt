@@ -84,7 +84,6 @@ int PMchecker(const Base& BB, const Field& FF, const size_t bitsize, const QPol&
 #endif
 
     PLinOpt::Tricounter mkn(PLinOpt::LRP2MM(L,R,P));
-    const size_t& m(std::get<0>(mkn)), k(std::get<1>(mkn)), n(std::get<2>(mkn));
 
 	// =============================================
 	// Random inputs

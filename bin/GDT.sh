@@ -4,14 +4,14 @@
 # Authors: J-G. Dumas, B. Grenet, C. Pernet, A. Sedoglavic
 # ==========================================================================
 # ==========================================================================
-# Tests: optimizer, compacter, transpozer, factorizer, sparsifier, inplacer
+# Tests: compacter, transpozer, SLPchecker
 # ==========================================================================
 
 if [ "$#" -ge 1 ]; then
     fics=("$@")
 else
     fics=(data/*slp)
-    # Do not test polynomial files yet
+    # Do not test polynomial files automatically yet
     fics=(${fics[@]//*-X_*})
     # Do not test large files automatically
     fics=(${fics[@]//*32x32x32*})
