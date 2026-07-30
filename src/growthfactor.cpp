@@ -30,7 +30,7 @@ template<> double access(const std::pair<size_t, Givaro::Rational>& a) {
 // ============================================
 // Different vector norms
 template<typename Vect_t> size_t norm0(const Vect_t& v) {
-    size_t s(0); for(const auto& it: v) ++s; return s;
+    return v.size();
 }
 
 template<typename Vect_t> double norm1(const Vect_t& v) {

@@ -25,47 +25,74 @@
 namespace PLinOpt {
 // ============================================================
 template<typename _Mat>
-int TFactorizer(const _Mat& M, const FileFormat& matformat,
-                const size_t selectinnerdim, const size_t randomloops) {
+int TFactorizer(const _Mat& A, const FileFormat& matformat,
+                const size_t selectinnerdim, const size_t randomloops,
+                const size_t blocksize, const size_t maxnumcoeff,
+                const bool initialElimination,
+                const bool initialSparsification) {
 
 
 
     using FMatrix = _Mat;
     using Field = typename _Mat::Field;
-    const Field& F(M.field());
+    using DenseFMatrix = LinBox::DenseMatrix<Field>;
+    const Field& F(A.field());
 
-    size_t sc,sb,sr;
-    densityProfile(std::clog << "# Initial profile: ", sc, M)
+    size_t sc;
+    densityProfile(std::clog << "# [FCTZ] Initial profile: ", sc, A)
                              << std::endl;
 
-    FMatrix Alt(F, M.rowdim(), selectinnerdim);
-    FMatrix CoB(F, selectinnerdim, M.coldim());
+    Givaro::Timer elapsed;
+    FMatrix Alt(F, A.rowdim(), selectinnerdim);
+    FMatrix CoB(F, selectinnerdim, A.coldim());
 
-    Givaro::Timer elapsed; elapsed.start();
-    Factorizer(Alt, CoB, M, randomloops, selectinnerdim);
-    elapsed.stop();
+    if (initialSparsification) {
+            // ============================================================
+            // Sparsifier
+        FMatrix Cs(F,A.coldim(), A.coldim());
+        FMatrix M(F,A.rowdim(), A.coldim());
+        blockSparsifier(elapsed, Cs, M, A, blocksize,
+                        matformat, maxnumcoeff, initialElimination);
+
+        const std::string blsp{"[SPRB]"};
+        size_t sm(profileConsistency(matformat, elapsed,
+                                     A, sc, blsp, M, 0, Cs, 0));
+        std::clog << std::string(30,'#') << std::endl;
+
+            // ============================================================
+            // Factorizer
+        FMatrix Ca(F, selectinnerdim, M.coldim());
+        Givaro::Timer Felapse; Felapse.start();
+        Factorizer(Alt, Ca, M, randomloops, selectinnerdim);
+        Felapse.stop();
+        elapsed += Felapse;
+
+        const std::string sprf{"[FCTA]"};
+        profileConsistency(matformat, elapsed, M, sm, sprf, Alt, 0, Ca, 0);
+        std::clog << std::string(30,'#') << std::endl;
+
+            // ============================================================
+            // Recombination, from A = M.Cs ; M = Alt.Ca:
+            // CoB = Ca.Cs, so that A = Alt.CoB
+        DenseFMatrix Do(F, Ca.rowdim(), Cs.coldim());
+        LinBox::MatrixDomain<Field> BMD(F);
+
+        Felapse.clear(); Felapse.start();
+        BMD.mul(Do, Ca, Cs);
+        CoB.resize(Do.rowdim(), Do.coldim());
+        dense2sparse(CoB, Do);
+        Felapse.stop();
+        elapsed += Felapse;
+    } else {
+        elapsed.start();
+        Factorizer(Alt, CoB, A, randomloops, selectinnerdim);
+        elapsed.stop();
+    }
 
         // ============================================================
         // Print resulting matrices
-
-        // change of basis to stdout
-    densityProfile(std::clog << "# Alternate basis profile: \033[1;36m",
-                   sb, CoB) << "\033[0m" << std::endl;
-    CoB.write(std::cout, matformat) << std::endl;
-
-        // residuum sparse matrix to stdlog
-    densityProfile(std::clog << "# Sparse residuum profile: \033[1;36m",
-                   sr, Alt) << "\033[0m" << std::endl;
-    Alt.write(std::clog, matformat)<< std::endl;
-
-        // Final check that we computed a factorization M=Alt.CoB
-    std::clog << std::string(30,'#') << std::endl;
-    consistency(std::clog, M, Alt, CoB)
-        << " \033[1;36m" << Alt.rowdim() << 'x' << Alt.coldim()
-        << " by " << CoB.rowdim() << 'x' << CoB.coldim() << " with "
-        << sr << " non-zeroes (" << sb << " alt.) instead of " << sc
-        << "\033[0m:" << ' ' << elapsed << std::endl;
-
+    const std::string fctz{"[FCTZ]"};
+    profileConsistency(matformat, elapsed, A, sc, fctz, Alt, -1, CoB, 1);
     return 0;
 }
 
@@ -79,7 +106,9 @@ int TFactorizer(const _Mat& M, const FileFormat& matformat,
 // Checking a linear program with a matrix
 int Fmain(std::istream& input, const Givaro::Integer& q,
           const PLinOpt::FileFormat& mformat,
-          const size_t innerdim, const size_t loops){
+          const size_t innerdim, const size_t loops,
+          const size_t blocksize, const size_t maxnumcoeff,
+          const bool initialElimination, const bool initialSparsification) {
         // ============================================================
         // Read Matrix of Linear Transformation
     PLinOpt::QRat QQ;
@@ -94,9 +123,13 @@ int Fmain(std::istream& input, const Givaro::Integer& q,
 
         const Field FF(q);
         FMatrix fM(rM, FF);
-        return PLinOpt::TFactorizer(fM, mformat, innerdim, loops);
+        return PLinOpt::TFactorizer(fM, mformat, innerdim, loops,
+                                    blocksize, maxnumcoeff,
+                                    initialElimination, initialSparsification);
     } else {
-        return PLinOpt::TFactorizer(rM, mformat, innerdim, loops);
+        return PLinOpt::TFactorizer(rM, mformat, innerdim, loops,
+                                    blocksize, maxnumcoeff,
+                                    initialElimination, initialSparsification);
     }
 }
 
@@ -113,6 +146,10 @@ int main(int argc, char** argv) {
     std::string filename;
     size_t innerdim(0);					// will default to columndimension
     size_t randomloops(DORANDOMSEARCH?DEFAULT_RANDOM_LOOPS:1);
+    size_t maxnumcoeff(COEFFICIENT_SEARCH); // default max coefficients
+    size_t blocksize(4u);                   // default column block size
+    bool initialSparsification(false);
+    bool initialElimination(true);
     Givaro::Integer q(0u);
 
     for (int i = 1; i<argc; ++i) {
@@ -120,9 +157,15 @@ int main(int argc, char** argv) {
         if (args == "-h") {
             std::clog
                 << "Usage: " << argv[0]
-                << " [-h|-M|-P|-S|-L|-k #|-O #] [stdin|matrixfile.sms]\n"
+                << " [-h|-M|-P|-S|-L|[-k|-O|-c|-b|-U|-V #]] [stdin|matrixfile.sms]\n"
                 << "  -k #: inner dimension (default is column dimension)\n"
                 << "  -M/-P/-S/-L: selects the ouput format\n"
+                << "  -V [1|0]: initial sparsification or not (default 0)\n"
+                << "  -b #: states the blocking dimension (default "
+                << blocksize << ")\n"
+                << "  -c #: max number of coefficients per iteration (default "
+                << maxnumcoeff << ")\n"
+                << "  -U [1|0]: initial LU factorization or not (default 1) \n"
                 << "  -q #: search modulo (default is Rationals)\n"
                 << "  -O #: search for reduced randomized sparsity (default "
                 << randomloops << " loops)\n";
@@ -135,6 +178,10 @@ int main(int argc, char** argv) {
         else if (args == "-L") { matformat = FileFormat(12); }// Linalg
         else if (args == "-k") { innerdim = atoi(argv[++i]); }
         else if (args == "-q") { q = Givaro::Integer(argv[++i]); }
+        else if (args == "-V") { initialSparsification = atoi(argv[++i]); }
+        else if (args == "-b") { blocksize = atoi(argv[++i]); }
+        else if (args == "-c") { maxnumcoeff = atoi(argv[++i]); }
+        else if (args == "-U") { initialElimination = atoi(argv[++i]); }
         else if (args == "-O") {
             randomloops = atoi(argv[++i]);
             if ( (randomloops>1) && (!DORANDOMSEARCH) ) {
@@ -147,10 +194,14 @@ int main(int argc, char** argv) {
     }
 
     if (filename == "") {
-        return Fmain(std::cin, q, matformat, innerdim, randomloops);
+        return Fmain(std::cin, q, matformat, innerdim, randomloops,
+                     blocksize, maxnumcoeff,
+                     initialElimination, initialSparsification);
     } else {
         std::ifstream inputmatrix(filename);
-        return Fmain(inputmatrix, q, matformat, innerdim, randomloops);
+        return Fmain(inputmatrix, q, matformat, innerdim, randomloops,
+                     blocksize, maxnumcoeff,
+                     initialElimination, initialSparsification);
     }
 }
 // ============================================================
