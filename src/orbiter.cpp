@@ -37,13 +37,13 @@
 // ===============================================================
 void usage(const char* prgname, const size_t randomloops) {
     std::clog << "Usage:" << prgname
-              << "  [-h|-b #|-m/-q #|-r # # #|-I x|-P P(x)] L.sms R.sms P.sms\n"
+              << "  [-h|-O/-b #|-m/-q #|-r # # #|-I x|-P P(x)|-s/-z/-c] L.sms R.sms P.sms\n"
               << "  [-b b]: random check with values of size 'bitsize'\n"
               << "  [-m/-q m]: check is modulo (mod) or (mod/2^k) (default no)\n"
               << "  [-r r e s]: check is modulo (r^e-s) or ((r^e-s)/2^k) (default no)\n"
               << "  [-I x]: indeterminate (default is X)\n"
               << "  [-P P(x)]: modular polynomial (default is none)\n"
-              << "  [-s|-z]: search sparser|faster (default is sparser)\n"
+              << "  [-s|-z|-c]: search sparser|faster|canonical (default is sparser)\n"
               << "  [-O #]: randomized search with that many loops (default "
               << randomloops << " loops)\n";
 
@@ -149,6 +149,22 @@ struct Operations {
     size_t operator()(const _Mat& L, const _Mat& R, const _Mat& P,
                       const size_t silent) {
         return PLinOpt::density(L,R,P,silent);
+    }
+};
+
+
+// Counting canonicals
+template<>
+struct Operations<2> {
+    template<typename _Mat>
+    size_t operator()(const _Mat& L, const _Mat& R, const _Mat& P,
+                      const size_t silent) {
+        size_t nnc(0);
+        _Mat TP(P.field(), P.coldim(), P.rowdim()); PLinOpt::Transpose(TP,P);
+        for(auto row=L.rowBegin(); row!=L.rowEnd(); ++row) if (row->size() == 1u) ++nnc;
+        for(auto row=R.rowBegin(); row!=R.rowEnd(); ++row) if (row->size() == 1u) ++nnc;
+        for(auto row=TP.rowBegin(); row!=TP.rowEnd(); ++row) if (row->size() == 1u) ++nnc;
+        return ((L.rowdim()+R.rowdim()+P.coldim())-nnc);
     }
 };
 
@@ -358,7 +374,7 @@ int main(int argc, char ** argv) {
     QPol::Element QP;
     std::vector<std::string> filenames;
 
-    size_t optim(0); // 0 for sparsity, 1 for nbops
+    size_t optim(0); // 0 for sparsity, 1 for nbops, 2 for canonicals
 
         // Parse arguments
 
@@ -390,6 +406,9 @@ int main(int argc, char ** argv) {
             else if (args[1] == 'z') {
                 optim = 1;
             }
+            else if (args[1] == 'c') {
+                optim = 2;
+            }
         } else { filenames.push_back(args); }
     }
     if (filenames.size() < 3) { usage(argv[0],randomloops); }
@@ -410,10 +429,13 @@ int main(int argc, char ** argv) {
         return Orbiter<0>()(QQX, QQXm, bitsize, randomloops, filenames);
     } else {
 		// Compute rational verification of rational matrices
-        if (optim == 1) {
-            return Orbiter<1>()(QQ, QQ, bitsize, randomloops, filenames);
-        } else {
-            return Orbiter<0>()(QQ, QQ, bitsize, randomloops, filenames);
+        switch(optim) {
+            case 2:
+                return Orbiter<2>()(QQ, QQ, bitsize, randomloops, filenames);
+            case 1:
+                return Orbiter<1>()(QQ, QQ, bitsize, randomloops, filenames);
+            default:
+                return Orbiter<0>()(QQ, QQ, bitsize, randomloops, filenames);
         }
     }
 }
