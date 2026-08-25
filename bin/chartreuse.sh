@@ -40,7 +40,7 @@ while [[ $# -gt 0 ]]; do
     exit 1
     ;;
     *)
-    FIL=$1
+    IFIL=$1
     shift # past argument
     ;;
     esac
@@ -53,9 +53,13 @@ NC='\033[0m'    # No Color
 
 #############################################################
 ## PLinOpt programs
-
 SLPCHK="${DIR}/SLPchecker${MOD}"
 DEPND="${DIR}/dependency${MOD}"
+
+#############################################################
+## Temporary file names
+NAM="chartreuse"
+
 #############################################################
 ## Show here-strings
 
@@ -68,23 +72,24 @@ function ShowQuietUniq() {
     echo -e "${!NAM}"| egrep -v '($^)'| sort -k1,1 -t';' --stable --unique
 }
 
+
+#############################################################
+## Remove no-op outputs
+FIL=$(egrep '(\+|-|\*|\/)' ${IFIL})
+# Show FIL
+
 #############################################################
 ## Variables to optimize
 
-OVARS=$(sed -r "s/([:=+-])/ /g" ${FIL}|awk '{var=$1;nbm=NF;b=nbm>3;if (!b){gsub(/[^*]/,""); b=length}; if (b) print "<"var","nbm"> "}')
+OVARS=$(sed -r "s/([:=+-])/ /g" <<< ${FIL} |awk '{var=$1;nbm=NF;b=nbm>3;if (!b){gsub(/[^*]/,""); b=length}; if (b) print "<"var","nbm"> "}')
 LOARS=(`echo "${OVARS}"`)
 >&2 echo "# [CHTRS] VARS>3 (${#LOARS[@]}): ${LOARS[@]}"
-
-#############################################################
-## Temporary file names
-
-NAM="chartreuse"
 
 #############################################################
 ## Define output and input variables of the subprogram
 ##     together with replacement names
 
-CHARS=(`sed 's/:=/ /;s/+/ /g;s/:=/ /;s/+/ /g;s/-/ /g;s/;.*/ /;s/\*[0-9]* / /g;s/\/[0-9]* / /g;s/)//g;s/(//g' ${FIL} | tr ' ' '\n' | sed 's/[0-9]//g;/^$/d' | sort -u| tr '\n' ' '`)
+CHARS=$(sed 's/:=/ /;s/+/ /g;s/:=/ /;s/+/ /g;s/-/ /g;s/;.*/ /;s/\*[0-9]* / /g;s/\/[0-9]* / /g;s/)//g;s/(//g' <<< ${FIL} | tr ' ' '\n' | sed 's/[0-9]//g;/^$/d' | sort -u| tr '\n' ' ')
 # >&2 echo "# CHARS: ${CHARS[@]}"
 
 NCHAR="a"
@@ -104,7 +109,7 @@ done
 #############################################################
 ## Build the subprogram in input 'i' and output 'o'
 
-BOD=$(sed "s/i/${NCHAR}/g;s/o/${OCHAR}/g" ${FIL})
+BOD=$(sed "s/i/${NCHAR}/g;s/o/${OCHAR}/g" <<< ${FIL})
 # Show BOD
 TSDO=$(cat <<< "${BOD}" | cut -d':' -f1 | sort -r| awk 'BEGIN {s=0} {print "s/"$1"/o"s"/g";s++}' |tac|tr '\n' ';')
 # Show TSDO
@@ -149,7 +154,7 @@ Combinations=$(SortLine <<< "${COMBR}" |sort -u)
 Show Combinations
 
 ## Write and sort the dependencies within the original program
-RELPL=$(sed -r 's/(.*):=(-.*);/\2-\1;/;s/(.*):=(.*);/+\2-\1;/' "${FIL}")
+RELPL=$(sed -r 's/(.*):=(-.*);/\2-\1;/;s/(.*):=(.*);/+\2-\1;/' <<< ${FIL})
 RELPS=$(SortLine <<< "${RELPL}" | awk '{orig=$0;gsub(/\+/,"PLUSPLUS");gsub(/\-/,"+");gsub(/PLUSPLUS/,"-");print orig; print}' |sort -u)
 
 ## Select only not known dependencies
