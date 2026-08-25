@@ -146,7 +146,7 @@ inline _Mat& zoiRandomMatrix(_Mat& M) {
 template<int Measure>
 struct Operations {
     template<typename _Mat>
-    size_t operator()(const _Mat& L, const _Mat& R, const _Mat& P,
+    inline size_t operator()(const _Mat& L, const _Mat& R, const _Mat& P,
                       const size_t silent) {
         return PLinOpt::density(L,R,P,silent);
     }
@@ -157,7 +157,7 @@ struct Operations {
 template<>
 struct Operations<2> {
     template<typename _Mat>
-    size_t operator()(const _Mat& L, const _Mat& R, const _Mat& P,
+    inline size_t operator()(const _Mat& L, const _Mat& R, const _Mat& P,
                       const size_t silent) {
         size_t nnc(0);
         _Mat TP(P.field(), P.coldim(), P.rowdim()); PLinOpt::Transpose(TP,P);
@@ -173,38 +173,40 @@ struct Operations<2> {
 template<>
 struct Operations<1> {
     template<typename _Mat>
-    size_t operator()(const _Mat& L, const _Mat& R, const _Mat& P,
-                      const size_t subloops) {
+    inline size_t operator()(const _Mat& L, const _Mat& R, const _Mat& P,
+                             const size_t subloops) {
         return nbOperations(L,R,P,subloops);
     }
 
     protected:
-template<typename _Mat>
-size_t nbOperations(const _Mat& M, const size_t rl) {
-    auto nbops(PLinOpt::naiveOps(M));
-    std::ostringstream sout;
-    Givaro::Timer global;
-    _Mat T(M.field(),M.coldim(),M.rowdim()); PLinOpt::Transpose(T,M);
-    PLinOpt::CSEOptimiser(nbops, sout, M.field(), M, T, global, rl);
-    return nbops.first+nbops.second;
-}
 
-template<typename Field>
-size_t nbOperations(const LinBox::DenseMatrix<Field>& A, const size_t rl) {
-    LinBox::SparseMatrix<Field> M(A.field(),A.rowdim(),A.coldim());
-    PLinOpt::dense2sparse(M,A);
-    return nbOperations(M, rl);
-}
+    template<typename _Mat>
+    inline size_t nbOperations(const _Mat& M, const size_t rl) {
+        auto nbops(PLinOpt::naiveOps(M));
+        std::ostringstream sout;
+        Givaro::Timer global;
+        _Mat T(M.field(),M.coldim(),M.rowdim()); PLinOpt::Transpose(T,M);
+        PLinOpt::CSEOptimiser(nbops, sout, M.field(), M, T, global, rl);
+        return nbops.first+nbops.second;
+    }
+
+    template<typename Field>
+    inline size_t nbOperations(const LinBox::DenseMatrix<Field>& A,
+                               const size_t rl) {
+        LinBox::SparseMatrix<Field> M(A.field(),A.rowdim(),A.coldim());
+        PLinOpt::dense2sparse(M,A);
+        return nbOperations(M, rl);
+    }
 
 
-template<typename _Mat>
-size_t nbOperations(const _Mat& L, const _Mat& R, const _Mat& P,
-                    const size_t rl) {
-    auto nbL(nbOperations(L,rl)),
-        nbR(nbOperations(R,rl)),
-        nbP(nbOperations(P,rl));
-    return nbL+nbR+nbP;
-}
+    template<typename _Mat>
+    inline size_t nbOperations(const _Mat& L, const _Mat& R, const _Mat& P,
+                               const size_t rl) {
+        auto nbL(nbOperations(L,rl)),
+            nbR(nbOperations(R,rl)),
+            nbP(nbOperations(P,rl));
+        return nbL+nbR+nbP;
+    }
 
 };
 

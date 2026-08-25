@@ -45,6 +45,7 @@ OPTMZR="${DIR}/optimizer${OPTFLAGS}${MOD}"
 MATTRP="${DIR}/matrix-transpose"
 TRSPZR="${DIR}/transpozer"
 CMPCTR="${DIR}/compacter"
+SGLVAR="${DIR}/singlevar.sh"
 
 GRE='\033[1;32m'
 RED='\033[0;41m'
@@ -100,9 +101,16 @@ done
 CHARS+=(${NCHAR})
 OCHAR=${NCHAR}
 while grep -q ${OCHAR} <<< ${CHARS[@]}; do
-    OCHAR=`echo ${OCHAR} | tr "a-z" "b-za"`
+    OCHAR=`echo ${OCHAR} | tr "a-z" "d-zabc"`
 done
 # >&2 echo "OCHAR: ${OCHAR}"
+
+CHARS+=(${OCHAR})
+ZCHAR=${OCHAR}
+while grep -q ${ZCHAR} <<< ${CHARS[@]}; do
+    ZCHAR=`echo ${ZCHAR} | tr "a-z" "d-zabc"`
+done
+# >&2 echo "ZCHAR: ${ZCHAR}"
 
 
 sed -i "s/i/${NCHAR}/g;s/o/${OCHAR}/g" ${BOD}
@@ -118,6 +126,7 @@ cat ${BOD} >> ${RES}
 
 TSDO=$(egrep -v "(^${VAR})" ${BOD} | cut -d':' -f1 | sort -r| awk 'BEGIN {s=0} {print "s/"$1"/o"s"/g";s++}' |tac|tr '\n' ';')
 egrep -v "(^${VAR})" ${BOD} | cut -d':' -f1 | sort -r| awk 'BEGIN {s=0} {print "o"s":="$1";";s++}' >> ${RES}
+# Show TSDO
 
 ###### sed -i -f ${SDO} ${RES}
 SDO=$(sed 's/s\/\([^\/]*\)\/\([^\/]*\)\/g/s\/\2\/\1\/g/g' <<< "${TSDO}")
@@ -146,7 +155,7 @@ function Compare() {
 #       Show SDI
       sed "s/${OCHAR}/o/g;s/${NCHAR}/i/g" ${BOD} > ${FND}
       uniq ${COM} &>> ${FND}
-       ((${CMPCTR} ${OPT} | egrep -v '(:=0;)' | sed "${SDI}${SDO}") >> ${FND}) 2> /dev/null
+       ((${CMPCTR} ${OPT} | ${SGLVAR} -c ${ZCHAR} | egrep -v '(:=0;)' | sed "${SDI}${SDO}") >> ${FND}) 2> /dev/null
   else
       if [[ "$DIF" -eq 0 ]]; then
 	  ADD=$((BEF[0]-AFT[0]))
@@ -162,10 +171,10 @@ function Compare() {
 	      >&2 echo -e "== ${BLU}${AFT[*]}\t\t less ${MSG} ...${NC}"
 
 	      SDI=$(tac <<< "${HEA}" | sed 's/:=/ /;s/;.*//' | awk '{print "s/"$2"/"$1"/g;"}' |tr '\n' ';')
-#	  Show SDI
+# 	      Show SDI
 	      sed "s/${OCHAR}/o/g;s/${NCHAR}/i/g" ${BOD} > ${FND}
 	      uniq ${COM} &>> ${FND}
-	      ((${CMPCTR} ${OPT} | egrep -v '(:=0;)' | sed "${SDI};${SDO}") >> ${FND}) 2> /dev/null
+	      ((${CMPCTR} ${OPT} | ${SGLVAR} -c ${ZCHAR} | egrep -v '(:=0;)' | sed "${SDI};${SDO}") >> ${FND}) 2> /dev/null
 	  else
 	      >&2 echo "== ${AFT[*]}"
 	  fi
