@@ -34,7 +34,7 @@ while [[ $# -gt 0 ]]; do
       exit 1
       ;;
     *)
-    FIL=$1
+    IFIL=$1
     shift # past argument
     ;;
     esac
@@ -73,17 +73,22 @@ RES="${NAM}-$$.slp"
 FND="${NAM}-$$.log"
 
 #############################################################
+## Remove no-op outputs (canonicals ...)
+FIL=$(egrep '(\+|-|\*|\/)' ${IFIL})
+# Show FIL
+
+#############################################################
 ## Recover all related variables to form the subprogram
 
 FROS="("
 for vari in ${VARS[@]}; do
-    FRO=`grep ${vari} ${FIL}| head -1 | sed 's/.*:=+//;s/.*:=-//;s/.*:=//;s/+/ /g;s/-/ /g;s/;.*/ /;s/\*[0-9]* / /g;s/\/[0-9]* / /g;s/ /\[\^0-9\]|/g'`
+    FRO=$(grep ${vari} <<< ${FIL}| head -1 | sed 's/.*:=+//;s/.*:=-//;s/.*:=//;s/+/ /g;s/-/ /g;s/;.*/ /;s/\*[0-9]* / /g;s/\/[0-9]* / /g;s/ /\[\^0-9\]|/g')
     FROS="${FROS}${FRO}"
 done
 FROS="${FROS}${VARP})"
 # >&2 echo "FROS: ${FROS}"
 
-egrep ${FROS} ${FIL} > ${BOD}
+$(egrep ${FROS} <<< ${FIL} > ${BOD})
 
 #############################################################
 ## Define output and input variables of the subprogram
@@ -171,7 +176,7 @@ function Compare() {
 	      >&2 echo -e "== ${BLU}${AFT[*]}\t\t less ${MSG} ...${NC}"
 
 	      SDI=$(tac <<< "${HEA}" | sed 's/:=/ /;s/;.*//' | awk '{print "s/"$2"/"$1"/g;"}' |tr '\n' ';')
-# 	      Show SDI
+#	      Show SDI
 	      sed "s/${OCHAR}/o/g;s/${NCHAR}/i/g" ${BOD} > ${FND}
 	      uniq ${COM} &>> ${FND}
 	      ((${CMPCTR} ${OPT} | ${SGLVAR} -c ${ZCHAR} | egrep -v '(:=0;)' | sed "${SDI};${SDO}") >> ${FND}) 2> /dev/null

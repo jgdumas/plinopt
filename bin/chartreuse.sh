@@ -74,7 +74,7 @@ function ShowQuietUniq() {
 
 
 #############################################################
-## Remove no-op outputs
+## Remove no-op outputs (canonicals ...)
 FIL=$(egrep '(\+|-|\*|\/)' ${IFIL})
 # Show FIL
 
