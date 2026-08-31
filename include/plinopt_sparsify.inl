@@ -748,8 +748,8 @@ int blockSparsifier(Givaro::Timer& elapsed, _Mat& CoB, _Mat& Res,
 }
 
 // ============================================================
-// Decomposing the matrix into:
-//   (Res=[identity,lower part])*(CoB=[upperpart])
+// Decomposing the matrix into (up to permutations):
+//   iM = (Res=[identity,lower part])*(CoB=[upperpart])
 //   with prescribed inner dimension
 // precondition: upper part is full-rank
 template<typename _Mat>
@@ -810,7 +810,7 @@ Tricounter backSolver(_Mat& CoB, _Mat& Res, const _Mat& iM) {
     for(size_t j=k; j<r; ++j)
         setRow(A2,j-k, M, j);
 
-#ifdef VERBATIM_PARSING
+#if VERBATIM_PARSING >= 3u
     T.write(std::clog   << "# [bSol] Initial perm.: ") << std::endl;
     CoB.write(std::clog << "# [bSol] Full row rank: ",FileFormat::Pretty)
                         << std::endl;
@@ -832,7 +832,7 @@ Tricounter backSolver(_Mat& CoB, _Mat& Res, const _Mat& iM) {
     GD.QLUPin(Rank, Det, P, L, U, Q, n, k );
 
 
-#ifdef VERBATIM_PARSING
+#if VERBATIM_PARSING >= 3u
     P.write(std::clog << "CoB P: ") << std::endl;
     L.write(std::clog << "CoB L: ", FileFormat::Pretty) << std::endl;
     U.write(std::clog << "CoB U: ", FileFormat::Pretty) << std::endl;
@@ -862,7 +862,42 @@ Tricounter backSolver(_Mat& CoB, _Mat& Res, const _Mat& iM) {
     dense2sparse(Res, R);
 #endif
 
+
+#if VERBATIM_PARSING >= 2u
+    const auto eops {nonzeroes(Res) };
+    std::clog << "# [bSLV] ini <nnz,nno>: " << eops << std::endl;
+#endif
+        // Pushing non-ones to CoB
+    FMatrix Tre(FF, k, r);
+    Transpose(Tre, Res);
+
+    for(size_t i(0); i<k; ++i) {
+            // Frequencies
+        std::map<Element,size_t> mfTre;
+        for(const auto& it: Tre[i]) {
+            mfTre[ Fabs(FF,it.second) ]++;
+        }
+            // Element of max-Frequency
+        size_t maxs(0u); Element q; FF.init(q);
+        for(const auto& it: mfTre) { if (it.second > maxs) {
+            maxs = it.second;
+            FF.assign(q,it.first);
+        } }
+            // If non-one, better push it in CoB
+        if (notAbsOne(FF, q)) {
+            for(auto& it: Tre[i]) FF.divin(it.second,q);
+            for(auto& it: CoB[i]) FF.mulin(it.second,q);
+        }
+    }
+
+
+    Transpose(Res, Tre);
     const auto rops {nonzeroes(Res) };
+
+#if VERBATIM_PARSING >= 2u
+    std::clog << "# [bSLV] red <nnz,nno>: " << rops << std::endl;
+#endif
+
     return Tricounter { rops.first, rops.second, density(CoB) };
 }
 
