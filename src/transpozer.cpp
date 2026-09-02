@@ -40,7 +40,8 @@
 #include "plinopt_programs.h"
 
 // ============================================================
-int Transpozer(std::istream& input) {
+int Transpozer(std::istream& input, bool compactOutput=true,
+               size_t numloops=0, bool simplSingle=true) {
     std::stringstream ssin; ssin << input.rdbuf();
     PLinOpt::VProgram_t progV; PLinOpt::programParser(progV, ssin);
     char next('d'); PLinOpt::parenthesisExpand(progV, next);
@@ -68,7 +69,16 @@ int Transpozer(std::istream& input) {
 #  endif
 #endif
 
-    return PLinOpt::Tellegen(ssout);
+    std::stringstream rawslp;
+    int rt=PLinOpt::Tellegen(rawslp,ssout);
+
+    if (compactOutput) {
+        PLinOpt::Compacter(std::cout, rawslp, numloops, simplSingle);
+    } else {
+        std::cout << rawslp.str() << std::flush;
+    }
+    return rt;
+//     return PLinOpt::Tellegen(std::cout,ssout);
 }
 
 
@@ -77,21 +87,40 @@ int Transpozer(std::istream& input) {
 // ============================================================
 // Main: select between file / std::cin for Transpozition
 int main(int argc, char** argv) {
-    if ( argc > 1 ) {
-        std::string args(argv[1]);
+    bool compactOutput(true);
+    size_t numloops(0);
+    bool simplSingle(true);
+    std::string filename;
+
+    for (int i = 1; argc>i; ++i) {
+        std::string args(argv[i]);
         if (args == "-h") {
-            std::clog << "Usage: " << argv[0] << " [stdin|file.prg]\n";
+            std::clog << "Usage: " << argv[0]
+                      << "[-r|-c [-O #] [-s/-n]] [stdin|file.prg]\n"
+                      << "  -r/-c: raw/compacted input (default compact)\n"
+                      << "  if compact:\n"
+                      << "    -s/-n: replace or not singly used variables\n"
+                      << "    -O #: number of trim loops (default until stable)"
+                      << std::endl;
             exit(-1);
         }
+        else if (args == "-r") { compactOutput = false; }
+        else if (args == "-c") { compactOutput = true; }
+        else if (args == "-s") { simplSingle = true; }
+        else if ((args == "-n") || (args == "-ns")) { simplSingle = false; }
+        else if (args == "-O") { numloops = atoi(argv[++i]); }
+        else { filename = args; }
+    }
 
-        std::ifstream ifile(argv[1]);
+    if (filename == "") {
+        return Transpozer(std::cin, compactOutput, numloops, simplSingle);
+    } else {
+        std::ifstream ifile(filename);
         if ( ifile ) {
-            int rt=Transpozer(ifile);
+            int rt=Transpozer(ifile, compactOutput, numloops, simplSingle);
             ifile.close();
             return rt;
         }
-    } else {
-        return Transpozer(std::cin);
     }
     return -1;
 }

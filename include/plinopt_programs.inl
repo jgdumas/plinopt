@@ -264,7 +264,8 @@ char unusedChar(const std::set<char>& C, const char cstart /* = 'a'-1 */) {
 
 // ============================================================
 // Main parsing procedure, writing the ouput program
-int Tellegen(std::istream& input, const char cchar /* = 'c'*/,
+int Tellegen(std::ostream& output, std::istream& input,
+             const char cchar /* = 'c'*/,
              const char ichar /* = 'i'*/, const char ochar /*= 'o'*/) {
         // Files contains a program with the following SYNTAX
         // [+] constants name start with 'c'
@@ -280,8 +281,7 @@ int Tellegen(std::istream& input, const char cchar /* = 'c'*/,
         //    each yi occurs singly in a given line
         //    One operation per line (';' stops the parsing of that line)
     std::stringstream ssin; ssin << input.rdbuf();
-    stackbuf sbuf;
-    std::ostream sout(&sbuf);
+    stackbuf sbuf; std::ostream sout(&sbuf);
 
         // Sets of variables
     std::set<std::string> varSet;   // List of found variables
@@ -320,7 +320,7 @@ int Tellegen(std::istream& input, const char cchar /* = 'c'*/,
                 std::clog << "# Constant found, unmodified : "
                           << line << std::endl;
 #endif
-                std::cout << line << std::endl;
+                output << line << std::endl;
                 continue;
             }
                 // Outputs are transposed into inputs
@@ -436,7 +436,7 @@ int Tellegen(std::istream& input, const char cchar /* = 'c'*/,
         // Initializing input variables
     for(const auto& variable: varSet) {
         if (variable[0] == freechar) { // Found input variable
-            std::cout << variable << ":=" << 0 << ';' << std::endl;
+            output << variable << ":=" << 0 << ';' << std::endl;
         }
     }
 
@@ -562,7 +562,7 @@ int Tellegen(std::istream& input, const char cchar /* = 'c'*/,
             if (line.find("=-", 0) != std::string::npos)
                 --(Nops.first);
 
-            std::cout << line << std::flush;
+            output << line << std::flush;
         }
     }
 
@@ -596,7 +596,7 @@ int Tellegen(std::istream& input, const char cchar /* = 'c'*/,
         if (variable[0] == freechar) { // Found input variable
             --dimOffset;
             std::string outvar(variable); outvar[0]=ochar;
-            std::cout << outvar << ":=" << variable << ';' << std::endl;
+            output << outvar << ":=" << variable << ';' << std::endl;
         }
     }
 
@@ -1676,6 +1676,53 @@ VProgram_t& parenthesisExpand(VProgram_t& P, char& nextfree) {
         nProgram.push_back(std::move(line));
     }
     return P=std::move(nProgram);
+}
+
+
+// ============================================================
+// Main compacting procedure, parsing then rewriting
+std::ostream& Compacter(std::ostream& sout, std::istream& input,
+                        const size_t numloops, const bool simplSingle) {
+        // Files contains a program with the following SYNTAX
+        // [+] input variables start with a character (default is 'i')
+        // [+] output variables start with a character (default is 'o')
+        // [+] lines are of the forms:
+        //    xi := sum (yi op(li)), with sum: + or -, and: op * or / or empty
+        //    One operation per line (';' stops the parsing of that line)
+    std::stringstream ssin; ssin << input.rdbuf();
+
+        // Line by line parsing
+    VProgram_t ProgramVector; programParser(ProgramVector, ssin);
+    const size_t PVs { progSize(ProgramVector) };
+    std::clog << std::string(40,'#') << std::endl;
+
+        // Semantic line removal
+    variablesTrimer(ProgramVector, simplSingle);
+    size_t prevPRs(PVs), currPRs(progSize(ProgramVector));
+
+    int iter(numloops); // decreasing 0 will never be == 0
+    do {
+        prevPRs = currPRs;
+        variablesTrimer(ProgramVector, simplSingle);
+        currPRs = progSize(ProgramVector);
+        std::clog << "# " << currPRs << "\telements\tinstead of "
+                  << prevPRs << std::endl;
+#ifdef VERBATIM_PARSING
+#  if VERBATIM_PARSING >= 5
+        std::clog << ProgramVector;
+        std::clog << std::string(40,'#') << std::endl;
+#  endif
+#endif
+    } while ( (currPRs < prevPRs) && (--iter != 0) ) ;
+
+    sout << ProgramVector;
+
+       // Comparing number of elements in the programs
+    std::clog << "# \033[1;32m" << currPRs << "\telements\tinstead of "
+              << PVs << "\033[0m" << std::endl;
+    std::clog << std::string(40,'#') << std::endl;
+
+    return sout;
 }
 
 

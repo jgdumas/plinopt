@@ -51,7 +51,7 @@ typedef std::vector<std::vector<std::string>> VProgram_t;
 
 // ============================================================
 // Main parsing procedure, writing the ouput program
-int Tellegen(std::istream& input, const char cchar = 'c',
+int Tellegen(std::ostream& sout, std::istream& input, const char cchar = 'c',
              const char ichar = 'i', const char ochar = 'o');
 // ============================================================
 
@@ -61,6 +61,11 @@ int Tellegen(std::istream& input, const char cchar = 'c',
 VProgram_t& programParser(VProgram_t& ProgramVector, std::stringstream& ssin);
 // ============================================================
 
+// ============================================================
+// Compacting programs, parsing then rewriting
+std::ostream& Compacter(std::ostream& sout, std::istream& input,
+                        const size_t numloops, const bool simplSingle=true);
+// ============================================================
 
 // ============================================================
 // Rewrites:

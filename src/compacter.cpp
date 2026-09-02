@@ -21,58 +21,6 @@
 
 #include "plinopt_programs.h"
 
-namespace PLinOpt {
-// ============================================================
-// Main compacting procedure, parsing then rewriting
-std::ostream& Compacter(std::ostream& sout, std::istream& input,
-                        const size_t numloops,
-                        const bool simplSingle=true) {
-        // Files contains a program with the following SYNTAX
-        // [+] input variables start with a character (default is 'i')
-        // [+] output variables start with a character (default is 'o')
-        // [+] lines are of the forms:
-        //    xi := sum (yi op(li)), with sum: + or -, and: op * or / or empty
-        //    One operation per line (';' stops the parsing of that line)
-    std::stringstream ssin; ssin << input.rdbuf();
-
-        // Line by line parsing
-    VProgram_t ProgramVector; programParser(ProgramVector, ssin);
-    const size_t PVs { progSize(ProgramVector) };
-    std::clog << std::string(40,'#') << std::endl;
-
-        // Semantic line removal
-    variablesTrimer(ProgramVector, simplSingle);
-    size_t prevPRs(PVs), currPRs(progSize(ProgramVector));
-
-    int iter(numloops); // decreasing 0 will never be == 0
-    do {
-        prevPRs = currPRs;
-        variablesTrimer(ProgramVector, simplSingle);
-        currPRs = progSize(ProgramVector);
-        std::clog << "# " << currPRs << "\telements\tinstead of "
-                  << prevPRs << std::endl;
-#ifdef VERBATIM_PARSING
-#  if VERBATIM_PARSING >= 5
-        std::clog << ProgramVector;
-        std::clog << std::string(40,'#') << std::endl;
-#  endif
-#endif
-    } while ( (currPRs < prevPRs) && (--iter != 0) ) ;
-
-    sout << ProgramVector;
-
-       // Comparing number of elements in the programs
-    std::clog << "# \033[1;32m" << currPRs << "\telements\tinstead of "
-              << PVs << "\033[0m" << std::endl;
-    std::clog << std::string(40,'#') << std::endl;
-
-    return sout;
-}
-
-} // End of namespace PLinOpt
-// ============================================
-
-
 // ============================================================
 // Main: select between file / std::cin
 int main(int argc, char** argv) {
