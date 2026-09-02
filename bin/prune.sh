@@ -67,7 +67,7 @@ while [[ $# -gt 0 ]]; do
     shift # past value
     ;;
     -h|--h|-help|--help|-*|--*)
-    echo "Usage: $0 [-O|-a #] [-q|-r|-m #] [-l pattern] [-n|-nl] [-p|-v] f.slp"
+    echo "Usage: $0 [-O|-a|-q|-r|-m #] [-l pattern] [-n|-p|-t|-v] f.slp"
       exit 1
       ;;
     *)
