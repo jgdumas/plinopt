@@ -118,13 +118,14 @@ std::ostream& PrettyPrint(std::ostream& out, std::istream& input,
             }
         }
 
-        std::clog << "# [READ]: \033[1;32m" << A.rowdim() << 'x' << A.coldim() << ' ' << nnz << ' ' << FNormSq << "\033[0m " << chrono << std::endl;
-
 #ifdef VERBATIM_PARSING
-        std::clog << "# row weights: ";
-        for(size_t i(0); i<A.rowdim(); ++i) std::clog << A[i].size() << ' ';
+        std::clog << "# [READ] row weights: ";
+        for(auto row=A.rowBegin(); row != A.rowEnd(); ++row)
+            std::clog << row->size() << ' ';
         std::clog << std::endl;
 #endif
+
+        std::clog << "# [READ]: \033[1;32m" << A.rowdim() << 'x' << A.coldim() << ' ' << nnz << ' ' << FNormSq << "\033[0m " << chrono << std::endl;
 
         if (maxsize <= 1) {
             PLinOpt::Matrix RA(QQ,A.rowdim(),A.coldim());
