@@ -17,6 +17,7 @@ MOD=""	# modular search
 LIM=""	# subset of variables containing LIM
 ALL=0	# Mirabelle on all variables at once, (with reduced -O $2)
 SQR=1	# Try all *pairs* of variables
+TRP=0	# Try all *triples* of variables
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -41,10 +42,17 @@ while [[ $# -gt 0 ]]; do
     ;;
     -p|-s|--pairs)
     SQR=1
+    TRP=0
     shift # past argument
     ;;
     -v|--no-pairs)
     SQR=0
+    TRP=0
+    shift # past argument
+    ;;
+    -t|--triples)
+    SQR=0
+    TRP=1
     shift # past argument
     ;;
     -n|-nl|--no-limit)
@@ -79,6 +87,14 @@ if [[ ${#VARS[@]} -gt 0 ]]; then
     for var in ${VARS[@]}; do
       for rav in ${VARS[@]}; do
 	${DIR}/mirabelle.sh -v $var -v $rav ${OPTFLAGS} ${MOD} ${FIL} |& tee -a ${LOG}
+      done
+    done
+  elif [[ ${TRP} -gt 0 ]]; then
+    for var in ${VARS[@]}; do
+      for rav in ${VARS[@]}; do
+	for arva in ${VARS[@]}; do
+	    ${DIR}/mirabelle.sh -v $var -v $rav -v $arva ${OPTFLAGS} ${MOD} ${FIL} |& tee -a ${LOG}
+	done
       done
     done
   else

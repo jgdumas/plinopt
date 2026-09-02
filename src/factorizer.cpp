@@ -28,11 +28,8 @@ template<typename _Mat>
 int TFactorizer(const _Mat& A, const FileFormat& matformat,
                 const size_t selectinnerdim, const size_t randomloops,
                 const size_t blocksize, const size_t maxnumcoeff,
-                const bool initialElimination,
+                const bool reduceMultipliers, const bool initialElimination,
                 const bool initialSparsification) {
-
-
-
     using FMatrix = _Mat;
     using Field = typename _Mat::Field;
     using DenseFMatrix = LinBox::DenseMatrix<Field>;
@@ -63,7 +60,7 @@ int TFactorizer(const _Mat& A, const FileFormat& matformat,
             // Factorizer
         FMatrix Ca(F, selectinnerdim, M.coldim());
         Givaro::Timer Felapse; Felapse.start();
-        Factorizer(Alt, Ca, M, randomloops, selectinnerdim);
+        Factorizer(Alt, Ca, M, randomloops, selectinnerdim, reduceMultipliers);
         Felapse.stop();
         elapsed += Felapse;
 
@@ -85,7 +82,7 @@ int TFactorizer(const _Mat& A, const FileFormat& matformat,
         elapsed += Felapse;
     } else {
         elapsed.start();
-        Factorizer(Alt, CoB, A, randomloops, selectinnerdim);
+        Factorizer(Alt, CoB, A, randomloops, selectinnerdim, reduceMultipliers);
         elapsed.stop();
     }
 
@@ -108,6 +105,7 @@ int Fmain(std::istream& input, const Givaro::Integer& q,
           const PLinOpt::FileFormat& mformat,
           const size_t innerdim, const size_t loops,
           const size_t blocksize, const size_t maxnumcoeff,
+          const bool reduceMultipliers,
           const bool initialElimination, const bool initialSparsification) {
         // ============================================================
         // Read Matrix of Linear Transformation
@@ -124,11 +122,11 @@ int Fmain(std::istream& input, const Givaro::Integer& q,
         const Field FF(q);
         FMatrix fM(rM, FF);
         return PLinOpt::TFactorizer(fM, mformat, innerdim, loops,
-                                    blocksize, maxnumcoeff,
+                                    blocksize, maxnumcoeff, reduceMultipliers,
                                     initialElimination, initialSparsification);
     } else {
         return PLinOpt::TFactorizer(rM, mformat, innerdim, loops,
-                                    blocksize, maxnumcoeff,
+                                    blocksize, maxnumcoeff, reduceMultipliers,
                                     initialElimination, initialSparsification);
     }
 }
@@ -150,6 +148,7 @@ int main(int argc, char** argv) {
     size_t blocksize(4u);                   // default column block size
     bool initialSparsification(false);
     bool initialElimination(true);
+    bool reduceMultipliers(false);
     Givaro::Integer q(0u);
 
     for (int i = 1; i<argc; ++i) {
@@ -157,15 +156,20 @@ int main(int argc, char** argv) {
         if (args == "-h") {
             std::clog
                 << "Usage: " << argv[0]
-                << " [-h|-M|-P|-S|-L|[-k|-O|-c|-b|-U|-V #]] [stdin|matrixfile.sms]\n"
+                << " [-h|-M|-P|-S|-L|[-k|-O|-c|-b|-d|-U|-V #]]"
+                << " [stdin|matrixfile.sms]\n"
                 << "  -k #: inner dimension (default is column dimension)\n"
                 << "  -M/-P/-S/-L: selects the ouput format\n"
-                << "  -V [1|0]: initial sparsification or not (default 0)\n"
+                << "  -V [1|0]: initial block sparsification or not (default "
+                << initialSparsification << ")\n"
                 << "  -b #: states the blocking dimension (default "
                 << blocksize << ")\n"
                 << "  -c #: max number of coefficients per iteration (default "
                 << maxnumcoeff << ")\n"
-                << "  -U [1|0]: initial LU factorization or not (default 1) \n"
+                << "  -U [1|0]: initial LU factorization or not (default "
+                << initialElimination << ") \n"
+                << "  -d [1|0]: minimizing non-ones (default "
+                << reduceMultipliers << ") \n"
                 << "  -q #: search modulo (default is Rationals)\n"
                 << "  -O #: search for reduced randomized sparsity (default "
                 << randomloops << " loops)\n";
@@ -182,6 +186,7 @@ int main(int argc, char** argv) {
         else if (args == "-b") { blocksize = atoi(argv[++i]); }
         else if (args == "-c") { maxnumcoeff = atoi(argv[++i]); }
         else if (args == "-U") { initialElimination = atoi(argv[++i]); }
+        else if (args == "-d") { reduceMultipliers = atoi(argv[++i]); }
         else if (args == "-O") {
             randomloops = atoi(argv[++i]);
             if ( (randomloops>1) && (!DORANDOMSEARCH) ) {
@@ -195,12 +200,12 @@ int main(int argc, char** argv) {
 
     if (filename == "") {
         return Fmain(std::cin, q, matformat, innerdim, randomloops,
-                     blocksize, maxnumcoeff,
+                     blocksize, maxnumcoeff, reduceMultipliers,
                      initialElimination, initialSparsification);
     } else {
         std::ifstream inputmatrix(filename);
         return Fmain(inputmatrix, q, matformat, innerdim, randomloops,
-                     blocksize, maxnumcoeff,
+                     blocksize, maxnumcoeff, reduceMultipliers,
                      initialElimination, initialSparsification);
     }
 }

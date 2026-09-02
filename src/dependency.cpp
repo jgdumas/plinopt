@@ -72,32 +72,32 @@ std::ostream& showLC(std::ostream& out, const Field& QQ, const Row_t& LC) {
 
 template<typename _Mat, typename _Arr>
 bool Explore(typename _Mat::Row& LC, _Arr& W, const _Mat& M, const size_t m,
-	     const _Arr&Coeffs, const size_t level) {
+             const _Arr&Coeffs, const size_t level) {
     typedef typename _Mat::Element _Elt;
     const auto& F(M.field());
     if (level>0) {
-	for(size_t q(m+1); q<M.rowdim(); ++q) {
-	    _Elt prevv,currv; F.assign(prevv, F.zero); F.assign(currv, F.zero);
-	    for(size_t v(0); v<Coeffs.size(); ++v) {
-		currv = Coeffs[v]-prevv; prevv = Coeffs[v];
-		LC.emplace_back(q,prevv);
-		for(const auto& el:M[q]) F.axpyin(W[el.first],currv,el.second);
-		if (isZero(F,W))  showLC(std::cout, F, LC);
-		else {
-		    const int i(isCano(F,W));
-		    if (i != -1) {
-			showOut(std::cout, F, 'i', i, -W[i]);
-			showLC(std::cout, F, LC);
-		    }
-		}
-		Explore(LC,W,M,q,Coeffs,level-1);
-		LC.pop_back();
-	    }
-	    for(const auto& el:M[q]) F.maxpyin(W[el.first],prevv,el.second);
-	}
-	return true;
+        for(size_t q(m+1); q<M.rowdim(); ++q) {
+            _Elt prevv,currv; F.assign(prevv, F.zero); F.assign(currv, F.zero);
+            for(size_t v(0); v<Coeffs.size(); ++v) {
+                currv = Coeffs[v]-prevv; prevv = Coeffs[v];
+                LC.emplace_back(q,prevv);
+                for(const auto& el:M[q]) F.axpyin(W[el.first],currv,el.second);
+                if (isZero(F,W))  showLC(std::cout, F, LC);
+                else {
+                    const int i(isCano(F,W));
+                    if (i != -1) {
+                        showOut(std::cout, F, 'i', i, -W[i]);
+                        showLC(std::cout, F, LC);
+                    }
+                }
+                Explore(LC,W,M,q,Coeffs,level-1);
+                LC.pop_back();
+            }
+            for(const auto& el:M[q]) F.maxpyin(W[el.first],prevv,el.second);
+        }
+        return true;
     } else
-	return false;
+        return false;
 }
 
 
@@ -128,12 +128,12 @@ int Depender(std::istream& input, QArray& Coeffs, const size_t maxnumcoeff,
 	// Try Coeffs and some coefficients in M
     for( auto indices = B.IndexedBegin();
 	 (indices != B.IndexedEnd()) ; ++indices ) {
-	augment(Coeffs, indices.value().nume(), QQ);
-	augment(Coeffs, indices.value().deno(), QQ);
+        augment(Coeffs, indices.value().nume(), QQ);
+        augment(Coeffs, indices.value().deno(), QQ);
     }
 
     for(size_t i=2; Coeffs.size() < maxnumcoeff; ++i) {
-	augment(Coeffs, Givaro::Integer(i), QQ);
+        augment(Coeffs, Givaro::Integer(i), QQ);
     }
 	// ========================================
 	// reduce to at most maxnumcoeff
@@ -141,13 +141,13 @@ int Depender(std::istream& input, QArray& Coeffs, const size_t maxnumcoeff,
 
     std::vector<_Elt> FCoeffs;
     for(const auto& e: Coeffs) {
-	_Elt num,den; F.init(num,e.nume()); F.init(den,e.deno());
-	F.divin(num,den);
-	if (! F.isZero(num)) {
-	    if(std::find(FCoeffs.begin(), FCoeffs.end(), num) == FCoeffs.end()) {
-		FCoeffs.push_back(num);
-	    }
-	}
+        _Elt num,den; F.init(num,e.nume()); F.init(den,e.deno());
+        F.divin(num,den);
+        if (! F.isZero(num)) {
+            if(std::find(FCoeffs.begin(), FCoeffs.end(), num) == FCoeffs.end()) {
+                FCoeffs.push_back(num);
+            }
+        }
     }
 
     std::clog << "# [DEPND] level " << level << ", coefficients: " << FCoeffs
@@ -156,12 +156,12 @@ int Depender(std::istream& input, QArray& Coeffs, const size_t maxnumcoeff,
     typename FMatrix::Row LC;
     FArray W(M.coldim(),F.zero);
     for(size_t i(0); i<M.rowdim(); ++i) {
-	std::clog << "# [DEPND] o" << i << std::endl;
-	LC.emplace_back(i,F.one);
-	for(const auto& el:M[i]) F.assign(W[el.first],el.second);
-	Explore(LC, W, M, i, FCoeffs, level-1);
-	for(const auto& el:M[i]) F.assign(W[el.first],F.zero);
-	LC.pop_back();
+        std::clog << "# [DEPND] o" << i << std::endl;
+        LC.emplace_back(i,F.one);
+        for(const auto& el:M[i]) F.assign(W[el.first],el.second);
+        Explore(LC, W, M, i, FCoeffs, level-1);
+        for(const auto& el:M[i]) F.assign(W[el.first],F.zero);
+        LC.pop_back();
     }
 
     elapsed.stop();

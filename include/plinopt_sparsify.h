@@ -47,8 +47,9 @@ namespace PLinOpt {
 // Factorizing into an Alternate basis times a CoB
 template<typename _Mat>
 int Factorizer(_Mat& Alt, _Mat& CoB, const _Mat& M,
-	       const size_t randomloops, const size_t selectinnerdim=0,
-	       const bool progressreport=true);
+	       const size_t randomloops,
+	       const size_t selectinnerdim=0,
+	       const bool redMul=false, const bool progReport=true);
 // ============================================================
 
 // ============================================================
@@ -103,7 +104,8 @@ Givaro::Timer& sparseAlternate(Givaro::Timer& chrono, _Mat& CoB, _Mat& Res,
 //   (Res=[identity,lower part])*(CoB=[upperpart])
 //   with prescribed inner dimension
 template<typename _Mat>
-Tricounter backSolver(_Mat& Res, _Mat& CoB, const _Mat& iM);
+Tricounter backSolver(_Mat& Res, _Mat& CoB, const _Mat& iM,
+                      const bool redMul=false);
 
 
 // ============================================================
