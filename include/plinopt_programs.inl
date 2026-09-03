@@ -185,7 +185,7 @@ VProgram_t& RemoveVars(VProgram_t& progV, Pair<size_t>& Pops,
 
             Pops -= lineOperations(*line);
 #if VERBATIM_PARSING > 1
-            std::clog << "# Removing (new ops=" << Pops.first << '|'
+            std::clog << "# [rmVR] Removing (new ops=" << Pops.first << '|'
                       << Pops.second << "): " << *line << std::endl;
 #endif
             line->resize(0);         // empty line
@@ -290,9 +290,9 @@ int Tellegen(std::ostream& output, std::istream& input,
     std::pair<size_t,size_t> Nops(0,0);
 
         // One pass to find a freechar
-    std::string ssstr; std::set<char> varsChar{'i','o',cchar};
+    std::string ssstr; std::set<char> varsChar{'i','o',ichar,ochar,cchar};
     for(std::string word{ichar}; !ssin.eof(); ssin>>word) {
-        varsChar.insert(word[0]);
+        varsChar.insert(word[0]); // variables are 1 char, the first one
     }
     const char next(cchar);
     const char zchar(unusedChar(varsChar,next));
@@ -317,7 +317,7 @@ int Tellegen(std::ostream& output, std::istream& input,
                 // Constants are left unmodified
             if (wordVector.front()[0] == cchar) {
 #ifdef VERBATIM_PARSING
-                std::clog << "# Constant found, unmodified : "
+                std::clog << "# [TRPZ] Constant found, unmodified : "
                           << line << std::endl;
 #endif
                 output << line << std::endl;
@@ -329,7 +329,7 @@ int Tellegen(std::ostream& output, std::istream& input,
                 inSet.insert( oneout );
                 oneout[0] = ichar;
 #ifdef VERBATIM_PARSING
-                std::clog << "# Output found, " << wordVector.front()
+                std::clog << "# [TRPZ] Output found, " << wordVector.front()
                           << ", becomes input: " << oneout<< std::endl;
 #endif
             }
@@ -355,7 +355,7 @@ int Tellegen(std::ostream& output, std::istream& input,
                         pos = line.find_first_of("+-*;", prev);
                         const std::string nnod(line.substr(prev, pos-prev));
 #ifdef VERBATIM_PARSING
-                        std::clog << "# Rational found: "
+                        std::clog << "# [TRPZ] Rational found: "
                                   << node << '/' << nnod << std::endl;
 #endif
                         node.append(delimiter);
@@ -377,7 +377,7 @@ int Tellegen(std::ostream& output, std::istream& input,
 #ifdef VERBATIM_PARSING
                 // =================
                 // Got a line
-            std::clog << "# Parsed: ";
+            std::clog << "# [TRPZ] Parsed: ";
             for(const auto& iter: wordVector) std::clog << iter << ' ';
             std::clog << std::endl;
 #endif
@@ -464,7 +464,7 @@ int Tellegen(std::ostream& output, std::istream& input,
         std::string line(*iter);
         if (line.size() == 0) continue;
 #ifdef VERBATIM_PARSING
-            std::clog << "# working on " << line << std::endl;
+            std::clog << "# [TRPZ] working on " << line;
 #endif
 
             // ==================================
@@ -482,8 +482,9 @@ int Tellegen(std::ostream& output, std::istream& input,
 
         if ( varposvec != varVector.end()) {
 #ifdef VERBATIM_PARSING
-            std::clog << "# First temporary, accumulation with " << variable
-                      << "=0 will be simplified in: " << line << std::endl;
+            std::clog << "# [TRPZ] First temporary, accumulation with "
+                      << variable
+                      << "=0 will be simplified in: " << line;
 #endif
             const auto accupos = line.find(variable, varlen);
 
@@ -520,10 +521,9 @@ int Tellegen(std::ostream& output, std::istream& input,
             if (line[prev] == ochar) {
                 if (modSet.find(param) == modSet.end()) {
 #ifdef VERBATIM_PARSING
-                    std::clog << "# Unmodified input usage of: "
+                    std::clog << "# [TRPZ] Unmodified input usage of: "
                               << line.substr(prev, pos-prev)
-                              << ", will be simplified in RHS: " << line
-                              << std::endl;
+                              << ", will be simplified in RHS: " << line;
 #endif
                     line[prev]=ichar;
                 } else {
@@ -532,10 +532,9 @@ int Tellegen(std::ostream& output, std::istream& input,
             } else if ((line[prev] != cchar) && (line[prev] != ichar)) {
                 if (modSet.find(param) == modSet.end()) {
 #ifdef VERBATIM_PARSING
-                    std::clog << "# Useless usage of uninitalized: "
+                    std::clog << "# [TRPZ] Useless usage of uninitalized: "
                               << param
-                              << ", will be simplified in RHS: " << line
-                              << std::endl;
+                              << ", will be simplified in RHS: " << line;
 #endif
                     pos = line.find_first_of("+-;", prev); // ignore 0 mul/div by constant
                     line.erase(prev, pos-prev);            // erase group of value 0
@@ -830,54 +829,54 @@ bool minLine(std::vector<std::string>& varline, const size_t index,
              const bool force=false){
     if (varline.front()[0] == outchar) {
         rotateMinus(varline);
-        if ( varline[2] == "-") {
 // std::clog << "# minLine: " << varline << std::endl;
-            for(size_t j=3; j<varline.size(); ++j) {
-                const auto variable(varline[j]);
-                VProgram_t nP; nP.assign(vP.begin(), vP.end());
-                if (isVariable(variable) &&
-                    (variable[0] != inchar) && (variable[0] != outchar) ) {
-                    int cm(1);
+        if ( varline[2] == "-") { for(size_t j=3; j<varline.size(); ++j) {
+            const auto variable(varline[j]);
+            VProgram_t nP; nP.assign(vP.begin(), vP.end());
+            if (isVariable(variable) &&
+                (variable[0] != inchar) && (variable[0] != outchar) ) {
+                int cm(1);
 // std::clog << "## found variable: " << variable << std::endl;
-                    for(int k=index-1; k>=0; --k) {
-                        if (nP[k].front() == variable) {
-                            const int bkm( (nP[k][2]=="-") ? 1 : 0);
-                            auto refline(negateLine(nP[k]));
-                            rotateMinus(refline);
-                            const int dkm(((refline[2]=="-")?1:0)-bkm);
+                for(int k=index-1; k>=0; --k) {
+                    if (nP[k].front() == variable) {
+                        const int bkm( (nP[k][2]=="-") ? 1 : 0);
+                        auto refline(negateLine(nP[k]));
+                        rotateMinus(refline);
+                        const int dkm(((refline[2]=="-")?1:0)-bkm);
 // std::clog << "## found line[" << k << "]: " << nP[k] << " --> dminus " << dkm << std::endl;
-                                // does it create a new minus?
-                            if (force || (dkm <= 0)) {
-                                cm += dkm;
-                            } else {
-                                break;
-                            }
+                            // does it create a new minus?
+                        if (force || (dkm <= 0)) {
+                            cm += dkm;
+                        } else {
+                            break;
+                        }
 
-                            nP[k] = std::move(refline);
+                        nP[k] = std::move(refline);
 // std::clog << "## repl. line[" << k << "]: " << nP[k] << std::endl;
 
-                            for(size_t l=k+1; l<nP.size(); ++l) {
-                                std::vector<std::string> negline;
-                                const int blm( (nP[l][2] == "-") ? 1 : 0 );
-                                const bool linmod(negatingVariable(negline, nP[l],
-                                                                   variable));
-                                rotateMinus(negline);
-                                nP[l] = std::move(negline);
-                                const int dlm( ((nP[l][2]=="-")?1:0) - blm);
-                                cm += dlm;
+                        for(size_t l=k+1; l<nP.size(); ++l) {
+                            std::vector<std::string> negline;
+                            const int blm( (nP[l][2] == "-") ? 1 : 0 );
+//                             const bool linmod(negatingVariable(negline,
+//                                                                nP[l],
+//                                                                variable));
+                            negatingVariable(negline, nP[l], variable);
+                            rotateMinus(negline);
+                            nP[l] = std::move(negline);
+                            const int dlm( ((nP[l][2]=="-")?1:0) - blm);
+                            cm += dlm;
 // if (linmod) std::clog << "## impa. line[" << l << "]: " << nP[l] << " --> lminus " << dlm << '/' << cm << std::endl;
-                                if (nP[l].front() == variable) break;
-                            }
+                            if (nP[l].front() == variable) break;
                         }
                     }
+                }
 // std::clog << "## variable impact: " << cm << std::endl;
-                    if (force || (cm <= 0)) {
-                        vP.assign(nP.begin(), nP.end());
-                        return true;
-                    }
+                if (force || (cm <= 0)) {
+                    vP.assign(nP.begin(), nP.end());
+                    return true;
                 }
             }
-        }
+        } }
     }
     return false;
 }
@@ -1291,7 +1290,7 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
             rotateMinus(init); // less sign changes if possible
 
 #ifdef VERBATIM_PARSING
-            std::clog << "# variable: " << variable
+            std::clog << "# [vTRM] var: " << variable
                       << ", P[" << i << "]: " << init
                       << ", P[" << j << "]: " << line << std::endl;
 #endif
@@ -1407,7 +1406,7 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
                 P[i].resize(0); // No need for that variable (& line) anymore
             }
 #ifdef VERBATIM_PARSING
-            std::clog << "#         : " << variable
+            std::clog << "# [vTRM]    : " << variable
                       << " --> P[" << j << "]: " << line << std::endl;
 #endif
 
@@ -1465,7 +1464,7 @@ _Mat& matrixBuilder(_Mat& A, const VProgram_t& P, const char outchar /* ='o'*/) 
 
     for(const auto& line: P) {
 #ifdef VERBATIM_PARSING
-        printline(std::clog << "# line: ", line) << std::endl;
+        printline(std::clog << "# [mBld] line: ", line) << std::endl;
 #endif
         const auto& output(line.front());
 
@@ -1573,9 +1572,9 @@ _Mat& matrixBuilder(_Mat& A, const VProgram_t& P, const char outchar /* ='o'*/) 
         setRow(M, i, newiline, 0);
 
 #ifdef VERBATIM_PARSING
-        std::clog << "# I: " << inputs << std::endl;
-        std::clog << "# V: " << variables << std::endl;
-        M.write(std::clog << "# M:", FileFormat::Pretty) << std::endl;
+        std::clog << "# [mBld] I: " << inputs << std::endl;
+        std::clog << "# [mBld] V: " << variables << std::endl;
+        M.write(std::clog << "# [mBld] M:", FileFormat::Pretty) << std::endl;
         std::clog << std::string(40,'#') << std::endl;
 #endif
 
@@ -1615,7 +1614,7 @@ _Mat& matrixBuilder(_Mat& A, const VProgram_t& P, const char outchar /* ='o'*/) 
 size_t extractParenthesis(VProgram_t& newP, std::vector<std::string>& line,
                           const char freechar, size_t& tmpnum) {
 #ifdef VERBATIM_PARSING
-    std::clog << "# initial " << freechar << "  line: " << line  << std::endl;
+    std::clog << "# [ePth] initial " << freechar << "  line: " << line  << std::endl;
 #endif
     size_t ep(0);
     auto openp = std::find(line.begin(),line.end(),"(");
@@ -1639,12 +1638,12 @@ size_t extractParenthesis(VProgram_t& newP, std::vector<std::string>& line,
         *openp = newvar;
         line.erase(openp+1, closp+1);
 #ifdef VERBATIM_PARSING
-        std::clog << "# new created line: " << newline  << std::endl;
+        std::clog << "# [ePth] new created line: " << newline  << std::endl;
 #endif
         ep = extractParenthesis(newP, newline, freechar, tmpnum);
         newP.push_back(newline);
 #ifdef VERBATIM_PARSING
-        std::clog << "# replaced    line: " << line
+        std::clog << "# [ePth] replaced    line: " << line
                   << " (" << (ep+1) << ')' << std::endl;
 #endif
         ep += extractParenthesis(newP, line, freechar, tmpnum);
@@ -1662,7 +1661,7 @@ VProgram_t& parenthesisExpand(VProgram_t& P, char& nextfree) {
         // Find two unused variable names
 
 
-    if ( static_cast<size_t>(nextfree) == 0u) nextfree='a'-1;
+    if ( static_cast<size_t>(nextfree) == 0u) nextfree='d';
     std::set<char> varsChar;
     for(const auto& line: P) for(const auto& word: line)
         varsChar.insert(word[0]);
@@ -1677,6 +1676,52 @@ VProgram_t& parenthesisExpand(VProgram_t& P, char& nextfree) {
     }
     return P=std::move(nProgram);
 }
+
+
+// ============================================================
+// Replaces all temporary variables names by variables with the same char
+VProgram_t& singleVar(VProgram_t& P,
+                      const char ichar /*='i'*/, const char ochar /*='o'*/) {
+    std::set<std::string> auxvariables;
+    for(const auto& line: P) {
+        const char & name(line[0][0]); // variable names 1 char, the first one
+        if ((name != ochar) && (name != ichar))
+            auxvariables.insert(line[0]);
+    }
+
+    if (auxvariables.size()>0u) {
+            // Uses the char of the last variable
+        const char achar((*auxvariables.rbegin())[0]);
+        size_t numvar(9u); // Will start numbering at 10
+
+#ifdef VERBATIM_PARSING
+        std::clog << std::string(40,'#') << std::endl;
+        std::clog << "# [sglV] : "
+                  << auxvariables << " --> " << achar << (numvar+1) << " .. "
+                  << achar << (numvar+auxvariables.size()) << std::endl;
+#endif
+
+        std::map<std::string,std::string> replace;
+        for(const auto& aux: auxvariables)
+            replace[aux]=std::string(1,achar)+std::to_string(++numvar);
+
+        for(auto& line: P) {
+            for(auto& word: line) {
+                auto it = replace.find(word);
+                if (it != replace.end()) {
+//                     std::clog << "# [sglV] in " << line << ", replace ["
+//                               << word << "] by [" << it->second << ']'
+//                               << std::endl;
+                    word.assign(it->second);
+                }
+            }
+        }
+
+    }
+
+    return P;
+}
+
 
 
 // ============================================================
@@ -1715,8 +1760,10 @@ std::ostream& Compacter(std::ostream& sout, std::istream& input,
 #endif
     } while ( (currPRs < prevPRs) && (--iter != 0) ) ;
 
-    sout << ProgramVector;
+        // Use a single char for the variable names
+    singleVar(ProgramVector);
 
+    sout << ProgramVector;
        // Comparing number of elements in the programs
     std::clog << "# \033[1;32m" << currPRs << "\telements\tinstead of "
               << PVs << "\033[0m" << std::endl;

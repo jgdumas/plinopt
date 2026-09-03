@@ -50,8 +50,8 @@ void usage(char ** argv) {
     const size_t randomloops(DORANDOMSEARCH?DEFAULT_RANDOM_LOOPS:1);
     std::clog << "Usage: " << argv[0] << " L.sms R.sms P.sms [-e|-m] [-O #]\n";
 
-    std::clog << "  -m: check for a matrix multiplication\n"
-              << "  -e: double expands the intermediate result\n"
+    std::clog << "  -e: double expands the intermediate result\n"
+              << "  -m: check for a matrix multiplication\n"
               << "  -O #: randomized search with that many loops (default "
               << randomloops << " loops)\n";
     exit(-1);
@@ -67,7 +67,10 @@ int main(int argc, char ** argv) {
     using PLinOpt::FileFormat;
 
     size_t randomloops(DORANDOMSEARCH?DEFAULT_RANDOM_LOOPS:1);
-    bool doexpand(false), checkmat(false);
+    bool doexpand(false);
+#ifdef INPLACE_CHECKER
+    bool checkmat(false);
+#endif
 
     if (argc<4) usage(argv);
 
@@ -76,7 +79,11 @@ int main(int argc, char ** argv) {
     for (int i = 1; i<argc; ++i) {
         std::string args(argv[i]);
         if (args == "-h") usage(argv);
-        else if (args == "-m") { checkmat = true; }
+        else if (args == "-m") {
+#ifdef INPLACE_CHECKER
+            checkmat = true;
+#endif
+        }
         else if (args == "-e") { doexpand = true; }
         else if (args == "-O") {
             randomloops = atoi(argv[++i]);

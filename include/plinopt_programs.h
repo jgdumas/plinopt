@@ -94,6 +94,12 @@ VProgram_t& parenthesisExpand(VProgram_t& P, char& nextfree);
 
 
 // ============================================================
+// Replaces all temporary variables names by variables with the same char
+VProgram_t& singleVar(VProgram_t& P,
+                      const char ichar ='i', const char ochar ='o');
+// ============================================================
+
+// ============================================================
 // Testing for a natural number within a string
 bool isNatural(const std::string& s);
 // ============================================================
