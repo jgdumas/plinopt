@@ -55,7 +55,7 @@ clean:
 #######
 
 SHELL=/bin/bash
-check: ${BIN} trspcheck pmcheck mmcheck opcheck slpcheck
+check: ${BIN} trspcheck modcheck pmcheck mmcheck opcheck slpcheck
 
 mmcheck: ./bin/MMchecker
 	$< data/2x2x2_7_Strassen_{L,R,P}.sms
@@ -69,6 +69,11 @@ pmcheck: ./bin/PMchecker
 	$< data/4o4o4_F243-11-44_{L,R,P}.sms -q 3 -P "1-X+X^5"
 	$< data/4o4o4_F243-Montgomery-13-42_{L,R,P}.sms -q 3 -P "X^5+X^4-X^3-X^2-1"
 
+modcheck: ./bin/sparsifier
+	$< data/2x2x2_7_Strassen_L.sms
+	$< -q 2 data/2x2x2_7_Strassen_L.sms
+	$< -q 3 data/2x2x2_7_Strassen_L.sms
+	$< -q 5 data/2x2x2_7_Strassen_L.sms
 
 TEMPFILE := $(shell mktemp)
 
