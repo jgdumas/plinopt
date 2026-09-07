@@ -64,7 +64,7 @@ VProgram_t& programParser(VProgram_t& ProgramVector, std::stringstream& ssin);
 // ============================================================
 // Compacting programs, parsing then rewriting
 std::ostream& Compacter(std::ostream& sout, std::istream& input,
-                        const size_t numloops, const bool simplSingle=true);
+                        const size_t numloops=0, const bool simplSingle=true);
 // ============================================================
 
 // ============================================================

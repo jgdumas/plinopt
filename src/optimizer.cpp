@@ -84,7 +84,8 @@ int FOptimiser(std::istream& input, const size_t randomloops,
                                    tryDirect, tryKernel, tryLU, tryAB,
                                    mostCSE, allkernels, KFI, verbose) );
 
-    std::cout << ssout.str() << std::flush;
+    std::stringstream ssin; ssin << ssout.str();
+    PLinOpt::Compacter(std::cout,ssin);
 
     if ((nbops.first !=0 || nbops.second != 0)) {
         std::clog << std::string(40,'#') << std::endl;
