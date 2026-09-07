@@ -153,18 +153,23 @@ struct Operations {
 };
 
 
-// Counting canonicals
+// Counting canonicals or reducing g_{inf,2}
 template<>
 struct Operations<2> {
     template<typename _Mat>
     inline size_t operator()(const _Mat& L, const _Mat& R, const _Mat& P,
                       const size_t silent) {
+#if defined(ACTION_HOUSEHOLDER)
+            // Minimizing g_{inf,2}
+        return size_t(1e6*Ginf2(L,R,P));
+#else
         size_t nnc(0);
         _Mat TP(P.field(), P.coldim(), P.rowdim()); PLinOpt::Transpose(TP,P);
         for(auto row=L.rowBegin(); row!=L.rowEnd(); ++row) if (row->size() == 1u) ++nnc;
         for(auto row=R.rowBegin(); row!=R.rowEnd(); ++row) if (row->size() == 1u) ++nnc;
         for(auto row=TP.rowBegin(); row!=TP.rowEnd(); ++row) if (row->size() == 1u) ++nnc;
         return ((L.rowdim()+R.rowdim()+P.coldim())-nnc);
+#endif
     }
 };
 
@@ -271,7 +276,7 @@ template<int Measure> struct Orbiter {
     PLinOpt::sparse2sparse(besthP,P);
     Givaro::Timer chrono; chrono.start();
 
-#pragma omp parallel for shared(L,R,P,m,k,n,bestopt,subloops,bestLj,bestRg,besthP)
+#pragma omp parallel for shared(L,R,P,m,k,n,bestopt,bestnz,subloops,bestLj,bestRg,besthP)
     for(size_t i=0; i<randomloops; ++i) {
         FMatrix U(FF,m,m), V(FF,k,k), W(FF,n,n);
         PLinOpt::zoiRandomMatrix(U);

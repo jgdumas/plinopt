@@ -999,7 +999,7 @@ int Factorizer(_Mat& Alt, _Mat& CoB, const _Mat& M,
         FMatrix lCoB(F, innerdim, M.coldim());
         FMatrix lAlt(F, M.rowdim(), innerdim);
         auto bSops{backSolver(lCoB, lAlt, M, redMul)};
-        
+
 #pragma omp critical
         {
             if (tricOpCount(bSops, nbops)) {

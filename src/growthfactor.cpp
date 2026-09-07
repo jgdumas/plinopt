@@ -14,137 +14,7 @@
  *     (https://hal.science/hal-04995684) ]
  **********************************************************************/
 
-#include "plinopt_library.h"
-
-#ifndef GIVABS
-#define GIVABS(a) ((a)>0?(a):-(a))
-#endif
-
-// ============================================
-// Element or second in pair
-template<typename T> double access(const T& a) { return double(a); }
-template<> double access(const std::pair<size_t, Givaro::Rational>& a) {
-    return double(a.second);
-}
-
-// ============================================
-// Different vector norms
-template<typename Vect_t> size_t norm0(const Vect_t& v) {
-    return v.size();
-}
-
-template<typename Vect_t> double norm1(const Vect_t& v) {
-    double s(0); for(const auto& it: v) s += GIVABS(access(it));
-    return s;
-}
-
-template<typename Vect_t> double norm2(const Vect_t& v) {
-    double s(0.); for(const auto& it: v) s += access(it)*access(it);
-    return std::sqrt(s);
-}
-
-template<typename Vect_t> double norminfty(const Vect_t& v) {
-    double s(0.); for(const auto& it: v) {
-        double r = GIVABS(access(it));
-        if (r>s) s=r;
-    }
-    return s;
-}
-
-// ============================================
-// Gamma factors
-
-// (n1 L * n1 R) * abs Pij
-std::vector<double> GPinf(const PLinOpt::Matrix& L,
-                          const PLinOpt::Matrix& R,
-                          const PLinOpt::Matrix& P) {
-    std::vector<double> r(P.rowdim(),0);
-    for(size_t i(0); i<P.coldim(); ++i) {
-        const double n1LRi(norm1(L[i])*norm1(R[i]));
-        for(size_t j(0); j<P.rowdim(); ++j) {
-            r[j] += n1LRi*GIVABS(double(P.getEntry(j,i)));
-        }
-    }
-    return r;
-}
-
-// max GPinf
-double Ginfinf(const PLinOpt::Matrix& L,
-               const PLinOpt::Matrix& R,
-               const PLinOpt::Matrix& P) {
-    auto r( GPinf(L,R,P) );
-    return *std::max_element(r.begin(),r.end());
-}
-
-// n2 GPinf
-double G2inf(const PLinOpt::Matrix& L,
-             const PLinOpt::Matrix& R,
-             const PLinOpt::Matrix& P) {
-    return norm2(GPinf(L,R,P) );
-}
-
-// (n2 L * n2 R) * abs Pij
-std::vector<double> GP2(const PLinOpt::Matrix& L,
-                        const PLinOpt::Matrix& R,
-                        const PLinOpt::Matrix& P) {
-    std::vector<double> r(P.rowdim(),0.);
-    for(size_t i(0); i<P.coldim(); ++i) {
-        const double n2LRi(norm2(L[i])*norm2(R[i]));
-        for(size_t j(0); j<P.rowdim(); ++j) {
-            r[j] += n2LRi*GIVABS(double(P.getEntry(j,i)));
-        }
-    }
-    return r;
-}
-
-// max GP2
-double Ginf2(const PLinOpt::Matrix& L,
-             const PLinOpt::Matrix& R,
-             const PLinOpt::Matrix& P) {
-    auto r( GP2(L,R,P) );
-    return *std::max_element(r.begin(),r.end());
-}
-
-
-// n2 GP2
-double G22(const PLinOpt::Matrix& L,
-           const PLinOpt::Matrix& R,
-           const PLinOpt::Matrix& P) {
-    return norm2(GP2(L,R,P) );
-}
-
-// n2 L * n2 R * n2 P
-double G2(const PLinOpt::Matrix& L,
-          const PLinOpt::Matrix& R,
-          const PLinOpt::Matrix& P) {
-    PLinOpt::Matrix Pt(P.field()); PLinOpt::Transpose(Pt,P);
-    double s(0.); for(size_t i(0); i<P.coldim(); ++i) {
-        s += norm2(L[i])*norm2(R[i])*norm2(Pt[i]);
-    }
-    return s;
-}
-
-// Q0 factor
-double Q0(const PLinOpt::Matrix& L,
-          const PLinOpt::Matrix& R,
-          const PLinOpt::Matrix& P) {
-
-    std::vector<double> n0LR(P.coldim(),0.);
-    for(size_t i(0); i<P.coldim(); ++i) n0LR[i] = norm0(L[i])*norm0(R[i]);
-
-    std::vector<double> r(P.rowdim(),0.);
-    for(size_t j(0); j<P.rowdim(); ++j) {
-        for(const auto& it: P[j]) {
-            const auto& n0LRi(n0LR[it.first]);
-            if (n0LRi > r[j]) r[j]= n0LRi;
-        }
-        r[j] += norm0(P[j]);
-    }
-    return *std::max_element(r.begin(),r.end());
-}
-
-#define Qk(q0,gamma,k) ((q0)*(gamma)/std::abs((gamma)-(k)))
-
+#include "plinopt_norms.h"
 
 // ===============================================================
 // argv[1-3]: L.sms R.sms P.sms
@@ -189,20 +59,20 @@ int main(int argc, char ** argv) {
         // =============================================
         // Different norms
 
-    const double ginfinf(Ginfinf(L,R,P));
-    const double ginf2(Ginf2(L,R,P));
-    const double g2inf(G2inf(L,R,P));
-    const double g22(G22(L,R,P));
-    const double g2(G2(L,R,P));
-    const double q0(Q0(L,R,P));
+    const double ginfinf(PLinOpt::Ginfinf(L,R,P));
+    const double ginf2(PLinOpt::Ginf2(L,R,P));
+    const double g2inf(PLinOpt::G2inf(L,R,P));
+    const double g22(PLinOpt::G22(L,R,P));
+    const double g2(PLinOpt::G2(L,R,P));
+    const double q0(PLinOpt::Q0(L,R,P));
 
-    const double qkinfinf(Qk(q0,ginfinf,k));
-    const double q1inf2(Qk(q0,ginf2,1));
-    const double q12inf(Qk(q0,g2inf,1));
+    const double qkinfinf(_PLO_Qk_(q0,ginfinf,k));
+    const double q1inf2(_PLO_Qk_(q0,ginf2,1));
+    const double q12inf(_PLO_Qk_(q0,g2inf,1));
     const double sqrtk(std::sqrt(double(k)));
     const double kth(sqrtk*sqrtk*sqrtk);
-    const double qk2inf(Qk(q0,g2inf,kth));
-    const double q122(Qk(q0,g22,1));
+    const double qk2inf(_PLO_Qk_(q0,g2inf,kth));
+    const double q122(_PLO_Qk_(q0,g22,1));
 
 
     std::clog << std::fixed << std::setw(8)
