@@ -31,6 +31,7 @@
 #include <givaro/givquotientdomain.h>
 #include "plinopt_polynomial.h"
 #include "plinopt_library.h"
+#include "plinopt_norms.h"
 #include "plinopt_sparsify.h"
 #include "plinopt_optimize.h"
 
@@ -161,7 +162,7 @@ struct Operations<2> {
                       const size_t silent) {
 #if defined(ACTION_HOUSEHOLDER)
             // Minimizing g_{inf,2}
-        return size_t(1e6*Ginf2(L,R,P));
+        return size_t(1e6*PLinOpt::Ginf2(L,R,P));
 #else
         size_t nnc(0);
         _Mat TP(P.field(), P.coldim(), P.rowdim()); PLinOpt::Transpose(TP,P);
