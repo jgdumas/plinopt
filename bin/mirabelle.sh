@@ -44,6 +44,7 @@ SLPCHK="${DIR}/SLPchecker${MOD}"
 OPTMZR="${DIR}/optimizer${OPTFLAGS}${MOD}"
 MATTRP="${DIR}/matrix-transpose"
 TRSPZR="${DIR}/transpozer"
+SGLVAR="${DIR}/singlevar.sh"
 
 GRE='\033[1;32m'
 RED='\033[0;41m'
@@ -158,7 +159,7 @@ function Compare() {
 #       Show SDI
       sed "s/${OCHAR}/o/g;s/${NCHAR}/i/g" ${BOD} > ${FND}
       uniq ${COM} &>> ${FND}
-       ((egrep -v '(:=0;)' ${OPT} | sed "${SDI}${SDO}") >> ${FND}) 2> /dev/null
+       ((${SGLVAR} -c ${ZCHAR} ${OPT} | egrep -v '(:=0;)' | sed "${SDI}${SDO}") >> ${FND}) 2> /dev/null
   else
       if [[ "$DIF" -eq 0 ]]; then
 	  ADD=$((BEF[0]-AFT[0]))
@@ -177,7 +178,7 @@ function Compare() {
 #	      Show SDI
 	      sed "s/${OCHAR}/o/g;s/${NCHAR}/i/g" ${BOD} > ${FND}
 	      uniq ${COM} &>> ${FND}
-	      ((egrep -v '(:=0;)' ${OPT}| sed "${SDI};${SDO}") >> ${FND}) 2> /dev/null
+	      ((${SGLVAR} -c ${ZCHAR} ${OPT} | egrep -v '(:=0;)' | sed "${SDI};${SDO}") >> ${FND}) 2> /dev/null
 	  else
 	      >&2 echo "== ${AFT[*]}"
 	  fi
