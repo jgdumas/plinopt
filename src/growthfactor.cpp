@@ -42,7 +42,7 @@ int main(int argc, char ** argv) {
         return 2;
     }
 
-#ifdef VERBATIM_PARSING
+#if VERBATIM_PARSING >= 2
     L.write(std::clog << "L:=",FileFormat::Maple) << ';' << std::endl;
     R.write(std::clog << "R:=",FileFormat::Maple) << ';' << std::endl;
     P.write(std::clog << "P:=",FileFormat::Maple) << ';' << std::endl;

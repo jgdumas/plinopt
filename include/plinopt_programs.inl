@@ -827,6 +827,9 @@ bool negatingVariable(std::vector<std::string>& line,
 bool minLine(std::vector<std::string>& varline, const size_t index,
              VProgram_t & vP, const char inchar, const char outchar,
              const bool force=false){
+#if VERBATIM_PARSING >= 6
+    std::clog << "# [mLn] of " << varline << std::endl;
+#endif
     if (varline.front()[0] == outchar) {
         rotateMinus(varline);
 // std::clog << "# minLine: " << varline << std::endl;
@@ -873,11 +876,17 @@ bool minLine(std::vector<std::string>& varline, const size_t index,
 // std::clog << "## variable impact: " << cm << std::endl;
                 if (force || (cm <= 0)) {
                     vP.assign(nP.begin(), nP.end());
+#if VERBATIM_PARSING >= 6
+    std::clog << "# [mLn] true  " << varline << std::endl;
+#endif
                     return true;
                 }
             }
         } }
     }
+#if VERBATIM_PARSING >= 6
+    std::clog << "# [mLn] false " << varline << std::endl;
+#endif
     return false;
 }
 
@@ -1063,6 +1072,7 @@ std::vector<std::string>& parenthesisMinusLine(std::vector<std::string>& line) {
 #endif
         line.assign(newline.begin(), newline.end());
     }
+
     return line;
 }
 // ============================================================
@@ -1444,8 +1454,18 @@ size_t variablesTrimer(VProgram_t& P, const bool simplSingle,
     endingMinus(P, inchar, outchar, true);
 
         // ==================================
+        // [*] Tries to remove minus signs after & before parenthesis
         // [*] Rotates lines starting with a '-'
-    for(auto& line : P) rotateMinus(line);
+    for(auto& line : P) {
+        line = swapParenthesisMinus(line.begin(), line.end());
+        if ((line[1] == ":=") && (line[2] == "(") && (line[3] == "-")) {
+                // after rotations there remains ":=(-"
+                // transform into ":=+(-x-y-...-z)", then ":=-(x+y+...+z)"
+            line.insert(line.begin()+2,"+");
+            line = swapParenthesisMinus(line.begin(), line.end());
+        }
+        rotateMinus(line);
+    }
 
     return tmpnum;
 }

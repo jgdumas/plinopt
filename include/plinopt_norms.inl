@@ -112,6 +112,11 @@ inline std::vector<double> GP2(const _Mat& L, const _Mat& R, const _Mat& P) {
 template<typename _Mat>
 inline double Ginf2(const _Mat& L, const _Mat& R, const _Mat& P) {
     auto r( GP2(L,R,P) );
+#ifdef VERBATIM_PARSING
+    std::clog << "# [GP2] ";
+    for(const auto& it: r) std::clog << it << ' ';
+    std::clog << std::endl;
+#endif
     return *std::max_element(r.begin(),r.end());
 }
 
