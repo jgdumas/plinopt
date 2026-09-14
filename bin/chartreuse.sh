@@ -81,7 +81,7 @@ FIL=$(egrep '(\+|-|\*|\/)' ${IFIL})
 #############################################################
 ## Variables to optimize
 
-OVARS=$(sed -r "s/([:=+-])/ /g" <<< ${FIL} |awk '{var=$1;nbm=NF;b=nbm>3;if (!b){gsub(/[^*]/,""); b=length}; if (b) print "<"var","nbm"> "}')
+OVARS=$(sed -r "s/([:=+-])/ /g" <<< ${FIL} |awk '{var=$1;nbm=NF;b=nbm>3;if (!b){gsub(/[^*]/,""); b=length}; if (b) print var,nbm}' | sort -k2nr | awk '{print "<"$1","$2">";}')
 LOARS=(`echo "${OVARS}"`)
 >&2 echo "# [CHTRS] VARS>3 (${#LOARS[@]}): ${LOARS[@]}"
 
