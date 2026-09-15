@@ -72,8 +72,8 @@ RES="${NAM}-$$.slp"
 FND="${NAM}-$$.log"
 
 #############################################################
-## Remove no-op outputs (canonicals ...)
-FIL=$(egrep '(\+|-|\*|\/)' ${IFIL})
+## Remove no-op outputs (canonicals, neg of canonicals ...)
+FIL=$(egrep '(\+|-|\*|\/)' ${IFIL}| egrep -v '(=-[^\+-\*\/]*;)')
 # Show FIL
 
 #############################################################
