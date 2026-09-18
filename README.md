@@ -50,7 +50,7 @@
 | :--------- | :------ |
 |`bin/sms2pretty` | pretty prints a matrix from a file |
 |`bin/matrix-transpose` | transposes a matrix from an SMS file |
-|`bin/SLPchecker` | asserts correctness of program, with respect to a matrix |
+|`bin/SLPchecker` | Transforms an SLP to a matrix (can thus asserts correctness of program, with respect to an external matrix) |
 |`bin/MMchecker` | asserts correctness of trilinear program for matrix-multiplication |
 |`bin/PMchecker` | asserts correctness of trilinear program for polynomial-multiplication |
 |`bin/dependency` | finds linear dependencies between rows |
@@ -58,7 +58,7 @@
 |  |  |
 
 
-**Scipts**:
+**Scripts**:
 |  |  |
 | :--------- | :------ |
 |`bin/mirabelle.sh` | tries to remove or to reduce temporary variables in an SLP |
