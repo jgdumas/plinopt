@@ -25,6 +25,7 @@
 // Main: select between file / std::cin
 int main(int argc, char** argv) {
     bool simplSingle(true);
+    bool inPlace(false);
     std::string filename;
     size_t numloops(0);
 
@@ -32,13 +33,15 @@ int main(int argc, char** argv) {
         std::string args(argv[i]);
         if (args == "-h") {
             std::clog << "Usage: " << argv[0]
-                      << "[-s/-n] [-O #] [stdin|file.prg]\n"
+                      << "[-s/-n] [-O #] [stdin|file.slp]\n"
+                      << "  -i: overwrites file.slp with output\n"
                       << "  -s/-n: replace/not-replace singly used variables\n"
                       << "  -O #: number of trim loops (default until stable)"
                       << std::endl;
             exit(-1);
         }
         else if (args == "-s") { simplSingle = true; }
+        else if (args == "-i") { inPlace = true; }
         else if ((args == "-n") || (args == "-ns")) { simplSingle = false; }
         else if (args == "-O") { numloops = atoi(argv[++i]); }
         else { filename = args; }
@@ -47,10 +50,18 @@ int main(int argc, char** argv) {
     if (filename == "") {
         PLinOpt::Compacter(std::cout, std::cin, numloops, simplSingle);
     } else {
-        std::ifstream ifile(filename);
-        if ( ifile ) {
-            PLinOpt::Compacter(std::cout, ifile, numloops, simplSingle);
-            ifile.close();
+        std::fstream file(filename);
+        if ( file ) {
+            if (inPlace) {
+                std::ostringstream sout;
+                PLinOpt::Compacter(sout, file, numloops, simplSingle);
+                file.close();
+                file.open(filename, std::ofstream::out | std::ofstream::trunc);
+                file << sout.str();
+            } else {
+                PLinOpt::Compacter(std::cout, file, numloops, simplSingle);
+            }
+            file.close();
         }
     }
 

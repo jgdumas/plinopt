@@ -150,7 +150,7 @@ int Depender(std::istream& input, QArray& Coeffs, const size_t maxnumcoeff,
         }
     }
 
-    std::clog << "# [DEPND] level " << level << ", coefficients: " << FCoeffs
+    std::clog << "# [DEPND] " << M.rowdim() << " outputs, level " << level << ", coefficients: " << FCoeffs
 	      << std::endl;
 
     typename FMatrix::Row LC;
