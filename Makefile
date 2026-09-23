@@ -55,7 +55,7 @@ clean:
 #######
 
 SHELL=/bin/bash
-check: ${BIN} trspcheck modcheck pmcheck mmcheck opcheck slpcheck
+check: ${BIN} trspcheck modcheck pmcheck mmcheck altcheck opcheck slpcheck
 
 mmcheck: ./bin/MMchecker
 	$< data/2x2x2_7_Strassen_{L,R,P}.sms
@@ -77,7 +77,7 @@ modcheck: ./bin/sparsifier
 
 TEMPFILE := $(shell mktemp)
 
-trspcheck: ./bin/compacter ./bin/transpozer ./bin/SLPchecker data/test-prg.sms 
+trspcheck: ./bin/compacter ./bin/transpozer ./bin/SLPchecker data/test-prg.sms
 	./bin/transpozer data/test-prg.slp | ./bin/compacter | ./bin/transpozer | ./bin/compacter | ./bin/SLPchecker -M data/test-prg.sms
 
 
@@ -90,6 +90,15 @@ opcheck: ./bin/GDT.sh ${BIN}
 slpcheck: ./bin/optimizer ./bin/FDT.sh
 	./bin/optimizer data/2x2x2_7_DPS-accurate_L.sms -E -N | ./bin/compacter | ./bin/SLPchecker -M data/2x2x2_7_DPS-accurate_L.sms
 	./bin/FDT.sh
+
+altcheck: ./bin/ALTchecker.sh
+	./bin/ALTchecker.sh data/4x4x4_48_204-16{CoB,ALT}_L.slp -M data/4x4x4_48_204_L.sms
+	./bin/ALTchecker.sh data/4x4x4_48_204-16{CoB,ALT}_R.slp -M data/4x4x4_48_204_R.sms
+	./bin/ALTchecker.sh data/4x4x4_48_204-16{ALT,CoB}_P.slp -M data/4x4x4_48_204_P.sms
+	./bin/ALTchecker.sh data/4x4x4_48_204-24{CoB,ALT}_L.slp -M data/4x4x4_48_204_L.sms
+	./bin/ALTchecker.sh data/4x4x4_48_204-24{CoB,ALT}_R.slp -M data/4x4x4_48_204_R.sms
+	./bin/ALTchecker.sh data/4x4x4_48_204-24{ALT,CoB}_P.slp -M data/4x4x4_48_204_P.sms
+	./bin/ALTchecker.sh data/4x4x4_48_204-32{ALT,CoB}_P.slp -M data/4x4x4_48_204_P.sms
 
 largecheck: ./bin/MMchecker ./bin/SLPchecker
 	./bin/MMchecker -b 5 data/32x32x32_15096_{L,R,P}.sms
