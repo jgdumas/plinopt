@@ -99,7 +99,7 @@ int SLPcheck(const std::string& prgname, const std::string& matname,
             return 1;
         }
     } else {
-        A.write(std::cout, FileFormat(5)) << std::endl;
+        A.write(std::cout, FileFormat(5));
     }
     return 0;
 }
