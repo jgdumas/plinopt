@@ -37,6 +37,11 @@ while [[ $# -gt 0 ]]; do
     ;;
     -h|--h|-help|--help|-*|--*)
     echo "Usage: $0 [-c|-q|-l #] [-v \"# ... #\"] P.slp"
+    echo "  -O #: randomized search with that many loops"
+    echo "  -q #: search modulo"
+    echo "  -l #: recursive levels"
+    echo "  -c #: number of different coefficients"
+    echo "  -v \"# ... #\": space separated list of explicit coefficients"
     exit 1
     ;;
     *)

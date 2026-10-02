@@ -31,6 +31,9 @@ while [[ $# -gt 0 ]]; do
     ;;
     -h|--h|-help|--help|-*|--*)
     echo "Usage: $0 [-O|-q #] [-v var[|var]*] P.slp"
+    echo "  -O #: randomized search with that many loops"
+    echo "  -v var: try to remove that variable (several -v var allowed)"
+    echo "  -v \"v1|v2|...|vn\": try all these variables simultaneously"
       exit 1
       ;;
     *)

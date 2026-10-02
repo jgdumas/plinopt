@@ -30,6 +30,9 @@ while [[ $# -gt 0 ]]; do
     ;;
     -h)
       echo "Usage: $0 [-c|-z x] [-s #] [-i] f.slp"
+      echo "  -i: inplace"
+      echo "  -c|-z x: replace all variable letters by x with renumbering"
+      echo "  -s #: start renumbering after # (default 10)"
       exit 1
       ;;
     *)

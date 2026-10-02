@@ -12,19 +12,22 @@
 
 #example: ./bin/ALTchecker.sh data/4x4x4_48_204-16{CoB,ALT}_R.slp -M data/4x4x4_48_204_R.sms
 
+DIR=`dirname $0`
+SLPCHK="${DIR}/SLPchecker"
+OPSCNT="${DIR}/OpCount.sh"
+
 if [[ $# -lt 2  ]]; then
   echo "Usage: $0 l.slp r.slp [-q #] [-M file.sms]"
+  echo "  (all parameters after l.slp r.slp are passed to ${SLPCHK})"
+  echo "  -q #: search modulo"
+  echo "  -M file.sms: checks the resulting SLP with file.sms"
   exit 1
 fi
 
-DIR=`dirname $0`
 LeftSLP=$1
 RightSLP=$2
 shift
 shift
-
-SLPCHK="${DIR}/SLPchecker"
-OPSCNT="${DIR}/OpCount.sh"
 
 function SLPSMSchk() {
     local SLP=$1

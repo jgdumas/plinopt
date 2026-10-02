@@ -29,7 +29,9 @@ while [[ $# -gt 0 ]]; do
     shift # past argument
     ;;
     -h|--h|-help|--help|-*|--*)
-    echo "Usage: $0 [-d left/right] [-r|-l] L.sms R.sms P.sms"
+    echo "Usage: $0 [-d left/right] [-l|-r] L.sms R.sms P.sms"
+    echo "  -l|-d left: rotation to the left (default)"
+    echo "  -r|-d right: rotation to the right"
     exit 1
     ;;
     *)

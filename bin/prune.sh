@@ -68,6 +68,14 @@ while [[ $# -gt 0 ]]; do
     ;;
     -h|--h|-help|--help|-*|--*)
     echo "Usage: $0 [-O|-a|-q|-r|-m #] [-l pattern] [-n|-p|-t|-v] f.slp"
+    echo "  -O #: randomized search with that many loops"
+    echo "  -q|-r|-m #: search modulo"
+    echo "  -v: try every variable"
+    echo "  -p|-s: try every pair of variables (default)"
+    echo "  -t: try every triple of variables"
+    echo "  -l pattern: try the variables matching the pattern"
+    echo "  -n: any pattern (default)"
+    echo "  -a: single run with every variables"
       exit 1
       ;;
     *)
