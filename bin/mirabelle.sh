@@ -60,6 +60,7 @@ NC='\033[0m'    # No Color
 VAR=${VARS[0]}
 VARP=`echo ${VARS[@]}|sed 's/ /|/g'`
 VART=`echo ${VARS[@]}|sed 's/ /-/g'`
+VARU=`echo ${VARS[@]}|sed 's/ /|^/g'`
 # >&2 echo "VARS: ${VARS[@]}"
 
 function Show() {
@@ -68,11 +69,6 @@ function Show() {
 }
 
 NAM="mirabelle_${VART}"
-BOD="${NAM}_bod-$$.slp"
-OPT="${NAM}_opt-$$.slp"
-COM="${NAM}-$$.com"
-RES="${NAM}-$$.slp"
-FND="${NAM}-$$.log"
 
 #############################################################
 ## Remove no-op outputs (canonicals, neg of canonicals ...)
@@ -90,13 +86,14 @@ done
 FROS="${FROS}${VARP})"
 # >&2 echo "FROS: ${FROS}"
 
-$(egrep ${FROS} <<< ${FIL} > ${BOD})
+HBOD=$(egrep ${FROS} <<< ${FIL})
+# Show HBOD
 
 #############################################################
 ## Define output and input variables of the subprogram
 ##     together with replacement names
 
-CHARS=(`sed 's/:=/ /;s/+/ /g;s/-/ /g;s/;.*/ /;s/)/ /g;s/(/ /g;s/\*[0-9]* / /g;s/\/[0-9]* / /g' ${BOD} | tr ' ' '\n' | sed 's/[0-9]//g;/^$/d' | sort -u| tr '\n' ' '`)
+CHARS=$((sed 's/:=/ /;s/+/ /g;s/-/ /g;s/;.*/ /;s/)/ /g;s/(/ /g;s/\*[0-9]* / /g;s/\/[0-9]* / /g' <<< ${HBOD}) | tr ' ' '\n' | sed 's/[0-9]//g;/^$/d' | sort -u| tr '\n' ' ')
 # >&2 echo "CHARS: ${CHARS[@]}"
 
 NCHAR="a"
@@ -120,20 +117,20 @@ done
 # >&2 echo "ZCHAR: ${ZCHAR}"
 
 
-sed -i "s/i/${NCHAR}/g;s/o/${OCHAR}/g" ${BOD}
+HBOD=$(sed "s/i/${NCHAR}/g;s/o/${OCHAR}/g" <<< ${HBOD})
+# Show HBOD
 
 
-INP=`sed 's/:=.*/\[\^0-9\]|/g' ${BOD} | tr '\n' ' '|sed 's/ //g;s/|$//'`
+INP=$((sed 's/:=.*/\[\^0-9\]|/g' <<< ${HBOD}) | tr '\n' ' '|sed 's/ //g;s/|$//')
 # >&2 echo "INP: ${INP}"
 
-HEA=$(sed 's/.*:=//;s/+/ /g;s/-/ /g;s/;.*/ /;s/\*[0-9]*/ /g;s/\/[0-9]*/ /g;s/)//g;s/(//g' ${BOD} | tr -s '[:space:]' | tr ' ' '\n'|sort -u| sed 's/$/;/'|egrep -v "(^;$|^i|${VAR}|${INP})"|sed 's/;.*//'|awk 'BEGIN {s=0} {print $1":=i"s";";s++}')
+HEA=$((sed 's/.*:=//;s/+/ /g;s/-/ /g;s/;.*/ /;s/\*[0-9]*/ /g;s/\/[0-9]*/ /g;s/)//g;s/(//g' <<< ${HBOD}) | tr -s '[:space:]' | tr ' ' '\n'|sort -u| sed 's/$/;/'|egrep -v "(^;$|^i|${VAR}|${INP})"|sed 's/;.*//'|awk 'BEGIN {s=0} {print $1":=i"s";";s++}')
 
-echo -e "${HEA}" > ${RES}
-cat ${BOD} >> ${RES}
-
-TSDO=$(egrep -v "(^${VAR})" ${BOD} | cut -d':' -f1 | sort -r| awk 'BEGIN {s=0} {print "s/"$1"/o"s"/g";s++}' |tac|tr '\n' ';')
-egrep -v "(^${VAR})" ${BOD} | cut -d':' -f1 | sort -r| awk 'BEGIN {s=0} {print "o"s":="$1";";s++}' >> ${RES}
+TSDO=$((egrep -v "(^${VARU})" <<< ${HBOD}) | cut -d':' -f1 | sort -r| awk 'BEGIN {s=0} {print "s/"$1"/o"s"/g";s++}' |tac|tr '\n' ';')
 # Show TSDO
+
+LRES=$(echo -e "${HEA}";cat <<< ${HBOD};(egrep -v "(^${VARU})" <<< ${HBOD}) | cut -d':' -f1 | sort -r| awk 'BEGIN {s=0} {print "o"s":="$1";";s++}')
+# Show LRES
 
 ###### sed -i -f ${SDO} ${RES}
 SDO=$(sed 's/s\/\([^\/]*\)\/\([^\/]*\)\/g/s\/\2\/\1\/g/g' <<< "${TSDO}")
@@ -143,26 +140,35 @@ SDO=${SDO}"s/${OCHAR}/o/g;s/${NCHAR}/i/g"
 #############################################################
 ## Compute original subprogram number of operations
 
-BEF=(`(${SLPCHK} ${RES} |& egrep '(additions|multiplications)' | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g'| awk '{print $2}') 2> /dev/null`)
-#>&2 echo ${BEF[*]}
+BEF=($(((${SLPCHK} <<< ${LRES}) |& egrep '(additions|multiplications)' | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g'| awk '{print $2}') 2> /dev/null))
+# >&2 echo "BEF: ${BEF[*]}"
 
+
+#############################################################
 #############################################################
 ## Function comparing the subprogram and an optimized version
 function Compare() {
-  AFT=(`egrep '(additions|multiplications)' ${COM} | tail -2 | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g'| awk '{print $2}'`)
-#>&2 echo ${AFT[*]}
+  local LOPT=$1
+  local LFND=$2
+  local LCOM=$3
+# Show LOPT
+# Show LCOM
+# Show LFND
+
+  AFT=($((egrep '(additions|multiplications)' <<< ${LCOM}) | tail -2 | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g'| awk '{print $2}'))
+# >&2 echo "AFT: ${AFT[*]}"
 
   DIF=$((BEF[0]+BEF[1]-AFT[0]-AFT[1]))
-#>&2 echo $DIF
+# >&2 echo "DIF: $DIF"
 
   if [[ "$DIF" -gt 0 ]]; then
       >&2 echo -e "${GRE}> ${AFT[*]}\t\t/!\ IMPROVEMENT /!\ ${NC}"
 
       SDI=$(tac <<< "${HEA}" | sed 's/:=/ /;s/;.*//' | awk '{print "s/"$2"/"$1"/g;"}'|tr '\n' ';')
 #       Show SDI
-      sed "s/${OCHAR}/o/g;s/${NCHAR}/i/g" ${BOD} > ${FND}
-      uniq ${COM} &>> ${FND}
-       ((${SGLVAR} -c ${ZCHAR} ${OPT} | egrep -v '(:=0;)' | sed "${SDI}${SDO}") >> ${FND}) 2> /dev/null
+      (sed "s/${OCHAR}/o/g;s/${NCHAR}/i/g" <<< ${HBOD}) > ${LFND}
+      (uniq <<< ${LCOM}) &>> ${LFND}
+      (((${SGLVAR} -c ${ZCHAR} <<< ${LOPT}) | egrep -v '(:=0;)' | sed "${SDI}${SDO}") >> ${LFND}) 2> /dev/null
   else
       if [[ "$DIF" -eq 0 ]]; then
 	  ADD=$((BEF[0]-AFT[0]))
@@ -179,9 +185,9 @@ function Compare() {
 
 	      SDI=$(tac <<< "${HEA}" | sed 's/:=/ /;s/;.*//' | awk '{print "s/"$2"/"$1"/g;"}' |tr '\n' ';')
 #	      Show SDI
-	      sed "s/${OCHAR}/o/g;s/${NCHAR}/i/g" ${BOD} > ${FND}
-	      uniq ${COM} &>> ${FND}
-	      ((${SGLVAR} -c ${ZCHAR} ${OPT} | egrep -v '(:=0;)' | sed "${SDI};${SDO}") >> ${FND}) 2> /dev/null
+	      (sed "s/${OCHAR}/o/g;s/${NCHAR}/i/g" <<< ${HBOD}) > ${LFND}
+	      (uniq <<< ${LCOM}) &>> ${LFND}
+	      (((${SGLVAR} -c ${ZCHAR} <<< ${LOPT}) | egrep -v '(:=0;)' | sed "${SDI};${SDO}") >> ${LFND}) 2> /dev/null
 	  else
 	      >&2 echo "== ${AFT[*]}"
 	  fi
@@ -191,38 +197,31 @@ function Compare() {
   fi
 }
 #############################################################
+#############################################################
 
 
 #############################################################
 ## Optimize program
 
 echo -n "${VARS[@]}D: ${BEF[*]} "
-((${SLPCHK} ${RES} | ${OPTMZR}) > ${OPT}) 2> ${COM}
-Compare
-
+HCOM=${ { HOPT=$((${SLPCHK} <<< ${LRES}) | ${OPTMZR}); } 2>&1; }
+FND="${NAM}d-$$.log"
+Compare "${HOPT} " "${FND}" "${HCOM} "
 
 echo -n "${VARS[@]}F: ${BEF[*]} "
-((${SLPCHK} ${RES} | ${MATTRP} | ${OPTMZR} -F | ${TRSPZR} ) > ${OPT}) 2> ${COM}
+HCOM=${ { HOPT=$((${SLPCHK} <<< ${LRES}) | ${MATTRP} | ${OPTMZR} -F | ${TRSPZR}) ; } 2>&1; }
 FND="${NAM}f-$$.log"
-Compare
-
+Compare "${HOPT} " "${FND}" "${HCOM} "
 
 #############################################################
 ## Optimize its transposition
 
 echo -n "${VARS[@]}T: ${BEF[*]} "
-((${SLPCHK} ${RES} | ${MATTRP} | ${OPTMZR} | ${TRSPZR} ) > ${OPT}) 2> ${COM}
+HCOM=${ { HOPT=$((${SLPCHK} <<< ${LRES}) | ${MATTRP} | ${OPTMZR} | ${TRSPZR}) ; } 2>&1; }
 FND="${NAM}t-$$.log"
-Compare
-
+Compare "${HOPT} " "${FND}" "${HCOM} "
 
 echo -n "${VARS[@]}U: ${BEF[*]} "
-((${SLPCHK} ${RES} | ${MATTRP} | ${OPTMZR} -F | ${TRSPZR} ) > ${OPT}) 2> ${COM}
+HCOM=${ { HOPT=$((${SLPCHK} <<< ${LRES}) | ${MATTRP} | ${OPTMZR} -F | ${TRSPZR}) ; } 2>&1; }
 FND="${NAM}u-$$.log"
-Compare
-
-
-#############################################################
-## Clean-up tyemporary files
-
-\rm -rf ${RES} ${BOD} ${OPT} ${COM} # ${RUN} ${SDO} ${SDI} ${HEA}
+Compare "${HOPT} " "${FND}" "${HCOM} "
