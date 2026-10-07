@@ -100,9 +100,11 @@ if [[ ${#VARS[@]} -gt 0 ]]; then
   elif [[ ${TRP} -gt 0 ]]; then
     for var in ${VARS[@]}; do
       for rav in ${VARS[@]}; do
-	for arva in ${VARS[@]}; do
+	if [[ "$var" != "$rav" ]]; then
+	  for arva in ${VARS[@]}; do
 	    ${DIR}/mirabelle.sh -v $var -v $rav -v $arva ${OPTFLAGS} ${MOD} ${FIL} |& tee -a ${LOG}
-	done
+	  done
+        fi
       done
     done
   else
