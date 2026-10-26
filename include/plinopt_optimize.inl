@@ -94,9 +94,24 @@ Pair<long> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
 
 	// Factor out cse, in all rows
 	// adds a column for the new factor
+    typename _Mat::Element ratio; FF.init(ratio);
     for(size_t i=0; i<AllPairs.size(); ++i) {
-	const auto& rows(AllPairs[i]);
-	if (std::find(rows.begin(), rows.end(), cse) != rows.end()) {
+	    // Is cse a pair of row i: its two columns, in this order, with
+	    // this ratio (what listpairs would have listed)
+	bool found(false);
+	{
+	    auto first(lM[i].end()), second(lM[i].end());
+	    for(auto iter=lM[i].begin(); iter != lM[i].end(); ++iter) {
+		if (iter->first == std::get<0>(cse)) first = iter;
+		else if (iter->first == std::get<1>(cse)) second = iter;
+	    }
+	    if ( (first != lM[i].end()) && (second != lM[i].end())
+		 && (first < second) ) {
+		FF.div(ratio, second->second, first->second);
+		found = FF.areEqual(ratio, std::get<2>(cse));
+	    }
+	}
+	if (found) {
 	    typename _Mat::Element coeff; FF.init(coeff);
 	    for(auto iter=lM[i].begin(); iter!= lM[i].end(); ++iter) {
 		if (iter->first==std::get<0>(lcse)) {
@@ -115,14 +130,9 @@ Pair<long> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
 	    }
 
 	    if (updateAPM) {
-		    // Update AllPairs[i] and PairMap
-		    // Decrease PairMap by old AP[i]
-		for (const auto& iter: AllPairs[i]) {
-		    PairMap[iter]--;
-		    if (PairMap[iter] == 0) PairMap.erase(iter);
-		}
-
-		    // Preserve pairs not involving the change
+		    // Update AllPairs[i] and PairMap: only the pairs with one
+		    // of the merged columns leave, only the pairs with the
+		    // new column arrive
 		std::vector<triple> newrow;
 		for (const auto& iter: AllPairs[i]) {
 		    if ( (std::get<0>(iter) != std::get<0>(lcse)) &&
@@ -131,6 +141,11 @@ Pair<long> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
 			 (std::get<1>(iter) != std::get<1>(lcse))
 			 ) {
 			newrow.push_back(iter);
+		    } else {
+			auto pit(PairMap.find(iter));
+			if (pit != PairMap.end()) {
+			    if (--(pit->second) == 0) PairMap.erase(pit);
+			}
 		    }
 		}
 		     // Add all pairs with new (last) element
@@ -139,11 +154,7 @@ Pair<long> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
 		for(auto iter=lM[i].begin(); iter != endlMi; ++iter) {
 		    newrow.emplace_back(iter->first, endlMi->first,
 					FF.div(tmp, endlMi->second, iter->second));
-		}
-
-		     // Increase PairMap by new AP[i]
-		for (const auto& iter: newrow) {
-		     PairMap[iter]++;
+		    PairMap[newrow.back()]++;
 		}
 
 		    // Update AllPairs[i]
