@@ -237,8 +237,11 @@ bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
 
     if (PairMap.size()==0) return false;
 
-    bool goodfreq(false);
-
+        // The loop below removes CSEs until no pair occurs twice, updating
+        // AllPairs and PairMap exactly as it goes (RemOneCSE); so when it
+        // ends there is nothing left for another call to find, and it
+        // returns false: Optimizer need not rebuild the pair lists to
+        // learn that.
     while(PairMap.size() > 0) {
             // Found some pairs
         size_t maxfrq(0);
@@ -257,9 +260,8 @@ bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
             }
         }
 
-        if (maxfrq <=1) return goodfreq;
+        if (maxfrq <=1) return false;
             // Factoring will gain something if maximal frequency > 1
-        goodfreq = true;
 
             // More than one pair with maximal frequency
         if (MaxCSE.size()>1) {
@@ -313,7 +315,7 @@ bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
 #  endif
 #endif
     }
-    return true;
+    return false;
 }
 
 // Factors out same coefficient in a column
