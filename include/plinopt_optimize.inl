@@ -7,6 +7,7 @@
  * PLinOpt Library, Optimization inline implementations
  ****************************************************************/
 
+#include <limits>
 #include "plinopt_optimize.h"
 #include "plinopt_sparsify.h"
 #include "plinopt_programs.h"
@@ -260,9 +261,7 @@ bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
         if (MaxCSE.size()>1) {
                 // Tie breaking heuristics
 #if defined(RANDOM_TIES) && !defined(DENSITY_OPTIMIZATION)
-            static thread_local Givaro::GivRandom
-                generator(Givaro::BaseTimer::seed());
-            cse = MaxCSE[ generator() % MaxCSE.size() ];
+            cse = MaxCSE[ generator()() % MaxCSE.size() ];
 #else
                 // Compute density in a row
             std::vector<size_t> Density;
@@ -709,7 +708,7 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
         l.resize(Nj);
         std::iota(l.begin(), l.end(), 0); // Select a random permutation
         std::shuffle ( l.begin(), l.end(),
-                       std::default_random_engine(Givaro::BaseTimer::seed()));
+                       std::default_random_engine(generator()()));
     } // Otherwise only use the prescribed permutation
     for(size_t i=1; i<Nj; ++i) {
         if (i != l[i]) {
@@ -797,9 +796,7 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
 #endif
         size_t FreePartKept(nullity), NotIndep(0u);
         if (restrictNotIndep) {
-            static thread_local Givaro::GivRandom
-                generator(Givaro::BaseTimer::seed());
-            NotIndep = (generator() % nullity);
+            NotIndep = (generator()() % nullity);
             FreePartKept -= NotIndep;
         }
 
@@ -1051,10 +1048,12 @@ Pair<size_t>& LUOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
 #endif
 
     std::ostringstream gout;
-    auto gops(nbops);
+    auto gops(nbops), sops(nbops);
+    size_t besti(std::numeric_limits<size_t>::max());
 
-#pragma omp parallel for shared(Q,L,U,P,gout,gops)
+#pragma omp parallel for shared(Q,L,U,P,gout,gops,sops,besti)
     for(size_t i=0; i<randomloops; ++i) {
+        reseed('G', i);
         std::ostringstream luout;
         FMatrix lU(U, F);
         FMatrix lL(L, F);
@@ -1081,9 +1080,12 @@ Pair<size_t>& LUOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
 #pragma omp critical
         {
         const bool better(cmpOpCount(Uops,gops));
-        if ( (gout.tellp() == std::streampos(0) ) || better ) {
+        const bool empty(gout.tellp() == std::streampos(0));
+        if ( empty || cmpOpCount(Uops,sops)
+             || (eqOpCount(Uops,sops) && (i < besti)) ) {
             gout.clear(); gout.str(std::string());
             gout.str(luout.str());
+            sops = Uops; besti = i;
             if (better) {
                 if (verbose>0) {
                     std::clog << "# Found G: "
@@ -1132,10 +1134,12 @@ Pair<size_t>& ABOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
     const size_t sa(density(Alt)), sc(density(CoB));
 
     std::ostringstream gout;
-    auto gops(nbops);
+    auto gops(nbops), sops(nbops);
+    size_t besti(std::numeric_limits<size_t>::max());
 
-#pragma omp parallel for shared(Alt,CoB,sa,sc,gout,gops)
+#pragma omp parallel for shared(Alt,CoB,sa,sc,gout,gops,sops,besti)
     for(size_t i=0; i<randomloops; ++i) {
+        reseed('A', i);
         FMatrix lC(CoB, F);
         FMatrix lA(Alt, F);
 
@@ -1155,9 +1159,12 @@ Pair<size_t>& ABOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
 #pragma omp critical
         {
         const bool better(cmpOpCount(ABops,gops));
-        if ( better || (gout.tellp() == std::streampos(0) ) ) {
+        const bool empty(gout.tellp() == std::streampos(0));
+        if ( empty || cmpOpCount(ABops,sops)
+             || (eqOpCount(ABops,sops) && (i < besti)) ) {
             gout.clear(); gout.str(std::string());
             gout << about.str();
+            sops = ABops; besti = i;
             if (better) {
                 if (verbose>0) {
                     std::clog << "# Found A: ("
@@ -1199,10 +1206,12 @@ Pair<size_t>& CSEOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
 
     Givaro::Timer chrono; chrono.start();
     std::ostringstream dout;
-    auto dops(nbops);
+    auto dops(nbops), sops(nbops);
+    size_t besti(std::numeric_limits<size_t>::max());
 
-#pragma omp parallel for shared(M,T,dout,dops)
+#pragma omp parallel for shared(M,T,dout,dops,sops,besti)
     for(size_t i=0; i<randomloops; ++i) {
+        reseed('D', i);
         FMatrix lM(M, F);
         FMatrix lT(T, F);
 
@@ -1214,7 +1223,9 @@ Pair<size_t>& CSEOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
 #pragma omp critical
         {
         const bool better(cmpOpCount(lnbops,dops));
-        if ( (dout.tellp() == std::streampos(0)) || better ) {
+        const bool empty(dout.tellp() == std::streampos(0));
+        if ( empty || cmpOpCount(lnbops,sops)
+             || (eqOpCount(lnbops,sops) && (i < besti)) ) {
 #ifdef VERBATIM_PARSING
             std::clog << "# Found, direct: "
                       << lnbops.first << "\tadditions, "
@@ -1222,6 +1233,7 @@ Pair<size_t>& CSEOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
 #endif
             dout.clear(); dout.str(std::string());
             dout << ldout.str();
+            sops = lnbops; besti = i;
             if (better) {
                 if (verbose>0) {
                     std::clog << "# Found D: "
@@ -1293,12 +1305,14 @@ Pair<size_t>& KernelOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
     typedef typename Matrix::template rebind<Field>::other FMatrix;
     Givaro::Timer chrono; chrono.start();
     std::ostringstream kout;
-    auto kops(nbops);
+    auto kops(nbops), sops(nbops);
+    size_t besti(std::numeric_limits<size_t>::max());
     bool nonzerokernel(true);
 
-#pragma omp parallel for shared(T,kout,kops)
+#pragma omp parallel for shared(T,kout,kops,sops,besti)
     for(size_t i=0; i<randomloops; ++i) {
         if (nonzerokernel) {
+            reseed('K', i);
             FMatrix lT(T, F);
             std::ostringstream lkout;
             FMatrix NullSpace(F,lT.coldim(),lT.coldim());
@@ -1314,7 +1328,9 @@ Pair<size_t>& KernelOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
 #pragma omp critical
             {
             const bool better(cmpOpCount(lnbops,kops));
-            if ( (kout.tellp() == std::streampos(0) ) || better ) {
+            const bool empty(kout.tellp() == std::streampos(0));
+            if ( empty || cmpOpCount(lnbops,sops)
+                 || (eqOpCount(lnbops,sops) && (i < besti)) ) {
 #ifdef VERBATIM_PARSING
                 std::clog << "# Found, kernel: "
                           << lnbops.first << "\tadditions, "
@@ -1322,6 +1338,7 @@ Pair<size_t>& KernelOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
 #endif
                 kout.clear(); kout.str(std::string());
                 kout << lkout.str();
+                sops = lnbops; besti = i;
                 if (better) {
                     if (verbose>0) {
                         std::clog << "# Found " << (KFI?'F':'K') << ": "
@@ -1365,10 +1382,12 @@ Pair<size_t>& AllKernelOpt(Pair<size_t>& nbops, std::ostringstream& sout,
     const size_t m(T.coldim());
     std::vector<size_t> Fm { factorial(m) };
     std::ostringstream aout;
-    auto aops(nbops);
+    auto aops(nbops), sops(nbops);
+    size_t besti(std::numeric_limits<size_t>::max());
 
-#pragma omp parallel for shared(Fm,T,aout,aops)
+#pragma omp parallel for shared(Fm,T,aout,aops,sops,besti)
     for(size_t i=0; i<Fm.back(); ++i) {
+        reseed('N', i);
         std::vector<size_t> l{kthpermutation(i,m,Fm)};
         FMatrix lT(T, F);
         std::ostringstream laout;
@@ -1378,7 +1397,9 @@ Pair<size_t>& AllKernelOpt(Pair<size_t>& nbops, std::ostringstream& sout,
 #pragma omp critical
         {
         const bool better(cmpOpCount(lkops,aops));
-        if ( (aout.tellp() == std::streampos(0)) || better) {
+        const bool empty(aout.tellp() == std::streampos(0));
+        if ( empty || cmpOpCount(lkops,sops)
+             || (eqOpCount(lkops,sops) && (i < besti)) ) {
 #ifdef VERBATIM_PARSING
             std::clog << "# Found, kernel: "
                       << lkops.first << "\tadditions, "
@@ -1386,6 +1407,7 @@ Pair<size_t>& AllKernelOpt(Pair<size_t>& nbops, std::ostringstream& sout,
 #endif
             aout.clear(); aout.str(std::string());
             aout << laout.str();
+            sops = lkops; besti = i;
             if (better) {
                 if (verbose>0) {
                     std::clog << "# Found E: "

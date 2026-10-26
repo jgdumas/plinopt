@@ -40,6 +40,8 @@
 
 #include <givaro/givrational.h>
 #include <givaro/givprint.h>
+#include <givaro/givrandom.h>
+#include <givaro/givtimer.h>
 #include <linbox/matrix/sparse-matrix.h>
 #include <linbox/util/matrix-stream.h>
 #include <linbox/blackbox/permutation.h>
@@ -223,6 +225,19 @@ int Fsign(const Givaro::Modular<Element>& F, const Element& e) {
     F.neg(a,e);
     return (a<e ? -1 : 1);
 }
+
+// ============================================
+// === PLinOpt random tie-breaking
+//   One generator per thread.  Every random loop reseeds its thread's
+//   generator from the global seed, a method tag and the loop index, so a
+//   run depends on the seed and not on the number of threads, and threads
+//   never repeat each other's draws (the clock alone seeds threads that
+//   start in the same instant identically).
+//   RandomSeed < 0 (the default) takes the seed from the clock, once.
+extern int64_t RandomSeed;
+inline uint64_t randomSeedBase();
+inline Givaro::GivRandom& generator();
+inline void reseed(const uint64_t method, const uint64_t loop);
 
 // ============================================
 // === PLinOpt Sets new temporaries with the input values

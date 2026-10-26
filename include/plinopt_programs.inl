@@ -710,7 +710,7 @@ bool rotateMinus(std::vector<std::string>& line) {
 // std::clog << "# rotM failed: " << line << std::endl;
             // No positive group found: randomly swap negative groups
         std::shuffle(negrps.begin(), negrps.end(),
-                     std::default_random_engine(Givaro::BaseTimer::seed()));
+                     std::default_random_engine(generator()()));
         if (negrps.front() != 2) {
             std::rotate(line.begin()+2,line.begin()+negrps.front(),
                         line.end()-1);

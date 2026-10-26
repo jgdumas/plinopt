@@ -10,6 +10,34 @@
 #include "plinopt_library.h"
 
 namespace PLinOpt {
+
+// ============================================
+// === PLinOpt random tie-breaking
+int64_t RandomSeed(-1);
+
+    // The base of every seed: fixed by RandomSeed, or the clock once
+inline uint64_t randomSeedBase() {
+    static const uint64_t base( RandomSeed < 0
+                                ? (uint64_t)Givaro::BaseTimer::seed()
+                                : (uint64_t)RandomSeed );
+    return base;
+}
+
+inline Givaro::GivRandom& generator() {
+    static thread_local Givaro::GivRandom gen( randomSeedBase() );
+    return gen;
+}
+
+    // splitmix64 of (base, method, loop): a nonzero seed per loop
+inline void reseed(const uint64_t method, const uint64_t loop) {
+    uint64_t z = randomSeedBase() + 0x9e3779b97f4a7c15ULL * (1 + method)
+                                  + 0xbf58476d1ce4e5b9ULL * (1 + loop);
+    z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9ULL;
+    z = (z ^ (z >> 27)) * 0x94d049bb133111ebULL;
+    z ^= z >> 31;
+    if (z == 0) z = 0x2545f4914f6cdd1dULL;
+    generator() = Givaro::GivRandom(z);
+}
 // ===============================================================
 // ==================
 // Matrix operations
