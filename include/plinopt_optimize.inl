@@ -68,13 +68,17 @@ Pair<long> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
     long savedadds(0), savedmuls(0);
 
         // Looking for the most number of ones in either columns of cse
-    _Mat lT(FF, lM.coldim(), lM.rowdim()); Transpose(lT, lM);
+        // (scanning the rows: a transposed copy per CSE was a fifth of the
+        // optimizer's time)
     size_t count0(0), count1(0);
-    for(const auto& iter: lT[std::get<0>(cse)]) {
-        if (isAbsOne(FF,iter.second)) ++count0;
-    }
-    for(const auto& iter: lT[std::get<1>(cse)]) {
-        if (isAbsOne(FF,iter.second)) ++count1;
+    for(auto rit=lM.rowBegin(); rit != lM.rowEnd(); ++rit) {
+        for(const auto& iter: *rit) {
+            if (iter.first == std::get<0>(cse)) {
+                if (isAbsOne(FF,iter.second)) ++count0;
+            } else if (iter.first == std::get<1>(cse)) {
+                if (isAbsOne(FF,iter.second)) ++count1;
+            }
+        }
     }
 
     triple lcse;
