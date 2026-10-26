@@ -7,6 +7,9 @@
  * PLinOpt Library, inline implementations
  ****************************************************************/
 
+#include <cmath>
+#include <numeric>
+#include <unordered_map>
 #include "plinopt_library.h"
 
 namespace PLinOpt {
@@ -397,6 +400,92 @@ std::ostream& printmulorjustdiv(std::ostream& out,
             out << '/' << r.deno();
         else
             out << '*' << r;
+    }
+    return out;
+}
+
+// ============================================
+// === PLinOpt lifting field
+    // num/den == e mod p with |num|, den <= sqrt(p/2): true if there is one.
+    // Machine words only, and each thread caches its lifts: the search meets
+    // a few dozen distinct residues.
+inline bool liftRational(int64_t& num, int64_t& den, const LiftField& F,
+                         const int64_t& e) {
+    struct Lift { int64_t num, den; bool ok; };
+    static thread_local std::unordered_map<int64_t, Lift> cache;
+    static thread_local int64_t cachep(0), bound(0);
+    const int64_t p((int64_t)F.residu());
+    if (p != cachep) {
+        cache.clear(); cachep = p;
+        bound = (int64_t)std::sqrt((double)(p/2));
+        while (bound*bound > p/2) --bound;
+        while ((bound+1)*(bound+1) <= p/2) ++bound;
+    }
+    const auto it(cache.find(e));
+    if (it != cache.end()) {
+        num = it->second.num; den = it->second.den; return it->second.ok;
+    }
+        // Extended Euclid on (p, e) until the remainder is within the bound
+    int64_t r0(p), r1(e < 0 ? e + p : e), t0(0), t1(1);
+    while (r1 > bound) {
+        const int64_t qu(r0 / r1);
+        const int64_t r2(r0 - qu*r1); r0 = r1; r1 = r2;
+        const int64_t t2(t0 - qu*t1); t0 = t1; t1 = t2;
+    }
+    bool ok(t1 != 0);
+    num = r1; den = t1;
+    if (den < 0) { num = -num; den = -den; }
+    if (ok && ((den > bound) || (std::gcd(num < 0 ? -num : num, den) != 1))) ok = false;
+    cache.emplace(e, Lift{num, den, ok});
+    return ok;
+}
+
+inline bool liftRational(Givaro::Rational& q, const LiftField& F,
+                         const int64_t& e) {
+    int64_t num, den;
+    if (! liftRational(num, den, F, e)) return false;
+    q = Givaro::Rational(Givaro::Integer(num), Givaro::Integer(den));
+    return true;
+}
+
+inline int64_t Fabs(const LiftField& F, const int64_t& e) {
+    int64_t num, den;
+    if (liftRational(num, den, F, e)) {
+        if (num < 0) { int64_t a; F.init(a); return F.neg(a,e); }
+        return e;
+    }
+    int64_t a; F.init(a);                   // not a small rational: modular |e|
+    F.neg(a,e);
+    return (a<e ? a : F.assign(a,e));
+}
+
+inline int Fsign(const LiftField& F, const int64_t& e) {
+    if (F.isZero(e)) return 0;
+    int64_t num, den;
+    if (liftRational(num, den, F, e)) return (num < 0 ? -1 : 1);
+    int64_t a; F.init(a);
+    F.neg(a,e);
+    return (a<e ? -1 : 1);
+}
+
+    // prints the lifted rational like the rational field does: c[i]/b or c[i]*r
+template<> inline
+std::ostream& printmulorjustdiv(std::ostream& out,
+                                const char c, const size_t i,
+                                const int64_t& e,
+                                size_t& nbmul, const LiftField& F) {
+    out << c << i;
+    if (notAbsOne(F,e)) {
+        ++nbmul;
+        Givaro::Rational q;
+        if (liftRational(q, F, e)) {
+            if (Givaro::isOne(q.nume()))
+                out << '/' << q.deno();
+            else
+                out << '*' << q;
+        } else {
+            out << '*' << e;
+        }
     }
     return out;
 }

@@ -40,6 +40,7 @@
 
 #include <givaro/givrational.h>
 #include <givaro/givprint.h>
+#include <givaro/modular.h>
 #include <givaro/givrandom.h>
 #include <givaro/givtimer.h>
 #include <linbox/matrix/sparse-matrix.h>
@@ -225,6 +226,27 @@ int Fsign(const Givaro::Modular<Element>& F, const Element& e) {
     F.neg(a,e);
     return (a<e ? -1 : 1);
 }
+
+// ============================================
+// === PLinOpt lifting field
+//   A word-size prime field for searching: the matrices met here have small
+//   rational coefficients, whose images modulo a 32-bit prime are distinct
+//   and cost a machine word each instead of a GMP rational.  Its elements
+//   are printed, and their signs and absolute values taken, as the rationals
+//   they reconstruct to, so a program found over it is a program over the
+//   rationals (to be checked against the matrix afterwards).
+typedef Givaro::Modular<int64_t> LiftField;
+const int64_t LiftPrime(4294967291);     // the largest prime below 2^32
+
+    // num/den == e mod p with |num|, den <= sqrt(p/2) (unique if any)
+inline bool liftRational(int64_t& num, int64_t& den, const LiftField& F,
+                         const int64_t& e);
+inline bool liftRational(Givaro::Rational& q, const LiftField& F,
+                         const int64_t& e);
+    // residue of |q| for the rational q that e lifts to
+inline int64_t Fabs(const LiftField& F, const int64_t& e);
+    // sign of the rational that e lifts to
+inline int Fsign(const LiftField& F, const int64_t& e);
 
 // ============================================
 // === PLinOpt random tie-breaking

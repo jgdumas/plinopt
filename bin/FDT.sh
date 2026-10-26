@@ -43,7 +43,7 @@ FCTZR=${BINDIR}/factorizer
 INPLR=${BINDIR}/inplacer
 SPSFR=${BINDIR}/sparsifier
 
-let numtests=9
+let numtests=10
 let tries=${numtests}*${#fics[@]}
 let current=0
 
@@ -56,6 +56,7 @@ do
     echo "${fic} ${m}x${n}:"
 
     ((${OPTIM} -O ${numopt} ${optflg} $fic | ${CMPCT} -s | ${SLPCK} -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
+    ((${OPTIM} -Q -O ${numopt} ${optflg} $fic | ${CMPCT} -s | ${SLPCK} -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
 
     ((${MTRSP} $fic | ${OPTIM} -q ${modulus} -O ${numopt} ${optflg} | ${TELLG} | ${CMPCT} -s | ${SLPCK}  -q ${modulus} -M $fic) >& /dev/stdout) | egrep '(SUCCESS|ERROR)' | tee -a ${tmpfile}
 
