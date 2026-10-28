@@ -11,6 +11,7 @@
 **Requirements**:
 - C++, pkg-config
 - [LinBox](https://linalg.org/), dev: headers & library (LinBox version ≥ 1.7.0; givaro version ≥ 4.2.0)
+- On macOS: Apple clang, `brew install pkg-config libomp` (OpenMP); LinBox, fflas-ffpack and givaro are not in Homebrew, so install them from source (or from conda-forge) and point `PKG_CONFIG_PATH` at their `pkgconfig` directory
 
 
 
@@ -20,6 +21,7 @@
            `sudo apt install git make g++ pkg-config liblinbox-dev`
            (sometimes also `sudo apt install libntl-dev libiml-dev libflint-dev`).
 - Then just run `make`, in order to produce the following executable programs
+- On macOS, with the requirements above, the same `make` works (the Makefile uses libomp's OpenMP flags for Apple clang)
 - See also [`bin/auto-docker.run`](https://github.com/jgdumas/plinopt/blob/main/bin/auto-docker.run)
 - `make check`, will run correctness programs on the examples files in the `data` directory
 

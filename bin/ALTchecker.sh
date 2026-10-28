@@ -42,4 +42,4 @@ function SLPSMSchk() {
 SLPSMSchk ${LeftSLP}
 SLPSMSchk ${RightSLP}
 
-cat <((compacter ${LeftSLP} 2>/dev/null) | sed 's/o/j/g') <((compacter ${RightSLP} 2>/dev/null) | sed 's/i/j/g' ) | ${SLPCHK} $*
+cat <((${DIR}/compacter ${LeftSLP} 2>/dev/null) | sed 's/o/j/g') <((${DIR}/compacter ${RightSLP} 2>/dev/null) | sed 's/i/j/g' ) | ${SLPCHK} $*

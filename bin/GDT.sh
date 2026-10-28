@@ -43,7 +43,7 @@ do
 if [ -e ${fic} ]; then
     echo -n "${fic}: "
 
-    BEF=(`(${CMPCT} ${fic} | ${SLPCK} |& egrep '(additions|multiplications)' | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g'| awk '{print $2}') 2> /dev/null`)
+    BEF=(`(${CMPCT} ${fic} | ${SLPCK} 2>&1 | egrep '(additions|multiplications)' | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g'| awk '{print $2}') 2> /dev/null`)
 # echo ${BEF[*]}
     AFT=(`${OPTCT} ${fic} | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g'| awk '{print $1}'`)
 # echo ${AFT[*]}

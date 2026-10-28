@@ -11,6 +11,7 @@
 #define _PLINOPT_POLYNOMIAL_H_
 
 #include <iostream>
+#include <sstream>
 #include <givaro/givpoly1.h>
 
 namespace PLinOpt {
