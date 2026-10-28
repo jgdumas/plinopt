@@ -13,6 +13,12 @@ OPTFLAGS=""
 VARS=()
 MOD=""
 
+# Requires bash >= 5.3
+if (( BASH_VERSINFO[0] < 5 || (BASH_VERSINFO[0] == 5 && BASH_VERSINFO[1] < 3) )); then
+    echo "Error: requires bash >= 5.3 (found ${BASH_VERSION}).">&2
+    exit 1
+fi
+
 while [[ $# -gt 0 ]]; do
   case $1 in
     -O|--Optflags)
