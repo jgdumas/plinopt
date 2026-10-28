@@ -4,21 +4,24 @@
 ####################################################################
 
 OPTFLAGS = -O3 -ffast-math
-STDFLAGS = -std=c++17		# CTAD, std::gcd: g++ defaults to C++17, Apple clang to C++14
+
+# CTAD, std::gcd: g++ defaults to C++17, Apple clang to C++14
+STDFLAGS = -std=c++17
 
 ##############
-# OpenMP: Apple clang has no -fopenmp; it uses Homebrew's libomp (brew install libomp)
+# OpenMP: Apple clang has no -fopenmp; it uses Homebrew's libomp
+#         (brew install libomp)
 ifeq ($(shell uname -s),Darwin)
-LIBOMP  := $(shell brew --prefix libomp 2>/dev/null || echo /opt/homebrew/opt/libomp)
-OMPFLAGS = -Xpreprocessor -fopenmp -I${LIBOMP}/include
-OMPLIBS  = -L${LIBOMP}/lib -lomp
+  LIBOMP  := $(shell brew --prefix libomp 2>/dev/null || echo /opt/homebrew/opt/libomp)
+  OMPFLAGS = -Xpreprocessor -fopenmp -I${LIBOMP}/include
+  OMPLIBS  = -L${LIBOMP}/lib -lomp
 else
-OMPFLAGS = -fopenmp
-OMPLIBS  =
+  OMPFLAGS = -fopenmp
 endif
-# clang rejects givaro's specialization of std::make_signed (recint/rrint.h)
+# clang rejects givaro's specialization of std::make_signed
+#       (recint/rrint.h)
 ifneq (,$(findstring clang,$(shell ${CXX} --version 2>/dev/null)))
-WNOFLAGS = -Wno-invalid-specialization
+  WNOFLAGS = -Wno-invalid-specialization
 endif
 
 ##############
