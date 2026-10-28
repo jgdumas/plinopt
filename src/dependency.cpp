@@ -132,7 +132,7 @@ int Depender(std::istream& input, QArray& Coeffs, const size_t maxnumcoeff,
         augment(Coeffs, indices.value().deno(), QQ);
     }
 
-    for(size_t i=2; Coeffs.size() < maxnumcoeff; ++i) {
+    for(uint64_t i=2; Coeffs.size() < maxnumcoeff; ++i) {	// Integer(uint64_t); size_t is not uint64_t on macOS
         augment(Coeffs, Givaro::Integer(i), QQ);
     }
 	// ========================================

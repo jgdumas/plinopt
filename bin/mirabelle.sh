@@ -147,7 +147,7 @@ SDO=${SDO}"s/${OCHAR}/o/g;s/${NCHAR}/i/g"
 #############################################################
 ## Compute original subprogram number of operations
 
-BEF=($(((${SLPCHK} <<< ${LRES}) |& egrep '(additions|multiplications)' | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g'| awk '{print $2}') 2> /dev/null))
+BEF=($(((${SLPCHK} <<< ${LRES}) 2>&1 | egrep '(additions|multiplications)' | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g'| awk '{print $2}') 2> /dev/null))
 # >&2 echo "BEF: ${BEF[*]}"
 
 

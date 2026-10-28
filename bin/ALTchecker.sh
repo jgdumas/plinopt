@@ -14,6 +14,7 @@
 
 DIR=`dirname $0`
 SLPCHK="${DIR}/SLPchecker"
+CMPCTR="${DIR}/compacter"
 OPSCNT="${DIR}/OpCount.sh"
 
 if [[ $# -lt 2  ]]; then
@@ -42,4 +43,4 @@ function SLPSMSchk() {
 SLPSMSchk ${LeftSLP}
 SLPSMSchk ${RightSLP}
 
-cat <((compacter ${LeftSLP} 2>/dev/null) | sed 's/o/j/g') <((compacter ${RightSLP} 2>/dev/null) | sed 's/i/j/g' ) | ${SLPCHK} $*
+cat <((${CMPCTR} ${LeftSLP} 2>/dev/null) | sed 's/o/j/g') <((${CMPCTR} ${RightSLP} 2>/dev/null) | sed 's/i/j/g' ) | ${SLPCHK} $*

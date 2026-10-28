@@ -262,11 +262,11 @@ _Mat& localSparsifier(_Mat& TCoB, _Mat& TM, const size_t maxnumcoeff) {
         }
     }
 
-    const size_t characteristic( size_t(FF.characteristic()) );
+    const size_t characteristic( (uint64_t)FF.characteristic() );	// via uint64_t: Integer has no conversion to unsigned long on macOS
     const size_t compcoeff( ((characteristic !=0) && (maxnumcoeff > characteristic)) ?
                             characteristic : maxnumcoeff );
 
-    for(size_t i=2; Coeffs.size() < compcoeff; ++i) {
+    for(uint64_t i=2; Coeffs.size() < compcoeff; ++i) {	// uint64_t: QField::init has no unsigned long on macOS
         Element tmp; FF.init(tmp, i);
         augment(Coeffs, tmp, FF);
     }

@@ -104,7 +104,7 @@ int main(int argc, char ** argv) {
                 modulus = Givaro::Integer(argv[++i]);
             } else if (args[1] == 'r') {
                 Givaro::Integer r(argv[++i]);
-                size_t e(atoi(argv[++i]));
+                uint64_t e(atoi(argv[++i]));	// pow(Integer, uint64_t); size_t is not uint64_t on macOS
                 Givaro::Integer s(argv[++i]);
                 modulus = pow(r,e)-s;
             } else if (args[1] == 'I') {

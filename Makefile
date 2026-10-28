@@ -3,7 +3,26 @@
 # Authors: J-G. Dumas, C. Pernet, A. Sedoglavic
 ####################################################################
 
-OPTFLAGS = -O3 -ffast-math -fopenmp
+OPTFLAGS = -O3 -ffast-math
+
+# CTAD, std::gcd: g++ defaults to C++17, Apple clang to C++14
+STDFLAGS = -std=c++17
+
+##############
+# OpenMP: Apple clang has no -fopenmp; it uses Homebrew's libomp
+#         (brew install libomp)
+ifeq ($(shell uname -s),Darwin)
+  LIBOMP  := $(shell brew --prefix libomp 2>/dev/null || echo /opt/homebrew/opt/libomp)
+  OMPFLAGS = -Xpreprocessor -fopenmp -I${LIBOMP}/include
+  OMPLIBS  = -L${LIBOMP}/lib -lomp
+else
+  OMPFLAGS = -fopenmp
+endif
+# clang rejects givaro's specialization of std::make_signed
+#       (recint/rrint.h)
+ifneq (,$(findstring clang,$(shell ${CXX} --version 2>/dev/null)))
+  WNOFLAGS = -Wno-invalid-specialization
+endif
 
 ##############
 # CXXFLAGS += -D DEFAULT_RANDOM_LOOPS=30u	# Default # of loops
@@ -24,8 +43,8 @@ OPTFLAGS = -O3 -ffast-math -fopenmp
 RNDFLAGS = -D RANDOM_TIES		# Default randomized search
 
 ##############
-CXXFLAGS += ${OPTFLAGS} ${RNDFLAGS} -I`pwd`/include/ `pkg-config linbox --cflags`
-LOADLIBES+= `pkg-config linbox --libs |sed 's/-liml//;s/-lfplll//;s/-lflint//'`
+CXXFLAGS += ${OPTFLAGS} ${STDFLAGS} ${OMPFLAGS} ${WNOFLAGS} ${RNDFLAGS} -I`pwd`/include/ `pkg-config linbox --cflags`
+LOADLIBES+= `pkg-config linbox --libs |sed 's/-liml//;s/-lfplll//;s/-lflint//'` ${OMPLIBS}
 
 ##############
 
