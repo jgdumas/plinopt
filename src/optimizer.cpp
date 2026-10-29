@@ -73,6 +73,9 @@ int FOptimiser(std::istream& input, const size_t randomloops,
     }
 
     std::clog << std::string(40,'#') << std::endl;
+    if (verbose>0 && DORANDOMSEARCH) {
+        std::clog << "# random seed " << randomSeedBase() << std::endl;
+    }
 
     const Pair<size_t> opsinit(naiveOps(M));
     std::ostringstream ssout;
@@ -85,6 +88,7 @@ int FOptimiser(std::istream& input, const size_t randomloops,
                                    mostCSE, allkernels, KFI, verbose) );
 
     std::stringstream ssin; ssin << ssout.str();
+    reseed('C', 0);     // the compacter's draws do not depend on the loops
     PLinOpt::Compacter(std::cout,ssin);
 
     if ((nbops.first !=0 || nbops.second != 0)) {
@@ -169,7 +173,7 @@ int main(int argc, char** argv) {
         std::string args(argv[i]);
         if (args == "-h") {
             std::clog << "Usage: " << argv[0]
-                      << " [-h|-M|-P|-K|-D|-G|-E|-N|-A|-q #|-O #] [stdin|matrixfile.sms]\n";
+                      << " [-h|-M|-P|-K|-D|-G|-E|-N|-A|-q #|-O #|-s #] [stdin|matrixfile.sms]\n";
 
             std::clog
                 << "  -D/-K/-G: direct/kernel/LU methods (default is all)\n"
@@ -180,7 +184,9 @@ int main(int argc, char** argv) {
                 << "  -P/-M: choose the printing format\n"
                 << "  -q #: search modulo (default is Rationals)\n"
                 << "  -O #: randomized search with that many loops (default "
-                << randomloops << " loops)\n";
+                << randomloops << " loops)\n"
+                << "  -s #: seed of the randomized search (default is the clock;"
+                << " the seed used is printed)\n";
 
             exit(-1);
         }
@@ -195,6 +201,7 @@ int main(int argc, char** argv) {
         else if (args == "-N") { allkernels = true; }
         else if (args == "-q") { prime = Givaro::Integer(argv[++i]); }
         else if (args == "-v") { verbose = atoi(argv[++i]); }
+        else if (args == "-s") { PLinOpt::RandomSeed = atoll(argv[++i]); }
         else if (args == "-O") {
             randomloops = atoi(argv[++i]);
             if ( (randomloops>1) && (!DORANDOMSEARCH) ) {

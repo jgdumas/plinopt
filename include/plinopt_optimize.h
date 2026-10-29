@@ -64,6 +64,10 @@ auto cmpOpCount {[](const auto& a, const auto& b) {
 #endif
 
 
+    // Same operation count
+auto eqOpCount {[](const auto& a, const auto& b) {
+    return (!cmpOpCount(a,b)) && (!cmpOpCount(b,a)); } };
+
 // ===============================================================
 template<typename Ring>
 using Etriple = std::tuple<size_t, size_t, typename Ring::Element>;
