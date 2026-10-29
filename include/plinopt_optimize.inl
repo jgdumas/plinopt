@@ -22,7 +22,7 @@ template<typename T1, typename T2>
 std::ostream& operator<<(std::ostream& out, const std::map<T1,T2>& v) {
     out << '{';
     for (const auto& [element, frequency] : v)
-        out << element << '=' << frequency << ' ';
+	out << element << '=' << frequency << ' ';
     return out << '}';
 }
 
@@ -32,11 +32,11 @@ std::vector<Etriple<Ring>> listpairs (const Container& c, const Ring& F) {
     std::vector<Etriple<Ring>> v;
     typename Ring::Element tmp; F.init(tmp);
     for(auto iter=c.begin(); iter != c.end(); ++iter) {
-        auto next(iter);
-        for(++next; next!= c.end(); ++next) {
-            v.emplace_back(iter->first, next->first,
-                           F.div(tmp,next->second,iter->second));
-        }
+	auto next(iter);
+	for(++next; next!= c.end(); ++next) {
+	    v.emplace_back(iter->first, next->first,
+			   F.div(tmp,next->second,iter->second));
+	}
     }
     return v;
 }
@@ -44,14 +44,14 @@ std::vector<Etriple<Ring>> listpairs (const Container& c, const Ring& F) {
 // If cse is present in row, add square of row density to score
 template<typename triple>
 inline size_t score(const std::vector<std::vector<triple>>& AllPairs,
-                    const std::vector<size_t>& Density,
-                    const triple& cse) {
+		    const std::vector<size_t>& Density,
+		    const triple& cse) {
     size_t score(0);
     for(size_t k=0; k<Density.size(); ++k) {
-        if (std::find(AllPairs[k].begin(), AllPairs[k].end(), cse)
-            != AllPairs[k].end()) {
-            score += Density[k]*Density[k];
-        }
+	if (std::find(AllPairs[k].begin(), AllPairs[k].end(), cse)
+	    != AllPairs[k].end()) {
+	    score += Density[k]*Density[k];
+	}
     }
     return score;
 }
@@ -59,134 +59,134 @@ inline size_t score(const std::vector<std::vector<triple>>& AllPairs,
 // Removes cse, updating lM (and AllPairs/PairMap if updateAPM)
 template<typename triple, typename _Mat>
 Pair<long> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
-                     std::vector<triple>& lmultiples, const triple& cse,
-                     std::vector<std::vector<triple>>& AllPairs,
-                     std::map<triple,size_t>& PairMap,
-                     const char tev, const char rav, const bool updateAPM) {
+		     std::vector<triple>& lmultiples, const triple& cse,
+		     std::vector<std::vector<triple>>& AllPairs,
+		     std::map<triple,size_t>& PairMap,
+		     const char tev, const char rav, const bool updateAPM) {
     const auto& FF(lM.field());
     size_t lm(lM.coldim());
     long savedadds(0), savedmuls(0);
 
-        // Looking for the most number of ones in either columns of cse
-        // (scanning the rows: a transposed copy per CSE was a fifth of the
-        // optimizer's time)
+	// Looking for the most number of ones in either columns of cse
+	// (scanning the rows: a transposed copy per CSE was a fifth of the
+	// optimizer's time)
     size_t count0(0), count1(0);
     for(auto rit=lM.rowBegin(); rit != lM.rowEnd(); ++rit) {
-        for(const auto& iter: *rit) {
-            if (iter.first == std::get<0>(cse)) {
-                if (isAbsOne(FF,iter.second)) ++count0;
-            } else if (iter.first == std::get<1>(cse)) {
-                if (isAbsOne(FF,iter.second)) ++count1;
-            }
-        }
+	for(const auto& iter: *rit) {
+	    if (iter.first == std::get<0>(cse)) {
+		if (isAbsOne(FF,iter.second)) ++count0;
+	    } else if (iter.first == std::get<1>(cse)) {
+		if (isAbsOne(FF,iter.second)) ++count1;
+	    }
+	}
     }
 
     triple lcse;
     if (count0<count1) { // More ones in std::get<1>(cse);
-        std::get<0>(lcse) = std::get<1>(cse);
-        std::get<1>(lcse) = std::get<0>(cse);
-        FF.inv( std::get<2>(lcse), std::get<2>(cse) );
+	std::get<0>(lcse) = std::get<1>(cse);
+	std::get<1>(lcse) = std::get<0>(cse);
+	FF.inv( std::get<2>(lcse), std::get<2>(cse) );
     } else {             // More ones in std::get<0>(cse);
-        std::get<0>(lcse) = std::get<0>(cse);
-        std::get<1>(lcse) = std::get<1>(cse);
-        FF.assign( std::get<2>(lcse), std::get<2>(cse) );
+	std::get<0>(lcse) = std::get<0>(cse);
+	std::get<1>(lcse) = std::get<1>(cse);
+	FF.assign( std::get<2>(lcse), std::get<2>(cse) );
     }
 
-        // Factor out cse, in all rows
-        // adds a column for the new factor
+	// Factor out cse, in all rows
+	// adds a column for the new factor
     for(size_t i=0; i<AllPairs.size(); ++i) {
-        const auto& rows(AllPairs[i]);
-        if (std::find(rows.begin(), rows.end(), cse) != rows.end()) {
-            typename _Mat::Element coeff; FF.init(coeff);
-            for(auto iter=lM[i].begin(); iter!= lM[i].end(); ++iter) {
-                if (iter->first==std::get<0>(lcse)) {
-                    coeff = iter->second;
-                    lM[i].erase(iter); ++savedadds;
-                    break;
-                }
-            }
-            for(auto iter=lM[i].begin(); iter!= lM[i].end(); ++iter) {
-                if (iter->first==std::get<1>(lcse)) {
-                    if (notAbsOne(FF,iter->second)) ++savedmuls;
-                    lM[i].erase(iter);
-                    lM[i].emplace_back(lm,coeff);
-                    break;
-                }
-            }
+	const auto& rows(AllPairs[i]);
+	if (std::find(rows.begin(), rows.end(), cse) != rows.end()) {
+	    typename _Mat::Element coeff; FF.init(coeff);
+	    for(auto iter=lM[i].begin(); iter!= lM[i].end(); ++iter) {
+		if (iter->first==std::get<0>(lcse)) {
+		    coeff = iter->second;
+		    lM[i].erase(iter); ++savedadds;
+		    break;
+		}
+	    }
+	    for(auto iter=lM[i].begin(); iter!= lM[i].end(); ++iter) {
+		if (iter->first==std::get<1>(lcse)) {
+		    if (notAbsOne(FF,iter->second)) ++savedmuls;
+		    lM[i].erase(iter);
+		    lM[i].emplace_back(lm,coeff);
+		    break;
+		}
+	    }
 
-            if (updateAPM) {
-                    // Update AllPairs[i] and PairMap
-                    // Decrease PairMap by old AP[i]
-                for (const auto& iter: AllPairs[i]) {
-                    PairMap[iter]--;
-                    if (PairMap[iter] == 0) PairMap.erase(iter);
-                }
+	    if (updateAPM) {
+		    // Update AllPairs[i] and PairMap
+		    // Decrease PairMap by old AP[i]
+		for (const auto& iter: AllPairs[i]) {
+		    PairMap[iter]--;
+		    if (PairMap[iter] == 0) PairMap.erase(iter);
+		}
 
-                    // Preserve pairs not involving the change
-                std::vector<triple> newrow;
-                for (const auto& iter: AllPairs[i]) {
-                    if ( (std::get<0>(iter) != std::get<0>(lcse)) &&
-                         (std::get<1>(iter) != std::get<0>(lcse)) &&
-                         (std::get<0>(iter) != std::get<1>(lcse)) &&
-                         (std::get<1>(iter) != std::get<1>(lcse))
-                         ) {
-                        newrow.push_back(iter);
-                    }
-                }
-                     // Add all pairs with new (last) element
-                typename _Mat::Element tmp; FF.init(tmp);
-                auto endlMi(lM[i].end()); --endlMi;
-                for(auto iter=lM[i].begin(); iter != endlMi; ++iter) {
-                    newrow.emplace_back(iter->first, endlMi->first,
-                                        FF.div(tmp, endlMi->second, iter->second));
-                }
+		    // Preserve pairs not involving the change
+		std::vector<triple> newrow;
+		for (const auto& iter: AllPairs[i]) {
+		    if ( (std::get<0>(iter) != std::get<0>(lcse)) &&
+			 (std::get<1>(iter) != std::get<0>(lcse)) &&
+			 (std::get<0>(iter) != std::get<1>(lcse)) &&
+			 (std::get<1>(iter) != std::get<1>(lcse))
+			 ) {
+			newrow.push_back(iter);
+		    }
+		}
+		     // Add all pairs with new (last) element
+		typename _Mat::Element tmp; FF.init(tmp);
+		auto endlMi(lM[i].end()); --endlMi;
+		for(auto iter=lM[i].begin(); iter != endlMi; ++iter) {
+		    newrow.emplace_back(iter->first, endlMi->first,
+					FF.div(tmp, endlMi->second, iter->second));
+		}
 
-                     // Increase PairMap by new AP[i]
-                for (const auto& iter: newrow) {
-                     PairMap[iter]++;
-                }
+		     // Increase PairMap by new AP[i]
+		for (const auto& iter: newrow) {
+		     PairMap[iter]++;
+		}
 
-                    // Update AllPairs[i]
-                AllPairs[i].assign(newrow.begin(),newrow.end());
-            }
-        }
+		    // Update AllPairs[i]
+		AllPairs[i].assign(newrow.begin(),newrow.end());
+	    }
+	}
     }
 
-        // If coefficient was already applied
-        //    then reuse the multiplication
-        //    else put it in a temporary for future reuse
+	// If coefficient was already applied
+	//    then reuse the multiplication
+	//    else put it in a temporary for future reuse
     auto asgs(Fabs(FF,std::get<2>(lcse)));
     size_t rindex(lm), moremul(0);
     if (notAbsOne(FF,asgs)) {
-        for(const auto& iter: lmultiples) {
-            if ((std::get<1>(iter) == std::get<1>(lcse)) &&
-                (std::get<2>(iter) == asgs)) {
-                rindex = std::get<0>(iter);
-                break;
-            }
-        }
-        if (rindex == lm) {
-            ssout << rav << lm << ":=";
-            printmulorjustdiv(ssout, tev, std::get<1>(lcse),
-                              asgs, moremul, FF) << ';' << std::endl;
-            lmultiples.emplace_back(lm,std::get<1>(lcse),asgs);
-        }
+	for(const auto& iter: lmultiples) {
+	    if ((std::get<1>(iter) == std::get<1>(lcse)) &&
+		(std::get<2>(iter) == asgs)) {
+		rindex = std::get<0>(iter);
+		break;
+	    }
+	}
+	if (rindex == lm) {
+	    ssout << rav << lm << ":=";
+	    printmulorjustdiv(ssout, tev, std::get<1>(lcse),
+			      asgs, moremul, FF) << ';' << std::endl;
+	    lmultiples.emplace_back(lm,std::get<1>(lcse),asgs);
+	}
     }
 
     nbmul += moremul;
     savedmuls -= moremul;
 
-        // Outputs the factor into a temporary variable
+	// Outputs the factor into a temporary variable
     ssout << tev << lm << ":=" << tev << std::get<0>(lcse);
     if ( (FF.isMOne(asgs)) || (Fsign(FF,std::get<2>(lcse))<0) ) {
-        ssout << '-';
+	ssout << '-';
     } else {
-        ssout << '+';
+	ssout << '+';
     }
     if (isAbsOne(FF,asgs)) {
-        ssout << tev << std::get<1>(lcse);
+	ssout << tev << std::get<1>(lcse);
     } else {
-        ssout << rav << rindex;
+	ssout << rav << rindex;
     }
     ssout << ';' << std::endl;
 
@@ -200,227 +200,226 @@ Pair<long> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
 
 template<typename triple, typename _Mat>
 Pair<long> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
-                     std::vector<triple>& lmultiples, const triple& cse,
-                     std::vector<std::vector<triple>>& AllPairs,
-                     const char tev, const char rav) {
+		     std::vector<triple>& lmultiples, const triple& cse,
+		     std::vector<std::vector<triple>>& AllPairs,
+		     const char tev, const char rav) {
     std::map<triple,size_t> PairMap;
     return RemOneCSE(ssout, lM, nbmul, lmultiples, cse, AllPairs,
-                     PairMap, tev, rav, false);
+		     PairMap, tev, rav, false);
 }
 
 
-// Removing one pair (CSE)
+// Removing CSEs until no pair occurs twice
 template<typename triple,typename _Mat>
-bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
-            size_t& nbadd, size_t& nbmul, const char tev, const char rav) {
+void OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
+	    size_t& nbadd, size_t& nbmul, const char tev, const char rav) {
     const auto& FF(M.field());
 
-        // Compute all pairs, in a row
+	// Compute all pairs, in a row
     std::vector<std::vector<triple>> AllPairs;
     for(auto iter=M.rowBegin(); iter != M.rowEnd(); ++iter) {
-        AllPairs.push_back(listpairs(*iter, FF));
+	AllPairs.push_back(listpairs(*iter, FF));
     }
 
-        // Count occurences of each pair in whole matrix
+	// Count occurences of each pair in whole matrix
     std::map<triple,size_t> PairMap;
     for(const auto& rows: AllPairs) {
-        for (const auto& iter: rows) {
-            PairMap[iter]++;
-        }
+	for (const auto& iter: rows) {
+	    PairMap[iter]++;
+	}
     }
 
 #ifdef VERBATIM_PARSING
     size_t apcount(0); for(const auto& rows: AllPairs) apcount += rows.size();
     std::clog << "# Pairs: " << PairMap.size() << '|' << apcount << '|'
-              << double(apcount)/double(AllPairs.size()) << std::endl;
+	      << double(apcount)/double(AllPairs.size()) << std::endl;
 #endif
 
-    if (PairMap.size()==0) return false;
+    if (PairMap.size()==0) return;
 
-        // The loop below removes CSEs until no pair occurs twice, updating
-        // AllPairs and PairMap exactly as it goes (RemOneCSE); so when it
-        // ends there is nothing left for another call to find, and it
-        // returns false: Optimizer need not rebuild the pair lists to
-        // learn that.
+	// The loop below removes CSEs until no pair occurs twice, updating
+	// AllPairs and PairMap exactly as it goes (RemOneCSE); so when it
+	// ends there is nothing left for another call to find, and it
+	// returns false: Optimizer need not rebuild the pair lists to
+	// learn that.
     while(PairMap.size() > 0) {
-            // Found some pairs
-        size_t maxfrq(0);
-        std::vector<triple> MaxCSE;
-        triple cse;
+	    // Found some pairs
+	size_t maxfrq(0);
+	std::vector<triple> MaxCSE;
+	triple cse;
 
-            // Find all pairs with maximal frequency
-        for (const auto& [element, frequency] : PairMap) {
-            if (frequency == maxfrq) {
-                MaxCSE.push_back(element);
-            }
-            if (frequency > maxfrq) {
-                maxfrq = frequency;
-                cse = element;
-                MaxCSE.resize(0); MaxCSE.push_back(element);
-            }
-        }
+	    // Find all pairs with maximal frequency
+	for (const auto& [element, frequency] : PairMap) {
+	    if (frequency == maxfrq) {
+		MaxCSE.push_back(element);
+	    }
+	    if (frequency > maxfrq) {
+		maxfrq = frequency;
+		cse = element;
+		MaxCSE.resize(0); MaxCSE.push_back(element);
+	    }
+	}
 
-        if (maxfrq <=1) return false;
-            // Factoring will gain something if maximal frequency > 1
+	if (maxfrq <=1) return;
+	    // Factoring will gain something if maximal frequency > 1
 
-            // More than one pair with maximal frequency
-        if (MaxCSE.size()>1) {
-                // Tie breaking heuristics
+	    // More than one pair with maximal frequency
+	if (MaxCSE.size()>1) {
+		// Tie breaking heuristics
 #if defined(RANDOM_TIES) && !defined(DENSITY_OPTIMIZATION)
-            cse = MaxCSE[ generator()() % MaxCSE.size() ];
+	    cse = MaxCSE[ generator()() % MaxCSE.size() ];
 #else
-                // Compute density in a row
-            std::vector<size_t> Density;
-            for(auto iter=M.rowBegin(); iter != M.rowEnd(); ++iter) {
-                Density.emplace_back(iter->size());
-            }
+		// Compute density in a row
+	    std::vector<size_t> Density;
+	    for(auto iter=M.rowBegin(); iter != M.rowEnd(); ++iter) {
+		Density.emplace_back(iter->size());
+	    }
 
-            size_t maxscore(0);
-            for(const auto& element: MaxCSE) {
-                const size_t newscore(score(AllPairs,Density,element));
-                if (newscore == maxscore) {
-                        // Tie breaking by multiplier
-                    if (isAbsOne(FF,std::get<2>(element))) {
-                        cse = element;
-                    }
-                }
-                    // Tie breaking by score
-                if (newscore > maxscore) {
-                    maxscore = newscore;
-                    cse = element;
-                }
-            }
+	    size_t maxscore(0);
+	    for(const auto& element: MaxCSE) {
+		const size_t newscore(score(AllPairs,Density,element));
+		if (newscore == maxscore) {
+			// Tie breaking by multiplier
+		    if (isAbsOne(FF,std::get<2>(element))) {
+			cse = element;
+		    }
+		}
+		    // Tie breaking by score
+		if (newscore > maxscore) {
+		    maxscore = newscore;
+		    cse = element;
+		}
+	    }
 #endif
-        }
+	}
 
-            // Now factoring out that CSE from the matrix
-        ++nbadd;
-        auto savings(RemOneCSE(sout, M, nbmul, multiples, cse,
-                               AllPairs, PairMap, tev, rav, true));
+	    // Now factoring out that CSE from the matrix
+	++nbadd;
+	auto savings(RemOneCSE(sout, M, nbmul, multiples, cse,
+			       AllPairs, PairMap, tev, rav, true));
 
 #if VERBATIM_PARSING > 1
 #  if defined(RANDOM_TIES) && !defined(DENSITY_OPTIMIZATION)
-        printEtriple(std::clog << "# Found: ", FF, cse) << '=' << maxfrq
-                               << ", Saved: " << savings.first << "+|"
-                               << savings.second << 'x' << std::endl;
+	printEtriple(std::clog << "# Found: ", FF, cse) << '=' << maxfrq
+			       << ", Saved: " << savings.first << "+|"
+			       << savings.second << 'x' << std::endl;
 #  else
-        for (const auto& [element, frequency] : PairMap) {
-            if ( (frequency == maxfrq) && (element != cse)) {
-                printEtriple(std::clog << "# tied : ", FF, element)
-                                       << '=' << maxfrq << ','
-                                       << score(AllPairs,Density,element)
-                                       << std::endl;
-            }
-        }
+	for (const auto& [element, frequency] : PairMap) {
+	    if ( (frequency == maxfrq) && (element != cse)) {
+		printEtriple(std::clog << "# tied : ", FF, element)
+				       << '=' << maxfrq << ','
+				       << score(AllPairs,Density,element)
+				       << std::endl;
+	    }
+	}
 #  endif
 #endif
     }
-    return false;
 }
 
 // Factors out same coefficient in a column
 template<typename Iter, typename triple, typename _Mat>
 void FactorOutColumns(std::ostream& sout, _Mat& T,
-                      std::vector<triple>& multiples, size_t& nbmul,
-                      const char tev, const char rav,
-                      const size_t j, const Iter& start, const Iter& end) {
+		      std::vector<triple>& multiples, size_t& nbmul,
+		      const char tev, const char rav,
+		      const size_t j, const Iter& start, const Iter& end) {
     if (start == end) return;
     const auto& FF(T.field());
 
     std::map<typename _Mat::Element, size_t> MapVals;
     for(Iter iter = start; iter != end; ++iter) {
-        MapVals[Fabs(FF,iter->second)]++;
+	MapVals[Fabs(FF,iter->second)]++;
     }
 
 
     for (const auto& [element, frequency] : MapVals) {
-        size_t m(T.rowdim());
+	size_t m(T.rowdim());
 
-            // Found repeated coefficient
-        if ( (frequency>1) && (notAbsOne(FF,element)) ) {
-            size_t rindex(m);
-                // If coefficient was already applied
-                //    then reuse the multiplication
-                //    else put it in a temporary for future reuse
-             for(const auto& iter: multiples) {
-                if ((std::get<1>(iter) == j) &&
-                    (std::get<2>(iter) == element)) {
-                    rindex = std::get<0>(iter);
-                    break;
-                }
-            }
-            if (rindex == m) {
-                sout << rav << m << ":=";
-                printmulorjustdiv(sout, tev, j,
-                                  element, nbmul, FF) << ';' << std::endl;
-                multiples.emplace_back(m,j,element);
-            }
-                // Outputs the coefficient into a temporary variable
-            sout << tev << m << ":=";
-            sout << rav << rindex << ';' << std::endl;
-            T.resize(++m, T.coldim());
+	    // Found repeated coefficient
+	if ( (frequency>1) && (notAbsOne(FF,element)) ) {
+	    size_t rindex(m);
+		// If coefficient was already applied
+		//    then reuse the multiplication
+		//    else put it in a temporary for future reuse
+	     for(const auto& iter: multiples) {
+		if ((std::get<1>(iter) == j) &&
+		    (std::get<2>(iter) == element)) {
+		    rindex = std::get<0>(iter);
+		    break;
+		}
+	    }
+	    if (rindex == m) {
+		sout << rav << m << ":=";
+		printmulorjustdiv(sout, tev, j,
+				  element, nbmul, FF) << ';' << std::endl;
+		multiples.emplace_back(m,j,element);
+	    }
+		// Outputs the coefficient into a temporary variable
+	    sout << tev << m << ":=";
+	    sout << rav << rindex << ';' << std::endl;
+	    T.resize(++m, T.coldim());
 
-                // Replace the coefficient in all rows by 1 or -1
-            for(size_t k=0; k<frequency; ++k) {
-                auto& row(T[j]);
-                for(auto iter=row.begin(); iter != row.end(); ++iter) {
-                    if (Fabs(FF,iter->second) == element) {
-                        T[m-1].emplace_back(iter->first, (Fsign(FF,iter->second) >= 0 ? FF.one : FF.mOne));
-                        row.erase(iter);
-                        break;
-                    }
-                }
-            }
-        }
+		// Replace the coefficient in all rows by 1 or -1
+	    for(size_t k=0; k<frequency; ++k) {
+		auto& row(T[j]);
+		for(auto iter=row.begin(); iter != row.end(); ++iter) {
+		    if (Fabs(FF,iter->second) == element) {
+			T[m-1].emplace_back(iter->first, (Fsign(FF,iter->second) >= 0 ? FF.one : FF.mOne));
+			row.erase(iter);
+			break;
+		    }
+		}
+	    }
+	}
     }
 }
 
 // Factors out same coefficient in a row
 template<typename Iter, typename _Mat>
 void FactorOutRows(std::ostream& sout, _Mat& M, size_t& nbadd, const char tev,
-                   const size_t i, const Iter& start, const Iter& end) {
+		   const size_t i, const Iter& start, const Iter& end) {
     if (start == end) return;
     const auto& FF(M.field());
 
     std::map<typename _Mat::Element, size_t> MapVals;
     for(Iter iter = start; iter != end; ++iter) {
-        MapVals[Fabs(FF,iter->second)]++;
+	MapVals[Fabs(FF,iter->second)]++;
     }
 
     size_t m(M.coldim());
     for (const auto& [element, frequency] : MapVals) {
-            // Found repeated coefficient
-        if ((frequency>1) && (notAbsOne(FF,element)) ) {
-            sout << tev << m << ":=";
-            ++m;
-                // Add a column with coefficient multiplying a new sum
-            M.resize(M.rowdim(), m);
-            M[i].emplace_back(m-1, element);
+	    // Found repeated coefficient
+	if ((frequency>1) && (notAbsOne(FF,element)) ) {
+	    sout << tev << m << ":=";
+	    ++m;
+		// Add a column with coefficient multiplying a new sum
+	    M.resize(M.rowdim(), m);
+	    M[i].emplace_back(m-1, element);
 
-                // Remove elements that will be in the new sum
-            auto& row(M[i]);
-            for(auto iter=row.begin(); iter != row.end(); ++iter) {
-                if (Fabs(FF,iter->second) == element) {
-                    if (Fsign(FF,iter->second) < 0) sout << '-';
-                    sout << tev << iter->first;
-                    row.erase(iter);
-                    break;
-                }
-            }
-                // Precompute the new sum (to be multiplied afterwards)
-            for(size_t k=1; k<frequency; ++k) {
-                for(auto iter=row.begin(); iter != row.end(); ++iter) {
-                    if (Fabs(FF,iter->second) == element) {
-                        ++nbadd;
-                        sout << (Fsign(FF,iter->second) < 0 ? '-' : '+')
-                                  << tev << iter->first;
-                        row.erase(iter);
-                        break;
-                    }
-                }
-            }
-            sout << ';' << std::endl;
-        }
+		// Remove elements that will be in the new sum
+	    auto& row(M[i]);
+	    for(auto iter=row.begin(); iter != row.end(); ++iter) {
+		if (Fabs(FF,iter->second) == element) {
+		    if (Fsign(FF,iter->second) < 0) sout << '-';
+		    sout << tev << iter->first;
+		    row.erase(iter);
+		    break;
+		}
+	    }
+		// Precompute the new sum (to be multiplied afterwards)
+	    for(size_t k=1; k<frequency; ++k) {
+		for(auto iter=row.begin(); iter != row.end(); ++iter) {
+		    if (Fabs(FF,iter->second) == element) {
+			++nbadd;
+			sout << (Fsign(FF,iter->second) < 0 ? '-' : '+')
+				  << tev << iter->first;
+			row.erase(iter);
+			break;
+		    }
+		}
+	    }
+	    sout << ';' << std::endl;
+	}
     }
 }
 
@@ -430,8 +429,8 @@ void FactorOutRows(std::ostream& sout, _Mat& M, size_t& nbadd, const char tev,
 // With only 2 multiplications, by a, then by b, instead of 3
 template<typename triple, typename _Mat>
 bool Triangle(std::ostream& sout, _Mat& M, _Mat& T,
-              std::vector<triple>& multiples, size_t& nbadd, size_t& nbmul,
-              const char tev, const char rav, const size_t j) {
+	      std::vector<triple>& multiples, size_t& nbadd, size_t& nbmul,
+	      const char tev, const char rav, const size_t j) {
 
     if (T[j].size() == 0) return false;
     const auto& FF(T.field());
@@ -442,70 +441,70 @@ bool Triangle(std::ostream& sout, _Mat& M, _Mat& T,
     do { over = true;
 
     for(auto iter = T[j].begin(); iter != T[j].end();
-        ++iter) { if (notAbsOne(FF, iter->second)) {
-        for(auto next = T[j].begin(); next != T[j].end();
-            ++next) { if ((next != iter) && notAbsOne(FF,next->second)) {
-            const size_t i(next->first);
-            typename _Mat::Element quot; FF.init(quot);
-            const auto& rowi(M[i]);
-            FF.div(quot, next->second, iter->second); // nnz should be inv.
-            for(auto third=rowi.begin(); third != rowi.end();
-                ++third) { if ( (third->first != j)
-                                && (notAbsOne(FF,third->second)) ) {
-                typename _Mat::Element coeff; FF.init(coeff);
-                FF.div(coeff, quot, third->second);
-                if (isAbsOne(FF,coeff)) {
-                    size_t m(T.rowdim());
-                    found = true; // Triangle found !!!
-                    over = false; // will have to loop again
+	++iter) { if (notAbsOne(FF, iter->second)) {
+	for(auto next = T[j].begin(); next != T[j].end();
+	    ++next) { if ((next != iter) && notAbsOne(FF,next->second)) {
+	    const size_t i(next->first);
+	    typename _Mat::Element quot; FF.init(quot);
+	    const auto& rowi(M[i]);
+	    FF.div(quot, next->second, iter->second); // nnz should be inv.
+	    for(auto third=rowi.begin(); third != rowi.end();
+		++third) { if ( (third->first != j)
+				&& (notAbsOne(FF,third->second)) ) {
+		typename _Mat::Element coeff; FF.init(coeff);
+		FF.div(coeff, quot, third->second);
+		if (isAbsOne(FF,coeff)) {
+		    size_t m(T.rowdim());
+		    found = true; // Triangle found !!!
+		    over = false; // will have to loop again
 
-                        // First, record one multiplication by a
+			// First, record one multiplication by a
 					sout << tev << m << ":=";
-                    auto ais(Fabs(FF,iter->second));
-                    if ( (Fsign(FF,iter->second) <0)
-                         || FF.isMOne(iter->second) ) sout << '-';
-                    printmulorjustdiv(sout, tev, j, ais,
-                                      nbmul, FF) << ';' << std::endl;
-                    multiples.emplace_back(m,j,iter->second);
+		    auto ais(Fabs(FF,iter->second));
+		    if ( (Fsign(FF,iter->second) <0)
+			 || FF.isMOne(iter->second) ) sout << '-';
+		    printmulorjustdiv(sout, tev, j, ais,
+				      nbmul, FF) << ';' << std::endl;
+		    multiples.emplace_back(m,j,iter->second);
 
-                        // Second, in j-th column, divide both elements by a
+			// Second, in j-th column, divide both elements by a
 #ifdef VERBATIM_PARSING
 #  if VERBATIM_PARSING >= 2
-                    size_t dummy(0);
-                    printmulorjustdiv(std::clog << "# Found Triangle [",
-                                      tev, j, ais, dummy, FF);
-                    std::clog << "]: (" << iter->first << ',' << j << ')' << '('
-                              << i << ',' << j << ')' << '('
-                              << i << ',' << third->first << ')' << std::endl;
+		    size_t dummy(0);
+		    printmulorjustdiv(std::clog << "# Found Triangle [",
+				      tev, j, ais, dummy, FF);
+		    std::clog << "]: (" << iter->first << ',' << j << ')' << '('
+			      << i << ',' << j << ')' << '('
+			      << i << ',' << third->first << ')' << std::endl;
 #  endif
 #endif
 
-                        //   second.i) add column with 1 and quot
-                    T.resize(++m, T.coldim());
-                    T[m-1].emplace_back(iter->first, FF.one);
-                    T[m-1].emplace_back(next->first, quot);
+			//   second.i) add column with 1 and quot
+		    T.resize(++m, T.coldim());
+		    T[m-1].emplace_back(iter->first, FF.one);
+		    T[m-1].emplace_back(next->first, quot);
 
-                        //   second.ii) remove iter & next from T[j]
-                    const auto& diter(*iter), & dnext(*next);
-                    auto isIorN {[diter,dnext](
-                        const typename _Mat::Row::value_type& p)
-                        { return ((p == diter) || (p == dnext));}};
-                    T[j].erase(std::remove_if(T[j].begin(), T[j].end(), isIorN),
-                               T[j].end());
+			//   second.ii) remove iter & next from T[j]
+		    const auto& diter(*iter), & dnext(*next);
+		    auto isIorN {[diter,dnext](
+			const typename _Mat::Row::value_type& p)
+			{ return ((p == diter) || (p == dnext));}};
+		    T[j].erase(std::remove_if(T[j].begin(), T[j].end(), isIorN),
+			       T[j].end());
 
-                    Transpose(M,T);
+		    Transpose(M,T);
 
-                        // Third, record multiplication by b
-                        // Fourth, divide both row elements by b
-                    FactorOutRows(sout, M, nbadd, tev,
-                                  i, M[i].begin(), M[i].end());
+			// Third, record multiplication by b
+			// Fourth, divide both row elements by b
+		    FactorOutRows(sout, M, nbadd, tev,
+				  i, M[i].begin(), M[i].end());
 
-                    Transpose(T,M);
-                    break;
-            } } }
-            if (found) break;
-        } }
-        if (found) break;
+		    Transpose(T,M);
+		    break;
+	    } } }
+	    if (found) break;
+	} }
+	if (found) break;
     } }
     } while(!over);
     return found;
@@ -516,96 +515,96 @@ bool Triangle(std::ostream& sout, _Mat& M, _Mat& T,
 // Direct program generateur from a matrix
 template<typename outstream, typename _Mat, typename triple>
 std::ostream& ProgramGen(outstream& sout, _Mat& M,
-                         std::vector<triple>& multiples,
-                         size_t& addcount, size_t& nbmul,
-                         const char ouv, const char tev, const char rav) {
+			 std::vector<triple>& multiples,
+			 size_t& addcount, size_t& nbmul,
+			 const char ouv, const char tev, const char rav) {
 
 #ifdef VERBATIM_PARSING
     std::clog << "# Program Generation:" << ouv << ' ' << tev << ' ' << rav
-              << std::endl;
+	      << std::endl;
     std::clog << std::string(30,'#') << std::endl;
 #endif
 
     const auto& FF(M.field());
 
-        // Factoring multiplier by columns
+	// Factoring multiplier by columns
     _Mat T(FF, M.coldim(), M.rowdim()); Transpose(T, M);
     for(size_t j=0; j<M.coldim(); ++j) {
-        FactorOutColumns(sout, T, multiples, nbmul, tev, rav,
-                         j, T[j].begin(), T[j].end());
+	FactorOutColumns(sout, T, multiples, nbmul, tev, rav,
+			 j, T[j].begin(), T[j].end());
     }
     Transpose(M,T);
 
-        // Factoring multiplier by rows
+	// Factoring multiplier by rows
     for(size_t i=0; i<M.rowdim(); ++i) {
-        FactorOutRows(sout, M, addcount, tev, i, M[i].begin(), M[i].end());
+	FactorOutRows(sout, M, addcount, tev, i, M[i].begin(), M[i].end());
     }
 
     Transpose(T,M);
 
-        // Factoring triangle multiplier
+	// Factoring triangle multiplier
     for(size_t j=0; j<M.coldim(); ++j) {
-        Triangle(sout, M, T, multiples, addcount, nbmul, tev, rav, j);
+	Triangle(sout, M, T, multiples, addcount, nbmul, tev, rav, j);
     }
 
-        // Computing remaining (simple) linear combinations
+	// Computing remaining (simple) linear combinations
     for(size_t i=0; i<M.rowdim(); ++i) {
-        const auto& row(M[i]);
-        if (row.size()>0) {
-            sout << ouv << i << ":=";
+	const auto& row(M[i]);
+	if (row.size()>0) {
+	    sout << ouv << i << ":=";
 
-            auto arbs(Fabs(FF,row.begin()->second));
+	    auto arbs(Fabs(FF,row.begin()->second));
 
-                // If already multiplied, reuse it
-            size_t rindex(M.coldim());
-            for(const auto& miter: multiples) {
-                if ((std::get<1>(miter) == row.begin()->first) &&
-                    (std::get<2>(miter) == arbs)) {
-                    rindex = std::get<0>(miter);
-                    break;
-                }
-            }
-            if (rindex != M.coldim()) {
-                if (! FF.areEqual(arbs,row.begin()->second)) sout << '-';
-                sout << rav << rindex;
-            } else {
-                if ( (Fsign(FF,row.begin()->second) < 0)
-                     || FF.isMOne(row.begin()->second) ) sout << '-';
-                printmulorjustdiv(sout, tev, row.begin()->first,
-                                  arbs, nbmul, FF);
-            }
+		// If already multiplied, reuse it
+	    size_t rindex(M.coldim());
+	    for(const auto& miter: multiples) {
+		if ((std::get<1>(miter) == row.begin()->first) &&
+		    (std::get<2>(miter) == arbs)) {
+		    rindex = std::get<0>(miter);
+		    break;
+		}
+	    }
+	    if (rindex != M.coldim()) {
+		if (! FF.areEqual(arbs,row.begin()->second)) sout << '-';
+		sout << rav << rindex;
+	    } else {
+		if ( (Fsign(FF,row.begin()->second) < 0)
+		     || FF.isMOne(row.begin()->second) ) sout << '-';
+		printmulorjustdiv(sout, tev, row.begin()->first,
+				  arbs, nbmul, FF);
+	    }
 
-                // For all the monomials of the linear combination
-            auto iter(row.begin());
-            for(++iter; iter!= row.end(); ++iter) {
-                ++addcount;
-                auto ais(Fabs(FF,iter->second));
+		// For all the monomials of the linear combination
+	    auto iter(row.begin());
+	    for(++iter; iter!= row.end(); ++iter) {
+		++addcount;
+		auto ais(Fabs(FF,iter->second));
 
-                    // If already multiplied, reuse it
-                size_t rindex(M.coldim());
-                for(const auto& miter: multiples) {
-                    if ((std::get<1>(miter) == iter->first) &&
-                        (std::get<2>(miter) == ais)) {
-                        rindex = std::get<0>(miter);
-                        break;
-                    }
-                }
-                if (rindex != M.coldim()) {
-                    sout << (FF.areEqual(ais,iter->second) ? '+' : '-')
-                         << rav << rindex;
-                } else {
-                        // otherwise next function will sout << '-'
-                    sout << ( ( (Fsign(FF,iter->second) <0)
-                                || FF.isMOne(iter->second) ) ? '-' : '+');
-                    printmulorjustdiv(sout, tev, iter->first,
-                                      ais, nbmul, FF);
-                }
-            }
-            sout << ';' << std::endl;
-        }
-        else {
-            sout << ouv << i << ":=0;" << std::endl;
-        }
+		    // If already multiplied, reuse it
+		size_t rindex(M.coldim());
+		for(const auto& miter: multiples) {
+		    if ((std::get<1>(miter) == iter->first) &&
+			(std::get<2>(miter) == ais)) {
+			rindex = std::get<0>(miter);
+			break;
+		    }
+		}
+		if (rindex != M.coldim()) {
+		    sout << (FF.areEqual(ais,iter->second) ? '+' : '-')
+			 << rav << rindex;
+		} else {
+			// otherwise next function will sout << '-'
+		    sout << ( ( (Fsign(FF,iter->second) <0)
+				|| FF.isMOne(iter->second) ) ? '-' : '+');
+		    printmulorjustdiv(sout, tev, iter->first,
+				      ais, nbmul, FF);
+		}
+	    }
+	    sout << ';' << std::endl;
+	}
+	else {
+	    sout << ouv << i << ":=0;" << std::endl;
+	}
     }
 #ifdef VERBATIM_PARSING
     std::clog << "# Program Generation done." << std::endl;
@@ -619,17 +618,19 @@ std::ostream& ProgramGen(outstream& sout, _Mat& M,
 // Global random optimization function (pairs and factors)
 template<typename outstream, typename _Mat>
 Pair<size_t> Optimizer(outstream& sout, _Mat& M,
-                       const char ouv, const char tev, const char rav) {
+		       const char ouv, const char tev, const char rav) {
 
     using triple=std::tuple<size_t, size_t, typename _Mat::Element>;
     size_t nbadd(0), nbmul(0);
 
-        // Factoring sums
-    std::vector<triple> multiples;
-    for( ; OneSub(sout, M, multiples, nbadd, nbmul, tev, rav) ; ) { }
+	// Factoring sums
 
-        // No more useful CSE, thus
-        // generate the rest of the program from the new M
+    
+    std::vector<triple> multiples;
+    OneSub(sout, M, multiples, nbadd, nbmul, tev, rav);
+
+	// No more useful CSE, thus
+	// generate the rest of the program from the new M
     ProgramGen(sout, M, multiples, nbadd, nbmul, ouv, tev, rav);
 
     return Pair<size_t>(nbadd,nbmul);
@@ -640,60 +641,60 @@ Pair<size_t> Optimizer(outstream& sout, _Mat& M,
 	// Postcondition _Matrix A is nullified
 template<typename outstream, typename _Mat>
 Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
-                             const bool KFI, const bool mostCSE) {
+			     const bool KFI, const bool mostCSE) {
 	std::vector<size_t> l;
     if (KFI) {
-        const auto& FF(A.field());
-        const size_t Ni(A.rowdim());
-        const size_t Nj(A.coldim());
+	const auto& FF(A.field());
+	const size_t Ni(A.rowdim());
+	const size_t Nj(A.coldim());
 
-            // Add identity to goals
-        x.resize(x.rowdim()+A.rowdim(),x.coldim());
-        A.resize(A.rowdim(),Nj+A.rowdim());
-        for(size_t i=0; i<A.rowdim(); ++i)
-            A.setEntry(i,Nj+i,FF.one);
+	    // Add identity to goals
+	x.resize(x.rowdim()+A.rowdim(),x.coldim());
+	A.resize(A.rowdim(),Nj+A.rowdim());
+	for(size_t i=0; i<A.rowdim(); ++i)
+	    A.setEntry(i,Nj+i,FF.one);
 
-        auto Pops = nullspacedecomp(sout, x, A, l, 'q', 'i', mostCSE);
+	auto Pops = nullspacedecomp(sout, x, A, l, 'q', 'i', mostCSE);
 
-        std::vector<std::string> iVars(A.rowdim());
-        for(size_t i=0; i<A.rowdim(); ++i) {
-            iVars[i]="q"+std::to_string(Nj+i);
-        }
+	std::vector<std::string> iVars(A.rowdim());
+	for(size_t i=0; i<A.rowdim(); ++i) {
+	    iVars[i]="q"+std::to_string(Nj+i);
+	}
 
-        std::stringstream ssin; ssin << sout.str();
-        VProgram_t progV; programParser(progV, ssin);
-        bool isreduced(false);
-        while( OpOnVars(progV, iVars) ) {
-            isreduced = true;
-            RemoveVars(progV, Pops, iVars);
-        }
+	std::stringstream ssin; ssin << sout.str();
+	VProgram_t progV; programParser(progV, ssin);
+	bool isreduced(false);
+	while( OpOnVars(progV, iVars) ) {
+	    isreduced = true;
+	    RemoveVars(progV, Pops, iVars);
+	}
 
-        if (isreduced) {
-            sout.clear(); sout.str(std::string());
-            char next(0u); parenthesisExpand(progV, next);
-                // Make output suitable for potential transpose
-            input2Temps(sout, Ni, 'i', next);
-            for(auto& line: progV) for(auto& word: line)
-                if (word[0]=='i') word[0]=next;
-            sout << progV;
-        }
+	if (isreduced) {
+	    sout.clear(); sout.str(std::string());
+	    char next(0u); parenthesisExpand(progV, next);
+		// Make output suitable for potential transpose
+	    input2Temps(sout, Ni, 'i', next);
+	    for(auto& line: progV) for(auto& word: line)
+		if (word[0]=='i') word[0]=next;
+	    sout << progV;
+	}
 
-            // out all goals, except the added identity
-            // Warning: the identity goals could now use unnecessary ops
-        for(size_t j=0; j<Nj; ++j)
-            sout << 'o' << j << ":=" << 'q' << j << ';' << std::endl;
+	    // out all goals, except the added identity
+	    // Warning: the identity goals could now use unnecessary ops
+	for(size_t j=0; j<Nj; ++j)
+	    sout << 'o' << j << ":=" << 'q' << j << ';' << std::endl;
 
-        return Pops;
+	return Pops;
     } else {
-        return nullspacedecomp(sout, x, A, l, 'o', 'i', mostCSE);
+	return nullspacedecomp(sout, x, A, l, 'o', 'i', mostCSE);
     }
 }
 
 	// Postcondition _Matrix A is nullified
 template<typename outstream, typename _Mat>
 Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
-                             std::vector<size_t>& l, const char ouv,
-                             const char inv, const bool mostCSE) {
+			     std::vector<size_t>& l, const char ouv,
+			     const char inv, const bool mostCSE) {
     const auto& FF(A.field());
     typename _Mat::Element Det;
     size_t Rank;
@@ -701,66 +702,68 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
 
     _Mat FreePart(FF, A.coldim(), A.rowdim()); Transpose(FreePart,A);
 
-        // ============================================
-        // Find the rows to start the kernel elimination
+	// ============================================
+	// Find the rows to start the kernel elimination
     std::vector<size_t> Q(Nj);
     std::iota(Q.begin(), Q.end(), 0); // Q will be this permutation
 
 
 #ifdef RANDOM_TIES
-        // If permutation is not fixed,
-        // Randomly swap initial rows of FreePart
+	// If permutation is not fixed,
+	// Randomly swap initial rows of FreePart
     if (l.size() != Nj) {
-        l.resize(Nj);
-        std::iota(l.begin(), l.end(), 0); // Select a random permutation
-        std::shuffle ( l.begin(), l.end(),
-                       std::default_random_engine(generator()()));
+	l.resize(Nj);
+	std::iota(l.begin(), l.end(), 0); // Select a random permutation
+	std::shuffle ( l.begin(), l.end(),
+
+
+		       std::default_random_engine(generator()()));
     } // Otherwise only use the prescribed permutation
     for(size_t i=1; i<Nj; ++i) {
-        if (i != l[i]) {
-            std::swap(FreePart[i],FreePart[l[i]]);
-            std::swap(Q[i], Q[l[i]]);
-        }
+	if (i != l[i]) {
+	    std::swap(FreePart[i],FreePart[l[i]]);
+	    std::swap(Q[i], Q[l[i]]);
+	}
     }
 #else
-        // Find sparsest initial rows of FreePart
+	// Find sparsest initial rows of FreePart
     for(size_t i=1; i<Nj; ++i) {
-        for(size_t j=0; j<i; ++j) {
-            if (FreePart[i].size()<FreePart[j].size()) {
-                std::swap(FreePart[i],FreePart[j]);
-                std::swap(Q[i], Q[j]);
-                --i;
-                break;
-            }
-        }
+	for(size_t j=0; j<i; ++j) {
+	    if (FreePart[i].size()<FreePart[j].size()) {
+		std::swap(FreePart[i],FreePart[j]);
+		std::swap(Q[i], Q[j]);
+		--i;
+		break;
+	    }
+	}
     }
 #endif
 
     Transpose(A, FreePart); // Apply the Q permutation on A
 
-        // ============================================
-        // Now find subset of independent rows
+	// ============================================
+	// Now find subset of independent rows
     LinBox::Permutation<typename _Mat::Field> P(FF,(long)Nj);
     LinBox::GaussDomain<typename _Mat::Field> GD(FF);
 
-        // LUP decomposition
+	// LUP decomposition
     GD.InPlaceLinearPivoting(Rank, Det, A, P, Ni, Nj );
 
-        // Removing zero rows
+	// Removing zero rows
     for(size_t i=0; i< Ni; ++i) {
-        if (A[i].size() == 0) {
-            size_t j(i);
-            if (nextnonzero(j,Ni,A)) {
-                A[i] = A[j];
-                A[j].resize(0);
-            }
-            else {
-                break;
-            }
-        }
+	if (A[i].size() == 0) {
+	    size_t j(i);
+	    if (nextnonzero(j,Ni,A)) {
+		A[i] = A[j];
+		A[j].resize(0);
+	    }
+	    else {
+		break;
+	    }
+	}
     }
 
-        // Compute NullSpace from U
+	// Compute NullSpace from U
     size_t nullity = A.coldim()-Rank;
     x.resize(x.rowdim(),nullity);
 #ifdef VERBATIM_PARSING
@@ -768,120 +771,120 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
     std::clog << std::string(30,'#') << std::endl;
 #endif
     if ( (Rank != 0) && (nullity != 0) ) {
-            // compute U2T s.t. U = [ U1 | -U2T^T ]
-        _Mat U2T(FF,nullity,Rank);
+	    // compute U2T s.t. U = [ U1 | -U2T^T ]
+	_Mat U2T(FF,nullity,Rank);
 
-        for(auto uit=A.IndexedBegin(); uit != A.IndexedEnd(); ++uit) {
-            if (uit.colIndex() >= Rank)
-                U2T.setEntry(uit.colIndex()-Rank,uit.rowIndex(),uit.value());
-        }
-        for(auto u2it=U2T.Begin(); u2it != U2T.End(); ++u2it)
-            FF.negin(*u2it);
+	for(auto uit=A.IndexedBegin(); uit != A.IndexedEnd(); ++uit) {
+	    if (uit.colIndex() >= Rank)
+		U2T.setEntry(uit.colIndex()-Rank,uit.rowIndex(),uit.value());
+	}
+	for(auto u2it=U2T.Begin(); u2it != U2T.End(); ++u2it)
+	    FF.negin(*u2it);
 
-            // Compute the basis vector by vector
-        typedef LinBox::Sparse_Vector<typename _Mat::Element> SparseVect;
-        for(size_t i=0; i<nullity; ++i) {
-            SparseVect W1Ti;
-                // Solve for upper part of basis
-            upperTriangularSparseSolve(W1Ti, Rank, A, U2T[i]);
+	    // Compute the basis vector by vector
+	typedef LinBox::Sparse_Vector<typename _Mat::Element> SparseVect;
+	for(size_t i=0; i<nullity; ++i) {
+	    SparseVect W1Ti;
+		// Solve for upper part of basis
+	    upperTriangularSparseSolve(W1Ti, Rank, A, U2T[i]);
 
-            for(size_t j=0; j<W1Ti.size(); ++j) {
-                    // P.applyTranspose(x[i],W1T[i]);
-                    // Transposein(x)
-                x.setEntry( (size_t)P.getStorage()[ (size_t)W1Ti[(size_t)j].first ], i, W1Ti[j].second );
-            }
-        }
+	    for(size_t j=0; j<W1Ti.size(); ++j) {
+		    // P.applyTranspose(x[i],W1T[i]);
+		    // Transposein(x)
+		x.setEntry( (size_t)P.getStorage()[ (size_t)W1Ti[(size_t)j].first ], i, W1Ti[j].second );
+	    }
+	}
 
 
-            // ============================================
-            // Remove (randomly chosen) dependent rows from FreePart
+	    // ============================================
+	    // Remove (randomly chosen) dependent rows from FreePart
 #if defined(RANDOM_TIES)
-        const bool restrictNotIndep(true);
+	const bool restrictNotIndep(true);
 #else
-        const bool restrictNotIndep(KFI);
+	const bool restrictNotIndep(KFI);
 #endif
-        size_t FreePartKept(nullity), NotIndep(0u);
-        if (restrictNotIndep) {
-            NotIndep = (generator()() % nullity);
-            FreePartKept -= NotIndep;
-        }
+	size_t FreePartKept(nullity), NotIndep(0u);
+	if (restrictNotIndep) {
+	    NotIndep = (generator()() % nullity);
+	    FreePartKept -= NotIndep;
+	}
 
-        for(size_t i=0; i<FreePartKept; ++i) {
-            FreePart[P.getStorage()[ Rank+i ]].resize(0);
-        }
+	for(size_t i=0; i<FreePartKept; ++i) {
+	    FreePart[P.getStorage()[ Rank+i ]].resize(0);
+	}
 
-            // ============================================
-            // Unapply Q
-        std::vector<size_t> cQ(Q);
-        for(size_t i=0; i<Nj; ++i) {
-            while(cQ[i] != i) {
-                std::swap(FreePart[i], FreePart[ cQ[i] ]);
-                std::swap(x[i], x[ cQ[i] ]);
-                std::swap(cQ[i], cQ[ cQ[i] ]);
-           }
-        }
+	    // ============================================
+	    // Unapply Q
+	std::vector<size_t> cQ(Q);
+	for(size_t i=0; i<Nj; ++i) {
+	    while(cQ[i] != i) {
+		std::swap(FreePart[i], FreePart[ cQ[i] ]);
+		std::swap(x[i], x[ cQ[i] ]);
+		std::swap(cQ[i], cQ[ cQ[i] ]);
+	   }
+	}
 
 
 
 #ifdef VERBATIM_PARSING
 #pragma omp critical
-        {
-        std::clog << "# FreePart dimensions:\t(" << Rank
-                  << '+' << NotIndep << ')'
-                  << 'x' << FreePart.coldim() << std::endl;
-        std::clog << std::string(30,'#') << std::endl;
-        }
+	{
+	std::clog << "# FreePart dimensions:\t(" << Rank
+		  << '+' << NotIndep << ')'
+		  << 'x' << FreePart.coldim() << std::endl;
+	std::clog << std::string(30,'#') << std::endl;
+	}
 #endif
 
-            // ============================================
-            // Optimize the set of independent rows
-        input2Temps(sout, FreePart.coldim(), inv, 't');
-            // o <-- Free . i
-        Pair<size_t> Fops;
-        if (mostCSE) {
-            Fops = RecOptimizer(sout, FreePart, ouv, 't', 'r');
-        } else {
-            Fops = Optimizer(sout, FreePart, ouv, 't', 'r');
-        }
+	    // ============================================
+	    // Optimize the set of independent rows
+	input2Temps(sout, FreePart.coldim(), inv, 't');
+	    // o <-- Free . i
+	Pair<size_t> Fops;
+	if (mostCSE) {
+	    Fops = RecOptimizer(sout, FreePart, ouv, 't', 'r');
+	} else {
+	    Fops = Optimizer(sout, FreePart, ouv, 't', 'r');
+	}
 
-            // ============================================
-            // Optimize the dependent rows (transposed nullspace)
-            // [ Free^T | Dep^T ] . [ x^T | I ]^T = 0
-            // So Dep . i = (- x^T) Free . i = (- x^T) o
-         _Mat Tx(x.field(), x.coldim(), x.rowdim()); NegTranspose(Tx, x);
-         Tx.resize(Tx.rowdim()-NotIndep,Tx.coldim());
+	    // ============================================
+	    // Optimize the dependent rows (transposed nullspace)
+	    // [ Free^T | Dep^T ] . [ x^T | I ]^T = 0
+	    // So Dep . i = (- x^T) Free . i = (- x^T) o
+	 _Mat Tx(x.field(), x.coldim(), x.rowdim()); NegTranspose(Tx, x);
+	 Tx.resize(Tx.rowdim()-NotIndep,Tx.coldim());
 
 #ifdef VERBATIM_PARSING
-        std::clog << std::string(30,'#') << std::endl;
-        std::clog << "# Dependent dimensions (" << x.coldim() << '-' << NotIndep
-                  << "):\t" << Tx.rowdim() << 'x' << Tx.coldim() << std::endl;
+	std::clog << std::string(30,'#') << std::endl;
+	std::clog << "# Dependent dimensions (" << x.coldim() << '-' << NotIndep
+		  << "):\t" << Tx.rowdim() << 'x' << Tx.coldim() << std::endl;
 #endif
 
-        Transpose(x, Tx);  // Remove the NotIndep columns of x for i2T checks
-        input2Temps(sout, Tx.coldim(), ouv, 'v', x);
-            // x <-- Tx . o = (- x^T) o
-        Pair<size_t> Kops;
-        if (mostCSE) {
-            Kops = RecOptimizer(sout, Tx, 'x', 'v', 'g');
-        } else {
-            Kops = Optimizer(sout, Tx, 'x', 'v', 'g');
-        }
+	Transpose(x, Tx);  // Remove the NotIndep columns of x for i2T checks
+	input2Temps(sout, Tx.coldim(), ouv, 'v', x);
+	    // x <-- Tx . o = (- x^T) o
+	Pair<size_t> Kops;
+	if (mostCSE) {
+	    Kops = RecOptimizer(sout, Tx, 'x', 'v', 'g');
+	} else {
+	    Kops = Optimizer(sout, Tx, 'x', 'v', 'g');
+	}
 
-            // ============================================
-            // Recover final output of NullSpace
-            // Applying both permutations, P then Q
-            // back into 'o' variables
-        for(size_t i=0; i<FreePartKept; ++i) {
-            sout << ouv << Q[ P.getStorage()[ Rank+i ] ] << ":="
-                 << 'x' << i << ';' << std::endl;
-        }
+	    // ============================================
+	    // Recover final output of NullSpace
+	    // Applying both permutations, P then Q
+	    // back into 'o' variables
+	for(size_t i=0; i<FreePartKept; ++i) {
+	    sout << ouv << Q[ P.getStorage()[ Rank+i ] ] << ":="
+		 << 'x' << i << ';' << std::endl;
+	}
 
-            // ============================================
-            // Total number of operations
-        Fops.first += Kops.first;
-        Fops.second += Kops.second;
+	    // ============================================
+	    // Total number of operations
+	Fops.first += Kops.first;
+	Fops.second += Kops.second;
 
-        return Fops;
+	return Fops;
     }
     return Pair<size_t>{-1,-1}; // +infty,+infty
 }
@@ -890,44 +893,44 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
 // Recusive search for the best cse
 template<typename triple,typename _Mat>
 bool RecSub(std::vector<std::string>& out, _Mat& Mat,
-            std::vector<triple>& multiples,
-            size_t& nbadd, size_t& nbmul, const size_t lvl,
-            const char tev, const char rav) {
+	    std::vector<triple>& multiples,
+	    size_t& nbadd, size_t& nbmul, const size_t lvl,
+	    const char tev, const char rav) {
 
     const auto& FF(Mat.field());
 
     std::vector<std::vector<triple>> AllPairs;
     std::vector<size_t> Density;
-        // Compute all pairs, in a row
+	// Compute all pairs, in a row
     for(auto iter=Mat.rowBegin(); iter != Mat.rowEnd(); ++iter) {
-        AllPairs.push_back(listpairs(*iter, FF));
+	AllPairs.push_back(listpairs(*iter, FF));
     }
 
-        // Count occurences of each pair in whole matrix
+	// Count occurences of each pair in whole matrix
     std::map<triple,size_t> PairMap;
     for(const auto& rows: AllPairs) {
-        for (const auto& iter: rows) {
-            PairMap[iter]++;
-        }
+	for (const auto& iter: rows) {
+	    PairMap[iter]++;
+	}
     }
-        // Found some pairs
+	// Found some pairs
     if (PairMap.size()) {
-        size_t maxfrq(0);
-            // Find all pairs with maximal frequency
-        for (const auto& [element, frequency] : PairMap) {
-            if (frequency > maxfrq) {
-                maxfrq = frequency;
-            }
-        }
-            // Factoring will gain something if maximal frequency > 1
-        if (maxfrq <= 1) {
-            return false;
-        }
+	size_t maxfrq(0);
+	    // Find all pairs with maximal frequency
+	for (const auto& [element, frequency] : PairMap) {
+	    if (frequency > maxfrq) {
+		maxfrq = frequency;
+	    }
+	}
+	    // Factoring will gain something if maximal frequency > 1
+	if (maxfrq <= 1) {
+	    return false;
+	}
     }
 
     triple cse{0,0,0};
     for(const auto& rows: AllPairs) {
-        if (rows.size() > 0) cse = rows.front();
+	if (rows.size() > 0) cse = rows.front();
     }
 
     size_t bestadds(nbadd), bestmuls(nbmul);
@@ -937,38 +940,38 @@ bool RecSub(std::vector<std::string>& out, _Mat& Mat,
 
 #pragma omp parallel for shared(AllPairs,Mat,bestadds,bestmuls,bestM,bestmultiples,bestdout,tev,rav,multiples)
     for(size_t i=0; i<AllPairs.size(); ++i) {
-        const auto& rows(AllPairs[i]);
-        for (const auto& cse: rows) {
-            if (PairMap[cse] > 1) {
-                _Mat lM(FF,Mat.rowdim(),Mat.coldim()); sparse2sparse(lM, Mat);
-                std::vector<triple> lmultiples(multiples);
-                std::ostringstream ssout;
-                size_t moremul(0);
+	const auto& rows(AllPairs[i]);
+	for (const auto& cse: rows) {
+	    if (PairMap[cse] > 1) {
+		_Mat lM(FF,Mat.rowdim(),Mat.coldim()); sparse2sparse(lM, Mat);
+		std::vector<triple> lmultiples(multiples);
+		std::ostringstream ssout;
+		size_t moremul(0);
 
-                    // Factoring out that CSE from the matrix
-                const Pair<long> savings = RemOneCSE(ssout, lM, moremul,
-                                                     lmultiples, cse,
-                                                     AllPairs, tev, rav);
+		    // Factoring out that CSE from the matrix
+		const Pair<long> savings = RemOneCSE(ssout, lM, moremul,
+						     lmultiples, cse,
+						     AllPairs, tev, rav);
 
-                size_t ladditions(nbadd-savings.first);
-                size_t lmuls(nbmul-savings.second);
+		size_t ladditions(nbadd-savings.first);
+		size_t lmuls(nbmul-savings.second);
 
-                std::vector<std::string> sdout(1,ssout.str());
-                RecSub(sdout, lM, lmultiples, ladditions, lmuls, lvl+1, tev, rav);
+		std::vector<std::string> sdout(1,ssout.str());
+		RecSub(sdout, lM, lmultiples, ladditions, lmuls, lvl+1, tev, rav);
 
 #pragma omp critical
-                {
-                if ( (ladditions < bestadds) ||
-                     ( (ladditions == bestadds) && (lmuls < bestmuls) ) ) {
-                    bestadds = ladditions;
-                    bestmuls = lmuls;
-                    sparse2sparse(bestM, lM);
-                    bestmultiples = lmultiples;
-                    bestdout = sdout;
-                }
-                }
-            }
-        }
+		{
+		if ( (ladditions < bestadds) ||
+		     ( (ladditions == bestadds) && (lmuls < bestmuls) ) ) {
+		    bestadds = ladditions;
+		    bestmuls = lmuls;
+		    sparse2sparse(bestM, lM);
+		    bestmultiples = lmultiples;
+		    bestdout = sdout;
+		}
+		}
+	    }
+	}
     }
 
     nbadd = bestadds;
@@ -989,23 +992,23 @@ bool RecSub(std::vector<std::string>& out, _Mat& Mat,
 // Global exhaustive greedy CSE optimization function (pairs and factors)
 template<typename outstream, typename _Mat>
 Pair<size_t> RecOptimizer(outstream& sout, _Mat& M,
-                          const char ouv, const char tev, const char rav) {
+			  const char ouv, const char tev, const char rav) {
     using triple=std::tuple<size_t, size_t, typename _Mat::Element>;
     const auto& FF(M.field());
 
     Pair<size_t> nbops(naiveOps(M));
 
-        // Factoring sums
+	// Factoring sums
     std::vector<std::string> dout;
     std::vector<triple> multiples;
     RecSub(dout, M, multiples, nbops.first, nbops.second, 0, tev, rav);
 
     size_t alreadymuls(nbops.second);
     for(auto it = M.IndexedBegin(); it != M.IndexedEnd(); ++it)
-        if (notAbsOne(FF,it.value())) --alreadymuls;
+	if (notAbsOne(FF,it.value())) --alreadymuls;
 
     for(auto iter = dout.begin(); iter != dout.end(); ++iter) {
-        sout << *iter;
+	sout << *iter;
     }
 
     size_t addcount(0);
@@ -1022,15 +1025,15 @@ Pair<size_t> RecOptimizer(outstream& sout, _Mat& M,
 // Optimizing a linear program (Gaussian elimination method)
 template<typename Field>
 Pair<size_t>& LUOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
-                          const Field& F, const Matrix& M, const Matrix& T,
-                          Givaro::Timer& global, const size_t randomloops, const int verbose) {
+			  const Field& F, const Matrix& M, const Matrix& T,
+			  Givaro::Timer& global, const size_t randomloops, const int verbose) {
 
-        // ============================================================
-        // Rebind matrix type over sub field matrix type
+	// ============================================================
+	// Rebind matrix type over sub field matrix type
     typedef typename Matrix::template rebind<Field>::other FMatrix;
     Givaro::Timer chrono; chrono.start();
 
-        // ============================================================
+	// ============================================================
 
     FMatrix U(M, F);
 
@@ -1059,59 +1062,59 @@ Pair<size_t>& LUOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
 
 #pragma omp parallel for shared(Q,L,U,P,gout,gops,sops,besti)
     for(size_t i=0; i<randomloops; ++i) {
-        reseed('G', i);
-        std::ostringstream luout;
-        FMatrix lU(U, F);
-        FMatrix lL(L, F);
+	reseed('G', i);
+	std::ostringstream luout;
+	FMatrix lU(U, F);
+	FMatrix lL(L, F);
 
-            // ============================================
-            // Applying permutation P to 'i' variables
-        input2Temps(luout, P.rowdim(), 'i', 't', P.getStorage());
+	    // ============================================
+	    // Applying permutation P to 'i' variables
+	input2Temps(luout, P.rowdim(), 'i', 't', P.getStorage());
 
-            // ============================================
-            // Applying Upper matrix to 't' variables
-        auto Uops = Optimizer(luout, lU, 'v', 't', 'r');
+	    // ============================================
+	    // Applying Upper matrix to 't' variables
+	auto Uops = Optimizer(luout, lU, 'v', 't', 'r');
 
-            // ============================================
-            // Applying Lower matrix to 'v' variables
-        auto Lops = Optimizer(luout, lL, 'x', 'v', 'g');
+	    // ============================================
+	    // Applying Lower matrix to 'v' variables
+	auto Lops = Optimizer(luout, lL, 'x', 'v', 'g');
 
-            // ============================================
-            // Applying permutation Q back into 'o' variables
-        input2Temps(luout, Q.rowdim(), 'x', 'o', Q.getStorage());
+	    // ============================================
+	    // Applying permutation Q back into 'o' variables
+	input2Temps(luout, Q.rowdim(), 'x', 'o', Q.getStorage());
 
-        Uops.first += Lops.first;
-        Uops.second += Lops.second;
+	Uops.first += Lops.first;
+	Uops.second += Lops.second;
 
 #pragma omp critical
-        {
-        const bool better(cmpOpCount(Uops,gops));
-        const bool empty(gout.tellp() == std::streampos(0));
-        if ( empty || cmpOpCount(Uops,sops)
-             || (eqOpCount(Uops,sops) && (i < besti)) ) {
-            gout.clear(); gout.str(std::string());
-            gout.str(luout.str());
-            sops = Uops; besti = i;
-            if (better) {
-                if (verbose>0) {
-                    std::clog << "# Found G: "
-                              << Uops.first << '|' << Uops.second
-                              << " instead of "
-                              << gops.first << '|' << gops.second << "\t["
-                              << i << '/' << omp_get_thread_num() << ']'
-                              << std::endl;
-                }
-                gops = Uops;
-            }
-        }
-        }
+	{
+	const bool better(cmpOpCount(Uops,gops));
+	const bool empty(gout.tellp() == std::streampos(0));
+	if ( empty || cmpOpCount(Uops,sops)
+	     || (eqOpCount(Uops,sops) && (i < besti)) ) {
+	    gout.clear(); gout.str(std::string());
+	    gout.str(luout.str());
+	    sops = Uops; besti = i;
+	    if (better) {
+		if (verbose>0) {
+		    std::clog << "# Found G: "
+			      << Uops.first << '|' << Uops.second
+			      << " instead of "
+			      << gops.first << '|' << gops.second << "\t["
+			      << i << '/' << omp_get_thread_num() << ']'
+			      << std::endl;
+		}
+		gops = Uops;
+	    }
+	}
+	}
     }
 
     chrono.stop(); global += chrono;
     if (cmpOpCount(gops,nbops)) {
-        nbops = gops;
-        sout.clear(); sout.str(std::string());
-        sout << gout.str();
+	nbops = gops;
+	sout.clear(); sout.str(std::string());
+	sout << gout.str();
     }
     return nbops;
 }
@@ -1120,12 +1123,12 @@ Pair<size_t>& LUOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
 // Optimizing a linear program (Alternative Factrization method)
 template<typename Field>
 Pair<size_t>& ABOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
-                          const Field& F, const Matrix& M, const Matrix& T,
-                          const size_t selectinnerdim,
-                          Givaro::Timer& global, const size_t randomloops, const int verbose) {
+			  const Field& F, const Matrix& M, const Matrix& T,
+			  const size_t selectinnerdim,
+			  Givaro::Timer& global, const size_t randomloops, const int verbose) {
 
-        // ============================================================
-        // Rebind matrix type over sub field matrix type
+	// ============================================================
+	// Rebind matrix type over sub field matrix type
     typedef typename Matrix::template rebind<Field>::other FMatrix;
     Givaro::Timer chrono; chrono.start();
 
@@ -1145,55 +1148,55 @@ Pair<size_t>& ABOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
 
 #pragma omp parallel for shared(Alt,CoB,sa,sc,gout,gops,sops,besti)
     for(size_t i=0; i<randomloops; ++i) {
-        reseed('A', i);
-        FMatrix lC(CoB, F);
-        FMatrix lA(Alt, F);
+	reseed('A', i);
+	FMatrix lC(CoB, F);
+	FMatrix lA(Alt, F);
 
-        std::ostringstream about;
-        input2Temps(about, lC.coldim(), 'i', 't');
+	std::ostringstream about;
+	input2Temps(about, lC.coldim(), 'i', 't');
 
-            // ============================================
-            // Applying CoB matrix from 't' to 'v' variables
-        auto Bops = Optimizer(about, lC, 'v', 't', 'r');
-            // ============================================
-            // Applying Alt matrix from 'v' to 'o' variables
-        auto Aops = Optimizer(about, lA, 'o', 'v', 'g');
+	    // ============================================
+	    // Applying CoB matrix from 't' to 'v' variables
+	auto Bops = Optimizer(about, lC, 'v', 't', 'r');
+	    // ============================================
+	    // Applying Alt matrix from 'v' to 'o' variables
+	auto Aops = Optimizer(about, lA, 'o', 'v', 'g');
 
-        Pair<size_t> ABops(Bops.first + Aops.first,
+	Pair<size_t> ABops(Bops.first + Aops.first,
 			   Bops.second + Aops.second);
 
 #pragma omp critical
-        {
-        const bool better(cmpOpCount(ABops,gops));
-        const bool empty(gout.tellp() == std::streampos(0));
-        if ( empty || cmpOpCount(ABops,sops)
-             || (eqOpCount(ABops,sops) && (i < besti)) ) {
-            gout.clear(); gout.str(std::string());
-            gout << about.str();
-            sops = ABops; besti = i;
-            if (better) {
-                if (verbose>0) {
-                    std::clog << "# Found A: ("
-                              << Alt.rowdim() << 'x' << Alt.coldim() << 'x'
-                              << CoB.coldim() << ' ' << sa << '/' << sc
-                              << ')' << '\t' << Bops.first << '+' << Aops.first
-                              << '|' << Bops.second << '+' << Aops.second
-                              << " instead of "
-                              << gops.first << '|' << gops.second << "\t["
-                              << i << '/' << omp_get_thread_num() << ']'
-                              << std::endl;
-                }
-                gops = ABops;
-            }
-        }
-        }
+	{
+	const bool better(cmpOpCount(ABops,gops));
+	const bool empty(gout.tellp() == std::streampos(0));
+	if ( empty || cmpOpCount(ABops,sops)
+	     || (eqOpCount(ABops,sops) && (i < besti)) ) {
+	    gout.clear(); gout.str(std::string());
+	    gout << about.str();
+	    sops = ABops; besti = i;
+	    if (better) {
+		if (verbose>0) {
+		    std::clog << "# Found A: ("
+			      << Alt.rowdim() << 'x' << Alt.coldim() << 'x'
+			      << CoB.coldim() << ' ' << sa << '/' << sc
+			      << ')' << '\t' << Bops.first << '+' << Aops.first
+			      << '|' << Bops.second << '+' << Aops.second
+			      << " instead of "
+			      << gops.first << '|' << gops.second << "\t["
+			      << i << '/' << omp_get_thread_num() << ']'
+			      << std::endl;
+		}
+		gops = ABops;
+	    }
+	}
+	}
     }
 
     chrono.stop(); global += chrono;
     if (cmpOpCount(gops,nbops)) {
-        nbops = gops;
-        sout.clear(); sout.str(std::string());
-        sout << gout.str();
+	nbops = gops;
+	sout.clear(); sout.str(std::string());
+	sout << gout.str();
     }
     return nbops;
 }
@@ -1204,10 +1207,10 @@ Pair<size_t>& ABOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
 // Optimizing a linear program (Common Subexpressions Elimination)
 template<typename Field>
 Pair<size_t>& CSEOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
-                           const Field& F, const Matrix& M, const Matrix& T,
-                           Givaro::Timer& global, const size_t randomloops, const int verbose) {
-        // ============================================================
-        // Rebind matrix type over sub field matrix type
+			   const Field& F, const Matrix& M, const Matrix& T,
+			   Givaro::Timer& global, const size_t randomloops, const int verbose) {
+	// ============================================================
+	// Rebind matrix type over sub field matrix type
     typedef typename Matrix::template rebind<Field>::other FMatrix;
 
     Givaro::Timer chrono; chrono.start();
@@ -1217,49 +1220,49 @@ Pair<size_t>& CSEOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
 
 #pragma omp parallel for shared(M,T,dout,dops,sops,besti)
     for(size_t i=0; i<randomloops; ++i) {
-        reseed('D', i);
-        FMatrix lM(M, F);
-        FMatrix lT(T, F);
+	reseed('D', i);
+	FMatrix lM(M, F);
+	FMatrix lT(T, F);
 
-        std::ostringstream ldout;
-            // Cancellation-free optimization
-        input2Temps(ldout, lM.coldim(), 'i', 't', lT);
-        auto lnbops( Optimizer(ldout, lM, 'o', 't', 'r') );
+	std::ostringstream ldout;
+	    // Cancellation-free optimization
+	input2Temps(ldout, lM.coldim(), 'i', 't', lT);
+	auto lnbops( Optimizer(ldout, lM, 'o', 't', 'r') );
 
 #pragma omp critical
-        {
-        const bool better(cmpOpCount(lnbops,dops));
-        const bool empty(dout.tellp() == std::streampos(0));
-        if ( empty || cmpOpCount(lnbops,sops)
-             || (eqOpCount(lnbops,sops) && (i < besti)) ) {
+	{
+	const bool better(cmpOpCount(lnbops,dops));
+	const bool empty(dout.tellp() == std::streampos(0));
+	if ( empty || cmpOpCount(lnbops,sops)
+	     || (eqOpCount(lnbops,sops) && (i < besti)) ) {
 #ifdef VERBATIM_PARSING
-            std::clog << "# Found, direct: "
-                      << lnbops.first << "\tadditions, "
-                      << lnbops.second << "\tmultiplications." << std::endl;
+	    std::clog << "# Found, direct: "
+		      << lnbops.first << "\tadditions, "
+		      << lnbops.second << "\tmultiplications." << std::endl;
 #endif
-            dout.clear(); dout.str(std::string());
-            dout << ldout.str();
-            sops = lnbops; besti = i;
-            if (better) {
-                if (verbose>0) {
-                    std::clog << "# Found D: "
-                              << lnbops.first << '|' << lnbops.second
-                              << " instead of "
-                              << dops.first << '|' << dops.second << "\t["
-                              << i << '/' << omp_get_thread_num() << ']'
-                              << std::endl;
-                }
-                dops = lnbops;
-            }
-        }
-        }
+	    dout.clear(); dout.str(std::string());
+	    dout << ldout.str();
+	    sops = lnbops; besti = i;
+	    if (better) {
+		if (verbose>0) {
+		    std::clog << "# Found D: "
+			      << lnbops.first << '|' << lnbops.second
+			      << " instead of "
+			      << dops.first << '|' << dops.second << "\t["
+			      << i << '/' << omp_get_thread_num() << ']'
+			      << std::endl;
+		}
+		dops = lnbops;
+	    }
+	}
+	}
     }
 
     chrono.stop(); global += chrono;
     if (cmpOpCount(dops,nbops)) {
-        nbops = dops;
-        sout.clear(); sout.str(std::string());
-        sout << dout.str();
+	nbops = dops;
+	sout.clear(); sout.str(std::string());
+	sout << dout.str();
     }
     return nbops;
 }
@@ -1268,10 +1271,10 @@ Pair<size_t>& CSEOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
 // Optimizing a linear program (whole CSE tree)
 template<typename Field>
 Pair<size_t>& AllCSEOpt(Pair<size_t>& nbops, std::ostringstream& sout,
-                        const Field& F, const Matrix& M, const Matrix& T,
-                        Givaro::Timer& global) {
-        // ============================================================
-        // Rebind matrix type over sub field matrix type
+			const Field& F, const Matrix& M, const Matrix& T,
+			Givaro::Timer& global) {
+	// ============================================================
+	// Rebind matrix type over sub field matrix type
     typedef typename Matrix::template rebind<Field>::other FMatrix;
 
     Givaro::Timer chrono; chrono.start();
@@ -1279,21 +1282,21 @@ Pair<size_t>& AllCSEOpt(Pair<size_t>& nbops, std::ostringstream& sout,
     FMatrix lT(T, F);
 
     std::ostringstream iout;
-        // Cancellation-free optimization
+	// Cancellation-free optimization
     input2Temps(iout, lM.coldim(), 'i', 't', lT);
     auto rnbops( RecOptimizer(iout, lM, 'o', 't', 'r') );
 
     chrono.stop(); global += chrono;
 
     if (cmpOpCount(rnbops, nbops)) {
-        sout.clear(); sout.str(std::string());
-        sout << iout.str();
-        nbops = rnbops;
+	sout.clear(); sout.str(std::string());
+	sout << iout.str();
+	nbops = rnbops;
     } else {
-            // Optimal was already found
-        std::clog << "# \033[1;36m"
-                  << "No greedy CSE schedule has less additions.\033[0m \t"
-                  << chrono << std::endl;
+	    // Optimal was already found
+	std::clog << "# \033[1;36m"
+		  << "No greedy CSE schedule has less additions.\033[0m \t"
+		  << chrono << std::endl;
     }
     return nbops;
 }
@@ -1304,10 +1307,10 @@ Pair<size_t>& AllCSEOpt(Pair<size_t>& nbops, std::ostringstream& sout,
 // Optimizing a linear program (kernel method)
 template<typename Field>
 Pair<size_t>& KernelOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
-                              const Field& F, const Matrix& T, Givaro::Timer& global,
-                              const size_t randomloops, const bool KFI, const int verbose) {
-        // ============================================================
-        // Rebind matrix type over sub field matrix type
+			      const Field& F, const Matrix& T, Givaro::Timer& global,
+			      const size_t randomloops, const bool KFI, const int verbose) {
+	// ============================================================
+	// Rebind matrix type over sub field matrix type
     typedef typename Matrix::template rebind<Field>::other FMatrix;
     Givaro::Timer chrono; chrono.start();
     std::ostringstream kout;
@@ -1317,60 +1320,60 @@ Pair<size_t>& KernelOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
 
 #pragma omp parallel for shared(T,kout,kops,sops,besti)
     for(size_t i=0; i<randomloops; ++i) {
-        if (nonzerokernel) {
-            reseed('K', i);
-            FMatrix lT(T, F);
-            std::ostringstream lkout;
-            FMatrix NullSpace(F,lT.coldim(),lT.coldim());
-            auto lnbops( nullspacedecomp(lkout, NullSpace, lT, KFI) );
+	if (nonzerokernel) {
+	    reseed('K', i);
+	    FMatrix lT(T, F);
+	    std::ostringstream lkout;
+	    FMatrix NullSpace(F,lT.coldim(),lT.coldim());
+	    auto lnbops( nullspacedecomp(lkout, NullSpace, lT, KFI) );
 
-            if (lnbops == Pair<size_t>{-1,-1}) {
+	    if (lnbops == Pair<size_t>{-1,-1}) {
 #pragma omp critical
-            {
-                nonzerokernel = false;
-            }
-            }
+	    {
+		nonzerokernel = false;
+	    }
+	    }
 
 #pragma omp critical
-            {
-            const bool better(cmpOpCount(lnbops,kops));
-            const bool empty(kout.tellp() == std::streampos(0));
-            if ( empty || cmpOpCount(lnbops,sops)
-                 || (eqOpCount(lnbops,sops) && (i < besti)) ) {
+	    {
+	    const bool better(cmpOpCount(lnbops,kops));
+	    const bool empty(kout.tellp() == std::streampos(0));
+	    if ( empty || cmpOpCount(lnbops,sops)
+		 || (eqOpCount(lnbops,sops) && (i < besti)) ) {
 #ifdef VERBATIM_PARSING
-                std::clog << "# Found, kernel: "
-                          << lnbops.first << "\tadditions, "
-                          << lnbops.second << "\tmultiplications." << std::endl;
+		std::clog << "# Found, kernel: "
+			  << lnbops.first << "\tadditions, "
+			  << lnbops.second << "\tmultiplications." << std::endl;
 #endif
-                kout.clear(); kout.str(std::string());
-                kout << lkout.str();
-                sops = lnbops; besti = i;
-                if (better) {
-                    if (verbose>0) {
-                        std::clog << "# Found " << (KFI?'F':'K') << ": "
-                                  << lnbops.first << '|' << lnbops.second
-                                  << " instead of "
-                                  << kops.first << '|' << kops.second
-                                  << "\t[" << i << '/'
-                                  << omp_get_thread_num() << ']'
-                                  << std::endl;
-                    }
-                    kops = lnbops;
-                }
-            }
-            }
-        }
+		kout.clear(); kout.str(std::string());
+		kout << lkout.str();
+		sops = lnbops; besti = i;
+		if (better) {
+		    if (verbose>0) {
+			std::clog << "# Found " << (KFI?'F':'K') << ": "
+				  << lnbops.first << '|' << lnbops.second
+				  << " instead of "
+				  << kops.first << '|' << kops.second
+				  << "\t[" << i << '/'
+				  << omp_get_thread_num() << ']'
+				  << std::endl;
+		    }
+		    kops = lnbops;
+		}
+	    }
+	    }
+	}
     }
 
     chrono.stop(); global += chrono;
     if (! nonzerokernel) {
-            // Zero dimensional kernel
-        std::clog << "# \033[1;36mZero dimensional kernel.\033[0m"
-                  << std::endl;
+	    // Zero dimensional kernel
+	std::clog << "# \033[1;36mZero dimensional kernel.\033[0m"
+		  << std::endl;
     } else if (cmpOpCount(kops,nbops)) {
-        nbops = kops;
-        sout.clear(); sout.str(std::string());
-        sout << kout.str();
+	nbops = kops;
+	sout.clear(); sout.str(std::string());
+	sout << kout.str();
     }
     return nbops;
 }
@@ -1379,10 +1382,10 @@ Pair<size_t>& KernelOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
 // Optimizing a linear program (kernel method)
 template<typename Field>
 Pair<size_t>& AllKernelOpt(Pair<size_t>& nbops, std::ostringstream& sout,
-                           const Field& F, const Matrix& T, const bool mostCSE,
-                           Givaro::Timer& global, const size_t randomloops, const int verbose) {
-        // ============================================================
-        // Rebind matrix type over sub field matrix type
+			   const Field& F, const Matrix& T, const bool mostCSE,
+			   Givaro::Timer& global, const size_t randomloops, const int verbose) {
+	// ============================================================
+	// Rebind matrix type over sub field matrix type
     typedef typename Matrix::template rebind<Field>::other FMatrix;
     Givaro::Timer chrono; chrono.start();
     const size_t m(T.coldim());
@@ -1393,53 +1396,53 @@ Pair<size_t>& AllKernelOpt(Pair<size_t>& nbops, std::ostringstream& sout,
 
 #pragma omp parallel for shared(Fm,T,aout,aops,sops,besti)
     for(size_t i=0; i<Fm.back(); ++i) {
-        reseed('N', i);
-        std::vector<size_t> l{kthpermutation(i,m,Fm)};
-        FMatrix lT(T, F);
-        std::ostringstream laout;
-        FMatrix NullSpace(F,lT.coldim(),T.coldim());
-        auto lkops( nullspacedecomp(laout, NullSpace, lT, l, 'o', 'i', mostCSE) );
+	reseed('N', i);
+	std::vector<size_t> l{kthpermutation(i,m,Fm)};
+	FMatrix lT(T, F);
+	std::ostringstream laout;
+	FMatrix NullSpace(F,lT.coldim(),T.coldim());
+	auto lkops( nullspacedecomp(laout, NullSpace, lT, l, 'o', 'i', mostCSE) );
 
 #pragma omp critical
-        {
-        const bool better(cmpOpCount(lkops,aops));
-        const bool empty(aout.tellp() == std::streampos(0));
-        if ( empty || cmpOpCount(lkops,sops)
-             || (eqOpCount(lkops,sops) && (i < besti)) ) {
+	{
+	const bool better(cmpOpCount(lkops,aops));
+	const bool empty(aout.tellp() == std::streampos(0));
+	if ( empty || cmpOpCount(lkops,sops)
+	     || (eqOpCount(lkops,sops) && (i < besti)) ) {
 #ifdef VERBATIM_PARSING
-            std::clog << "# Found, kernel: "
-                      << lkops.first << "\tadditions, "
-                      << lkops.second << "\tmultiplications." << std::endl;
+	    std::clog << "# Found, kernel: "
+		      << lkops.first << "\tadditions, "
+		      << lkops.second << "\tmultiplications." << std::endl;
 #endif
-            aout.clear(); aout.str(std::string());
-            aout << laout.str();
-            sops = lkops; besti = i;
-            if (better) {
-                if (verbose>0) {
-                    std::clog << "# Found E: "
-                              << lkops.first << '|' << lkops.second
-                              << " instead of "
-                              << aops.first << '|' << aops.second << "\t["
-                              << i << '/' << omp_get_thread_num() << ']'
-                              << std::endl;
-                }
-                aops = lkops;
-            }
-        }
-        }
+	    aout.clear(); aout.str(std::string());
+	    aout << laout.str();
+	    sops = lkops; besti = i;
+	    if (better) {
+		if (verbose>0) {
+		    std::clog << "# Found E: "
+			      << lkops.first << '|' << lkops.second
+			      << " instead of "
+			      << aops.first << '|' << aops.second << "\t["
+			      << i << '/' << omp_get_thread_num() << ']'
+			      << std::endl;
+		}
+		aops = lkops;
+	    }
+	}
+	}
     }
 
     chrono.stop(); global += chrono;
 
     if (cmpOpCount(aops,nbops)) {
-        sout.clear(); sout.str(std::string());
-        sout << aout.str();
-        nbops = aops;
+	sout.clear(); sout.str(std::string());
+	sout << aout.str();
+	nbops = aops;
     } else {
-            // Optimal was already found
-        std::clog << "# \033[1;36m"
-                  << "No kernel permutation has less additions.\033[0m \t"
-                  << chrono << std::endl;
+	    // Optimal was already found
+	std::clog << "# \033[1;36m"
+		  << "No kernel permutation has less additions.\033[0m \t"
+		  << chrono << std::endl;
     }
     return nbops;
 }
@@ -1449,67 +1452,67 @@ Pair<size_t>& AllKernelOpt(Pair<size_t>& nbops, std::ostringstream& sout,
 // Optimizing a linear program (Direct CSE or Kernel methods)
 template<typename Field>
 Pair<size_t> OptMethods(const Pair<size_t> opsinit,
-                        std::ostringstream& sout, const Field& F,
-                        const Matrix& M, const Matrix& T,
-                        Givaro::Timer& global, const size_t randomloops,
-                        const bool printMaple, const bool printPretty,
-                        const bool tryDirect, const bool tryKernel,
-                        const bool tryLU, bool tryAB, const bool mostCSE,
-                        const bool allkernels, const bool KFI, const int verbose) {
+			std::ostringstream& sout, const Field& F,
+			const Matrix& M, const Matrix& T,
+			Givaro::Timer& global, const size_t randomloops,
+			const bool printMaple, const bool printPretty,
+			const bool tryDirect, const bool tryKernel,
+			const bool tryLU, bool tryAB, const bool mostCSE,
+			const bool allkernels, const bool KFI, const int verbose) {
 
     Pair<size_t> nbops(opsinit);
 
-        // ============================================================
-        // Optimize the Alternative factorization
+	// ============================================================
+	// Optimize the Alternative factorization
     if (tryAB) {
 //         for(int id(M.rowdim()-1); id >= M.coldim(); --id)
-        for(size_t id(M.coldim()); id < M.rowdim(); ++id)
-            ABOptimiser(nbops, sout, F, M, T, id, global, randomloops,verbose);
+	for(size_t id(M.coldim()); id < M.rowdim(); ++id)
+	    ABOptimiser(nbops, sout, F, M, T, id, global, randomloops,verbose);
     }
 
 
-        // ============================================================
-        // Otimize the whole matrix
+	// ============================================================
+	// Otimize the whole matrix
     if (tryDirect) {
-        CSEOptimiser(nbops, sout, F, M, T, global, randomloops,verbose);
+	CSEOptimiser(nbops, sout, F, M, T, global, randomloops,verbose);
     }
 
-        // ============================================================
-        // Separate independent and dependent rows
+	// ============================================================
+	// Separate independent and dependent rows
     if (tryKernel) {
-        KernelOptimiser(nbops, sout, F, T, global, randomloops, KFI, verbose);
+	KernelOptimiser(nbops, sout, F, T, global, randomloops, KFI, verbose);
     }
 
-        // ============================================================
-        // Optimize the factorized matrix
+	// ============================================================
+	// Optimize the factorized matrix
     if (tryLU) {
-        LUOptimiser(nbops, sout, F, M, T, global, randomloops,verbose);
+	LUOptimiser(nbops, sout, F, M, T, global, randomloops,verbose);
     }
 
-        // ============================================================
-        // Exhaustive nullspace permutation search (if # is <= 12!)
+	// ============================================================
+	// Exhaustive nullspace permutation search (if # is <= 12!)
     if (allkernels && (M.rowdim() < 13)) {
-        AllKernelOpt(nbops, sout, F, T, mostCSE, global, randomloops,verbose);
+	AllKernelOpt(nbops, sout, F, T, mostCSE, global, randomloops,verbose);
     }
 
-        // ============================================================
-        // Greedy CSE search
+	// ============================================================
+	// Greedy CSE search
     if (mostCSE) {
-        AllCSEOpt(nbops, sout, F, M, T, global);
+	AllCSEOpt(nbops, sout, F, M, T, global);
     }
 
     if (cmpOpCount(opsinit,nbops) || (opsinit == nbops)) {
-            // Found nothing better than direct matrix expression
-        typedef typename Matrix::template rebind<Field>::other FMatrix;
-        FMatrix lM(M, F), lT(T, F);
-        size_t nbadd(0), nbmul(0);
-        std::vector<Etriple<Field>> multiples;
+	    // Found nothing better than direct matrix expression
+	typedef typename Matrix::template rebind<Field>::other FMatrix;
+	FMatrix lM(M, F), lT(T, F);
+	size_t nbadd(0), nbmul(0);
+	std::vector<Etriple<Field>> multiples;
 
-        input2Temps(sout, lM.coldim(), 'i', 't', lT);
-        ProgramGen(sout, lM, multiples, nbadd, nbmul, 'o', 't', 'r');
+	input2Temps(sout, lM.coldim(), 'i', 't', lT);
+	ProgramGen(sout, lM, multiples, nbadd, nbmul, 'o', 't', 'r');
 
-        nbops.first = nbadd;
-        nbops.second= nbmul;
+	nbops.first = nbadd;
+	nbops.second= nbmul;
     }
 
     return nbops;
