@@ -101,9 +101,9 @@ std::ostream& ProgramGen(outstream& sout, _Mat& M,
                          const char inv, const char ouv,
                          const char tev, const char rav);
 
-// Removing one CSE
+// Removing CSEs
 template<typename triple, typename _Mat>
-bool OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
+void OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
             size_t& nbadd, size_t& nbmul, const char tev, const char rav);
 
 // Recusive search for the best CSE
