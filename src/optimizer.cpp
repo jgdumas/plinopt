@@ -39,6 +39,7 @@
 #include <sstream>
 
 #include "plinopt_optimize.h"
+#include "plinopt_programs.h"
 
 namespace PLinOpt {
 
@@ -130,23 +131,14 @@ int FOptimiser(std::istream& input, std::ostream& output,
 // Does the program compute the matrix, over the rationals?
 bool checkProgram(const std::string& matrix, const std::string& program) {
     QRat QQ;
-    std::stringstream mss(matrix);
-    QMstream ms(QQ,mss);
-    Matrix M(ms); M.resize(M.rowdim(),M.coldim());
 
     std::stringstream pss(program);
-    VProgram_t PV; programParser(PV, pss);
-    char next(0); parenthesisExpand(PV, next);
-    Matrix A(QQ); matrixBuilder(A, PV);
+    Matrix A(QQ); SLPbuilder(A,pss,false);
 
-    const size_t m(std::max(M.rowdim(),A.rowdim()));
-    const size_t n(std::max(M.coldim(),A.coldim()));
-    M.resize(m,n); A.resize(m,n);
-    DenseMatrix dA(QQ,m,n), dM(QQ,m,n), R(QQ,m,n);
-    any2dense(dA,A); any2dense(dM,M);
-    LinBox::MatrixDomain<QRat> BMD(QQ);
-    BMD.sub(R,dM,dA);
-    return BMD.isZero(R);
+    std::stringstream mss(matrix);
+    Pair<size_t> nbelts;
+
+    return areEqual(A, mss, nbelts, false);
 }
 
 // ============================================================

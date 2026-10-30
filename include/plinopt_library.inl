@@ -21,8 +21,8 @@ int64_t RandomSeed(-1);
     // The base of every seed: fixed by RandomSeed, or the clock once
 inline uint64_t randomSeedBase() {
     static const uint64_t base( RandomSeed < 0
-                                ? (uint64_t)Givaro::BaseTimer::seed()
-                                : (uint64_t)RandomSeed );
+				? (uint64_t)Givaro::BaseTimer::seed()
+				: (uint64_t)RandomSeed );
     return base;
 }
 
@@ -34,7 +34,7 @@ inline Givaro::GivRandom& generator() {
     // splitmix64 of (base, method, loop): a nonzero seed per loop
 inline void reseed(const uint64_t method, const uint64_t loop) {
     uint64_t z = randomSeedBase() + 0x9e3779b97f4a7c15ULL * (1 + method)
-                                  + 0xbf58476d1ce4e5b9ULL * (1 + loop);
+				  + 0xbf58476d1ce4e5b9ULL * (1 + loop);
     z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9ULL;
     z = (z ^ (z >> 27)) * 0x94d049bb133111ebULL;
     z ^= z >> 31;
@@ -45,12 +45,23 @@ inline void reseed(const uint64_t method, const uint64_t loop) {
 // ==================
 // Matrix operations
 
+template<typename _Mat> inline
+Pair<size_t> naiveOps(const _Mat& M) {
+    const auto& FF(M.field());
+    size_t nbadd(0), nbmul(0);
+    for(auto iter=M.rowBegin(); iter != M.rowEnd(); ++iter)
+	nbadd += std::max((long)iter->size()-1l,0l);
+    for(auto it = M.IndexedBegin(); it != M.IndexedEnd(); ++it)
+	if (notAbsOne(FF,it.value())) ++nbmul;
+    return Pair<size_t>{nbadd,nbmul};
+}
+
 template<typename _Mat1, typename _Mat2>
 inline _Mat1& Transpose(_Mat1& T, const _Mat2& A) {
     T.resize(0,0); T.resize(A.coldim(), A.rowdim());
     if (A.rowdim() != 0)
       for(auto it = A.IndexedBegin(); it != A.IndexedEnd(); ++it)
-        T.setEntry(it.colIndex(),it.rowIndex(), it.value());
+	T.setEntry(it.colIndex(),it.rowIndex(), it.value());
     return T;
 }
 
@@ -60,10 +71,48 @@ inline _Mat1& NegTranspose(_Mat1& T, const _Mat2& A) {
     typename _Mat1::Element tmp; T.field().init(tmp);
     if (A.rowdim() != 0)
       for(auto it = A.IndexedBegin(); it != A.IndexedEnd(); ++it)
-        T.setEntry(it.colIndex(),it.rowIndex(), T.field().neg(tmp,it.value()));
+	T.setEntry(it.colIndex(),it.rowIndex(), T.field().neg(tmp,it.value()));
     return T;
 }
 
+
+	// Checking matrix equality
+template<typename _Mat, typename _Stream>
+inline bool areEqual(const _Mat& A, _Stream& matfile,
+		     Pair<size_t>& nbelts, const bool verbose) {
+  typedef typename _Mat::Field Field;
+  using FMatrix=typename _Mat::template rebind<Field>::other;
+  const Field& FF(A.field());
+
+  QRat QQ;
+  QMstream ms(QQ, matfile);
+  Matrix M(ms);
+  nbelts = naiveOps(M);
+
+  const size_t m(std::max(M.rowdim(),A.rowdim()));
+  const size_t n(std::max(M.coldim(),A.coldim()));
+  M.resize(m,n);
+  FMatrix B(M,FF);
+  FMatrix C(A,FF); C.resize(m,n);
+  LinBox::DenseMatrix<Field> dB(FF,m,n),dA(FF,m,n),R(FF,m,n);
+  any2dense(dA,C); any2dense(dB,B);
+  LinBox::MatrixDomain<Field> BMD(FF);
+  BMD.sub(R,dB,dA);
+
+  const bool result(BMD.isZero(R));
+
+  if (verbose && (! result)) {
+    std::cerr << "# \033[1;31m****** ERROR, not a "
+	      << m << 'x' << n
+	      << " m-v algorithm******\033[0m"
+	      << std::endl;
+    A.write(std::clog<<"# Program:\n", FileFormat::Pretty);
+    B.write(std::clog<<"\n# Matrix:\n", FileFormat::Pretty);
+    R.write(std::clog<<"\n# diff:\n", FileFormat::Pretty) << std::endl;
+  }
+
+  return result;
+}
 
 	// Replace row i of A, by row j of B
 template<typename _Mat1, typename _Mat2>
@@ -73,8 +122,8 @@ inline _Mat1& setRow(_Mat1& A, size_t i, const _Mat2& B, size_t j) {
     auto& Ai(A[i]); const auto& Bj(B[j]);
     Ai.resize(0); Ai.reserve(Bj.size());
     for(const auto& biter: Bj) {
-        if (! F.isZero(biter.second))
-            Ai.emplace_back(biter.first,biter.second);
+	if (! F.isZero(biter.second))
+	    Ai.emplace_back(biter.first,biter.second);
     }
     return A;
 }
@@ -86,7 +135,7 @@ inline _Mat& setRow(_Mat& A, size_t i, const _Vector& v) {
     const Field& F(A.field());
     auto& Ai(A[i]); Ai.resize(0);
     for(size_t j=0; j<v.size(); ++j)
-        if (! F.isZero(v[j])) Ai.emplace_back(j,v[j]);
+	if (! F.isZero(v[j])) Ai.emplace_back(j,v[j]);
     return A;
 }
 
@@ -104,7 +153,7 @@ inline _Mat& updCol(_Mat& A, size_t j, const _Vector& v) {
     using Field = typename _Mat::Field;
     const Field& F(A.field());
     for(size_t i=0; i<v.size(); ++i)
-        if (! F.isZero(v[i])) A.setEntry(i,j,v[i]);
+	if (! F.isZero(v[i])) A.setEntry(i,j,v[i]);
     return A;
 }
 
@@ -131,16 +180,16 @@ inline _Mat& mulRow(_Mat& A, size_t i, const typename _Mat::Element& e) {
 	// M[i] <- M[i] + c * s
 template<typename _Mat>
 inline void opRow(_Mat& M, const size_t i, const typename _Mat::Row& s,
-                  const typename _Mat::Element& c) {
+		  const typename _Mat::Element& c) {
     using Field = typename _Mat::Field;
     const Field& F(M.field());
     _Mat B(F,1,M.coldim()); setRow(B,0,M,i); // copy row i of M
     for(auto e: s) {
-        const size_t j(e.first);
-        typename Field::Element t; F.init(t);
-        F.assign(t,M.getEntry(i,j));    // might be zero (can't use refEntry)
-        F.axpyin(t,c,e.second);
-        B.setEntry(0,j,t);              // might have become zero ...
+	const size_t j(e.first);
+	typename Field::Element t; F.init(t);
+	F.assign(t,M.getEntry(i,j));    // might be zero (can't use refEntry)
+	F.axpyin(t,c,e.second);
+	B.setEntry(0,j,t);              // might have become zero ...
     }
     setRow(M,i,B,0);                    // ... gets only the non-zeroes in B
 }
@@ -151,7 +200,7 @@ template<typename _Mat, typename _DMat>
 inline _Mat& dense2sparse(_Mat& A, const _DMat& M) {
     A.resize(M.rowdim(), M.coldim());
     for(size_t i=0; i<A.rowdim(); ++i) {
-        setRow(A,i,M[i]);
+	setRow(A,i,M[i]);
     }
     return A;
 }
@@ -161,7 +210,7 @@ template<typename _Mat>
 inline _Mat& sparse2sparse(_Mat& A, const _Mat& B) {
     A.resize(B.rowdim(), B.coldim());
     for(size_t i=0; i<A.rowdim(); ++i) {
-        setRow(A,i,B,i);
+	setRow(A,i,B,i);
     }
     return A;
 }
@@ -173,33 +222,33 @@ inline _DMat& any2dense(_DMat& A, const _SMat& M) {
     A.init(M.rowdim(), M.coldim());
     if (M.rowdim() != 0)
       for(auto indices = M.IndexedBegin(); indices != M.IndexedEnd(); ++indices)
-        A.setEntry(indices.rowIndex(), indices.colIndex(), indices.value());
+	A.setEntry(indices.rowIndex(), indices.colIndex(), indices.value());
     return A;
 }
 
 	// Copy (and convert) a matrix
 template<typename _Field>
 inline SMatrix<_Field>& matrixCopy(SMatrix<_Field>& C,
-                                   const SMatrix<_Field>& A){
+				   const SMatrix<_Field>& A){
     return sparse2sparse(C,A);
 }
 
 template<typename _Field>
 inline SMatrix<_Field>& matrixCopy(SMatrix<_Field>& C,
-                                   const DMatrix<_Field>& A){
+				   const DMatrix<_Field>& A){
     return dense2sparse(C,A);
 }
 
 
 template<typename _Field>
 inline DMatrix<_Field>& matrixCopy(DMatrix<_Field>& C,
-                                   const SMatrix<_Field>& A){
+				   const SMatrix<_Field>& A){
     return any2dense(C,A);
 }
 
 template<typename _Field>
 inline DMatrix<_Field>& matrixCopy(DMatrix<_Field>& C,
-                                   const DMatrix<_Field>& A){
+				   const DMatrix<_Field>& A){
     return any2dense(C,A);
 }
 
@@ -207,20 +256,20 @@ inline DMatrix<_Field>& matrixCopy(DMatrix<_Field>& C,
 	// permute rows
 template<>
 inline DenseMatrix& permuteRows(DenseMatrix& R, const Permutation& P,
-                         const DenseMatrix& A, const QRat& QQ) {
+			 const DenseMatrix& A, const QRat& QQ) {
     return P.applyRight(R,A);
 }
 
 template<>
 inline DenseMatrix& permuteRows(DenseMatrix& R, const Permutation& P,
-                         const Matrix& A, const QRat& QQ) {
+			 const Matrix& A, const QRat& QQ) {
     DenseMatrix dA(QQ,A.rowdim(),A.coldim()); any2dense(dA, A);
     return P.applyRight(R,dA);
 }
 
 template<>
 inline Matrix& permuteRows(Matrix& R, const Permutation& P,
-                    const DenseMatrix& A, const QRat& QQ) {
+		    const DenseMatrix& A, const QRat& QQ) {
     DenseMatrix dR(QQ,A.rowdim(),A.coldim());
     P.applyRight(dR, A);
     return dense2sparse(R, dR);
@@ -228,7 +277,7 @@ inline Matrix& permuteRows(Matrix& R, const Permutation& P,
 
 template<> inline
 Matrix& permuteRows(Matrix& R, const Permutation& P,
-                    const Matrix& A, const QRat& QQ) {
+		    const Matrix& A, const QRat& QQ) {
     DenseMatrix dA(QQ,A.rowdim(),A.coldim()); any2dense(dA, A);
     DenseMatrix dR(QQ,A.rowdim(),A.coldim());
     P.applyRight(dR, dA);
@@ -245,24 +294,12 @@ _Matrix& Tensor(_Matrix& T, const _Matrix& A, const _Matrix& B) {
     Element tmp; A.field().init(tmp);
     for(auto itA = A.IndexedBegin(); itA != A.IndexedEnd(); ++itA) {
     for(auto itB = B.IndexedBegin(); itB != B.IndexedEnd(); ++itB) {
-        T.setEntry(itA.rowIndex()*B.rowdim()+itB.rowIndex(),
-                   itA.colIndex()*B.coldim()+itB.colIndex(),
-                   A.field().mul(tmp,itA.value(),itB.value()));
+	T.setEntry(itA.rowIndex()*B.rowdim()+itB.rowIndex(),
+		   itA.colIndex()*B.coldim()+itB.colIndex(),
+		   A.field().mul(tmp,itA.value(),itB.value()));
     }
     }
     return T;
-}
-
-// Matrix operations
-template<typename _Mat> inline
-Pair<size_t> naiveOps(const _Mat& M) {
-    const auto& FF(M.field());
-    size_t nbadd(0), nbmul(0);
-    for(auto iter=M.rowBegin(); iter != M.rowEnd(); ++iter)
-        nbadd += std::max((long)iter->size()-1l,0l);
-    for(auto it = M.IndexedBegin(); it != M.IndexedEnd(); ++it)
-        if (notAbsOne(FF,it.value())) ++nbmul;
-    return Pair<size_t>{nbadd,nbmul};
 }
 
 	// Number of non-zero elements (sparse)
@@ -270,7 +307,7 @@ template<typename _Matrix> inline
 size_t density(const _Matrix& A) {
     size_t nnz(0);
     for(auto row=A.rowBegin(); row != A.rowEnd(); ++row) {
-        nnz += row->size(); // # of non-zero elements
+	nnz += row->size(); // # of non-zero elements
     }
     return nnz;
 }
@@ -280,7 +317,7 @@ template<typename Field> inline
 size_t density(const LinBox::DenseMatrix<Field>& A) {
     size_t nnz(0);
     for(auto itA = A.IndexedBegin(); itA != A.IndexedEnd(); ++itA) {
-        if (! A.field().isZero(itA.value())) ++nnz;
+	if (! A.field().isZero(itA.value())) ++nnz;
     }
     return nnz;
 
@@ -291,10 +328,10 @@ Pair<size_t> nonzeroes(const _Mat& M) {
     const auto& F(M.field());
     size_t nnz(0), nno(0);
     for(auto it=M.IndexedBegin();it!=M.IndexedEnd();++it) {
-        if (! F.isZero(it.value()) ) {
-            ++nnz;
-            if (! isAbsOne(F, it.value())) ++nno;
-        }
+	if (! F.isZero(it.value()) ) {
+	    ++nnz;
+	    if (! isAbsOne(F, it.value())) ++nno;
+	}
     }
     return Pair<size_t>{nnz,nno};
 }
@@ -302,7 +339,7 @@ Pair<size_t> nonzeroes(const _Mat& M) {
 template<typename _Mat>
 size_t density(const _Mat& L, const _Mat& R, const _Mat& P,const size_t silent) {
     const size_t nnzl(PLinOpt::density(L)),
-        nnzr(PLinOpt::density(R)), nnzp(PLinOpt::density(P));
+	nnzr(PLinOpt::density(R)), nnzp(PLinOpt::density(P));
     if (! silent) std::clog << nnzl << '+' << nnzr << '+' << nnzp;
     return (nnzl+nnzr+nnzp);
 }
@@ -318,17 +355,17 @@ Pair<size_t> nonzeroes(const _Mat& L, const _Mat& R, const _Mat& P) {
 // Returns the kth-permutation of 0..(n-1) via the factoradic
 // Fn is the factorial vector up to n-1 -- from 'factorial(m)'
 inline std::vector<size_t> kthpermutation(const size_t k, const size_t n,
-                                          const std::vector<size_t>& Fn ) {
+					  const std::vector<size_t>& Fn ) {
     std::vector<size_t> l;
     std::vector<size_t> Q(n);
     std::iota(Q.begin(), Q.end(), 0); // 0,1,2,3,4
     ldiv_t result;
     long r(k);
     for(size_t i=n-1; i>0; --i) {
-        result = div(r, Fn[i-1]);
-        l.push_back(Q[result.quot]);
-        Q.erase(Q.begin()+result.quot);
-        r = result.rem;
+	result = div(r, Fn[i-1]);
+	l.push_back(Q[result.quot]);
+	Q.erase(Q.begin()+result.quot);
+	r = result.rem;
     }
     l.push_back(Q.front());
     return l;
@@ -338,37 +375,37 @@ inline std::vector<size_t> kthpermutation(const size_t k, const size_t n,
 // ==================
 // Sets new temporaries with the input values
 inline std::ostream& input2Temps(std::ostream& sout, const size_t N,
-                                 const char inv, const char tev) {
-        // Inputs to temporaries
+				 const char inv, const char tev) {
+	// Inputs to temporaries
     for(size_t i=0; i<N; ++i) {
-        sout << tev << i << ":="
-             << inv << i << ';' << std::endl;
+	sout << tev << i << ":="
+	     << inv << i << ';' << std::endl;
     }
     return sout;
 }
 // Sets new temporaries with the input values, checking usage
 template<typename _Mat> inline
 std::ostream& input2Temps(std::ostream& sout, const size_t N,
-                          const char inv, const char tev,
-                          const _Mat& trsp) {
-        // Inputs to temporaries
+			  const char inv, const char tev,
+			  const _Mat& trsp) {
+	// Inputs to temporaries
     for(size_t i=0; i<N; ++i) {
-        if (trsp[i].size()) {
-            sout << tev << i << ":="
-                 << inv << i << ';' << std::endl;
-        } // otherwise variable is not used
+	if (trsp[i].size()) {
+	    sout << tev << i << ":="
+		 << inv << i << ';' << std::endl;
+	} // otherwise variable is not used
     }
     return sout;
 }
 // ==================
 // Sets new temporaries with the permuted input values
 inline std::ostream& input2Temps(std::ostream& sout, const size_t N,
-                                 const char inv, const char tev,
-                                 const LinBox::LightContainer<long>& P) {
+				 const char inv, const char tev,
+				 const LinBox::LightContainer<long>& P) {
     // Inputs to temporaries
     for(size_t i=0; i<N; ++i) {
-        sout << tev << i << ":="
-                  << inv << P[i] << ';' << std::endl;
+	sout << tev << i << ":="
+		  << inv << P[i] << ';' << std::endl;
     }
     return sout;
 }
@@ -377,29 +414,29 @@ inline std::ostream& input2Temps(std::ostream& sout, const size_t N,
 // Program outputs
 template<typename Ring> inline
 std::ostream& printmulorjustdiv(std::ostream& out,
-                                const char c, const size_t i,
-                                const typename Ring::Element& e,
-                                size_t& nbmul, const Ring& F) {
+				const char c, const size_t i,
+				const typename Ring::Element& e,
+				size_t& nbmul, const Ring& F) {
     out << c << i;
     if (notAbsOne(F,e)) {
-        ++nbmul;
-        out << '*' << e;
+	++nbmul;
+	out << '*' << e;
     }
     return out;
 }
 
 template<> inline
 std::ostream& printmulorjustdiv(std::ostream& out,
-                                const char c, const size_t i,
-                                const Givaro::Rational& r,
-                                size_t& nbmul, const QRat& QQ) {
+				const char c, const size_t i,
+				const Givaro::Rational& r,
+				size_t& nbmul, const QRat& QQ) {
     out << c << i;
     if (!QQ.isOne(r)) {
-        ++nbmul;
-        if (Givaro::isOne(r.nume()))
-            out << '/' << r.deno();
-        else
-            out << '*' << r;
+	++nbmul;
+	if (Givaro::isOne(r.nume()))
+	    out << '/' << r.deno();
+	else
+	    out << '*' << r;
     }
     return out;
 }
@@ -410,27 +447,27 @@ std::ostream& printmulorjustdiv(std::ostream& out,
     // Machine words only, and each thread caches its lifts: the search meets
     // a few dozen distinct residues.
 inline bool liftRational(int64_t& num, int64_t& den, const LiftField& F,
-                         const int64_t& e) {
+			 const int64_t& e) {
     struct Lift { int64_t num, den; bool ok; };
     static thread_local std::unordered_map<int64_t, Lift> cache;
     static thread_local int64_t cachep(0), bound(0);
     const int64_t p((int64_t)F.residu());
     if (p != cachep) {
-        cache.clear(); cachep = p;
-        bound = (int64_t)std::sqrt((double)(p/2));
-        while (bound*bound > p/2) --bound;
-        while ((bound+1)*(bound+1) <= p/2) ++bound;
+	cache.clear(); cachep = p;
+	bound = (int64_t)std::sqrt((double)(p/2));
+	while (bound*bound > p/2) --bound;
+	while ((bound+1)*(bound+1) <= p/2) ++bound;
     }
     const auto it(cache.find(e));
     if (it != cache.end()) {
-        num = it->second.num; den = it->second.den; return it->second.ok;
+	num = it->second.num; den = it->second.den; return it->second.ok;
     }
-        // Extended Euclid on (p, e) until the remainder is within the bound
+	// Extended Euclid on (p, e) until the remainder is within the bound
     int64_t r0(p), r1(e < 0 ? e + p : e), t0(0), t1(1);
     while (r1 > bound) {
-        const int64_t qu(r0 / r1);
-        const int64_t r2(r0 - qu*r1); r0 = r1; r1 = r2;
-        const int64_t t2(t0 - qu*t1); t0 = t1; t1 = t2;
+	const int64_t qu(r0 / r1);
+	const int64_t r2(r0 - qu*r1); r0 = r1; r1 = r2;
+	const int64_t t2(t0 - qu*t1); t0 = t1; t1 = t2;
     }
     bool ok(t1 != 0);
     num = r1; den = t1;
@@ -441,7 +478,7 @@ inline bool liftRational(int64_t& num, int64_t& den, const LiftField& F,
 }
 
 inline bool liftRational(Givaro::Rational& q, const LiftField& F,
-                         const int64_t& e) {
+			 const int64_t& e) {
     int64_t num, den;
     if (! liftRational(num, den, F, e)) return false;
     q = Givaro::Rational(Givaro::Integer(num), Givaro::Integer(den));
@@ -451,8 +488,8 @@ inline bool liftRational(Givaro::Rational& q, const LiftField& F,
 inline int64_t Fabs(const LiftField& F, const int64_t& e) {
     int64_t num, den;
     if (liftRational(num, den, F, e)) {
-        if (num < 0) { int64_t a; F.init(a); return F.neg(a,e); }
-        return e;
+	if (num < 0) { int64_t a; F.init(a); return F.neg(a,e); }
+	return e;
     }
     int64_t a; F.init(a);                   // not a small rational: modular |e|
     F.neg(a,e);
@@ -471,34 +508,34 @@ inline int Fsign(const LiftField& F, const int64_t& e) {
     // prints the lifted rational like the rational field does: c[i]/b or c[i]*r
 template<> inline
 std::ostream& printmulorjustdiv(std::ostream& out,
-                                const char c, const size_t i,
-                                const int64_t& e,
-                                size_t& nbmul, const LiftField& F) {
+				const char c, const size_t i,
+				const int64_t& e,
+				size_t& nbmul, const LiftField& F) {
     out << c << i;
     if (notAbsOne(F,e)) {
-        ++nbmul;
-        Givaro::Rational q;
-        if (liftRational(q, F, e)) {
-            if (Givaro::isOne(q.nume()))
-                out << '/' << q.deno();
-            else
-                out << '*' << q;
-        } else {
-            out << '*' << e;
-        }
+	++nbmul;
+	Givaro::Rational q;
+	if (liftRational(q, F, e)) {
+	    if (Givaro::isOne(q.nume()))
+		out << '/' << q.deno();
+	    else
+		out << '*' << q;
+	} else {
+	    out << '*' << e;
+	}
     }
     return out;
 }
 
 inline std::ostream& printSCA(std::ostream& out,
-                              const char c, const size_t i, const char p,
-                              const Givaro::Rational& r,
-                              size_t& nbmul, const QRat& QQ) {
+			      const char c, const size_t i, const char p,
+			      const Givaro::Rational& r,
+			      size_t& nbmul, const QRat& QQ) {
     if (p == '*')
-        return printmulorjustdiv(out, c, i, r, nbmul, QQ);
+	return printmulorjustdiv(out, c, i, r, nbmul, QQ);
     else { // operation is division --> multiply by the inverse
-        Givaro::Rational u; QQ.inv(u,r);
-        return printmulorjustdiv(out, c, i, u, nbmul, QQ);
+	Givaro::Rational u; QQ.inv(u,r);
+	return printmulorjustdiv(out, c, i, u, nbmul, QQ);
     }
 }
 
@@ -514,37 +551,37 @@ inline std::ostream& printSCA(std::ostream& out,
 // Generic random element with bitsize
 template<typename Domain> inline
 typename Domain::Element& RandomElt(typename Domain::Element& e,
-                                    const Domain& D,
-                                    Givaro::GivRandom& generator,
-                                    const size_t bitsize) {
+				    const Domain& D,
+				    Givaro::GivRandom& generator,
+				    const size_t bitsize) {
     return D.random(generator, e, bitsize);
 }
 
 // Specialization for Modular, as bitsize is meanigless for its random
 template<> inline
 typename Givaro::Integer& RandomElt(Givaro::Integer& e,
-                                    const Givaro::Modular<Givaro::Integer>& D,
-                                    Givaro::GivRandom& generator,
-                                    const size_t bitsize) {
+				    const Givaro::Modular<Givaro::Integer>& D,
+				    Givaro::GivRandom& generator,
+				    const size_t bitsize) {
     return D.random(generator, e);
 }
 
 // Generic {-1,0,1} element
 template<typename Domain>
 typename Domain::Element& zoRandomElt(typename Domain::Element& e,
-                                      const Domain& D,
-                                      Givaro::GivRandom& generator) {
+				      const Domain& D,
+				      Givaro::GivRandom& generator) {
     D.init(e, (generator() % 3));
     return D.subin(e, D.one);
 }
 
 template<typename Domain, typename _Vect>
 _Vect& zoRandomVect(typename Domain::Element&e, _Vect& v,
-                    const Domain& D, Givaro::GivRandom& generator) {
+		    const Domain& D, Givaro::GivRandom& generator) {
     D.assign(e,D.zero);
     for(auto& it: v) {
-        zoRandomElt(it, D, generator);
-        D.axpyin(e,it,it);
+	zoRandomElt(it, D, generator);
+	D.axpyin(e,it,it);
     }
     return v;
 }
@@ -565,13 +602,13 @@ public:
     Hom(const Source& S, const Target& T) : _source(S), _target(T) {}
 
     Elt& image(Elt& t, const SrcElt& s) {
-        _target.assign (t, s); // this will compute the modular image
-        return t;
+	_target.assign (t, s); // this will compute the modular image
+	return t;
     }
 
     SrcElt& preimage(SrcElt& s, const Elt& t) {
-        _source.assign (s, t); // this will just copy
-        return s;
+	_source.assign (s, t); // this will just copy
+	return s;
     }
 
     const Source& source() { return _source;}
@@ -588,27 +625,27 @@ namespace PLinOpt {
 // Generic verification, within Field, of matrices over Base
 template<typename Field, typename _Matrix>
 int MMchecker(const Field& FF, const size_t bitsize,
-              const _Matrix& L, const _Matrix& R, const _Matrix& P) {
+	      const _Matrix& L, const _Matrix& R, const _Matrix& P) {
     using PLinOpt::FileFormat;
     typedef LinBox::DenseVector<Field> FVector;
 
     PLinOpt::Tricounter mkn(PLinOpt::LRP2MM(L,R,P));
     const size_t& m(std::get<0>(mkn)), k(std::get<1>(mkn)), n(std::get<2>(mkn));
 
-        // =============================================
-        // Random inputs
+	// =============================================
+	// Random inputs
     FVector va(FF,L.rowdim()), ua(FF,L.coldim());
     FVector vb(FF,R.rowdim()), ub(FF,R.coldim());
     FVector wc(FF,P.rowdim()), vc(FF,P.coldim());
 
     if ( (ua.size()!=(m*k)) || (ub.size()!=(k*n)) || (wc.size()!=(m*n)) ) {
-        std::cerr << "# \033[1;31m****** ERROR, outer dimension mismatch: "
-                  << L.coldim() << ':' << m << 'x' << k << ' '
-                  << R.coldim() << ':' << k << 'x' << n << ' '
-                  << P.rowdim() << ':' << m << 'x' << n
-                  << " ******\033[0m"
-                  << std::endl;
-        return 3;
+	std::cerr << "# \033[1;31m****** ERROR, outer dimension mismatch: "
+		  << L.coldim() << ':' << m << 'x' << k << ' '
+		  << R.coldim() << ':' << k << 'x' << n << ' '
+		  << P.rowdim() << ':' << m << 'x' << n
+		  << " ******\033[0m"
+		  << std::endl;
+	return 3;
     }
 
     Givaro::GivRandom generator;
@@ -616,8 +653,8 @@ int MMchecker(const Field& FF, const size_t bitsize,
     for(auto &iter:ua) RandomElt(iter, FF, generator, bitsize);
     for(auto &iter:ub) RandomElt(iter, FF, generator, bitsize);
 
-        // =============================================
-        // Compute matrix product via the HM algorithm
+	// =============================================
+	// Compute matrix product via the HM algorithm
     L.apply(va,ua);
     R.apply(vb,ub);
 
@@ -625,11 +662,11 @@ int MMchecker(const Field& FF, const size_t bitsize,
 
     P.apply(wc,vc);
 
-        // =============================================
-        // Compute the matrix product directly
+	// =============================================
+	// Compute the matrix product directly
     LinBox::DenseMatrix<Field> Ma(FF,m,k), Mb(FF,k,n), Delta(FF,m,n);
 
-        // row-major vectorization
+	// row-major vectorization
     for(size_t i=0; i<ua.size(); ++i) Ma.setEntry(i/k,i%k,ua[i]);
     for(size_t i=0; i<ub.size(); ++i) Mb.setEntry(i/n,i%n,ub[i]);
     for(size_t i=0; i<wc.size(); ++i) Delta.setEntry(i/n,i%n,wc[i]);
@@ -640,36 +677,36 @@ int MMchecker(const Field& FF, const size_t bitsize,
 
     BMD.subin(Delta, Mc);
 
-        // =============================================
-        // Both computations should agree
+	// =============================================
+	// Both computations should agree
     if (BMD.isZero (Delta)) {
-        FF.write(std::clog <<"# \033[1;32mSUCCESS: correct "
-                 << m << 'x' << k << 'x' << n
-                 << ' ' << PLinOpt::nonzeroes(L,R,P)
-                 << " Matrix-Multiplication \033[0m") << std::endl;
+	FF.write(std::clog <<"# \033[1;32mSUCCESS: correct "
+		 << m << 'x' << k << 'x' << n
+		 << ' ' << PLinOpt::nonzeroes(L,R,P)
+		 << " Matrix-Multiplication \033[0m") << std::endl;
     } else {
-        FF.write(std::cerr << "# \033[1;31m****** ERROR, not a "
-                 << m << 'x' << k << 'x' << n
-                 << " MM algorithm******\033[0m") << std::endl;
+	FF.write(std::cerr << "# \033[1;31m****** ERROR, not a "
+		 << m << 'x' << k << 'x' << n
+		 << " MM algorithm******\033[0m") << std::endl;
 
-        ua.write(std::clog << "Ua:=", FileFormat::Maple ) << ';' << std::endl;
-        va.write(std::clog << "Va:=", FileFormat::Maple ) << ';' << std::endl;
-        ub.write(std::clog << "Ub:=", FileFormat::Maple ) << ';' << std::endl;
-        vb.write(std::clog << "Vb:=", FileFormat::Maple ) << ';' << std::endl;
-        vc.write(std::clog << "Vc:=", FileFormat::Maple ) << ';' << std::endl;
-        wc.write(std::clog << "wc:=", FileFormat::Maple ) << ';' << std::endl;
+	ua.write(std::clog << "Ua:=", FileFormat::Maple ) << ';' << std::endl;
+	va.write(std::clog << "Va:=", FileFormat::Maple ) << ';' << std::endl;
+	ub.write(std::clog << "Ub:=", FileFormat::Maple ) << ';' << std::endl;
+	vb.write(std::clog << "Vb:=", FileFormat::Maple ) << ';' << std::endl;
+	vc.write(std::clog << "Vc:=", FileFormat::Maple ) << ';' << std::endl;
+	wc.write(std::clog << "wc:=", FileFormat::Maple ) << ';' << std::endl;
 
-        Ma.write(std::clog << "Ma:=", FileFormat::Maple) << ';' << std::endl;
-        Mb.write(std::clog << "Mb:=", FileFormat::Maple) << ';' << std::endl;
-            // Correct value
-        Mc.write(std::clog << "Mc:=", FileFormat::Maple) << ';' << std::endl;
-            // Difference with computed value
-        Delta.write(std::clog << "Df:=", FileFormat::Maple) << ';' << std::endl;
-        BMD.addin(Delta, Mc);
-            // Computed value
-        Delta.write(std::clog << "Rc:=", FileFormat::Maple) << ';' << std::endl;
+	Ma.write(std::clog << "Ma:=", FileFormat::Maple) << ';' << std::endl;
+	Mb.write(std::clog << "Mb:=", FileFormat::Maple) << ';' << std::endl;
+	    // Correct value
+	Mc.write(std::clog << "Mc:=", FileFormat::Maple) << ';' << std::endl;
+	    // Difference with computed value
+	Delta.write(std::clog << "Df:=", FileFormat::Maple) << ';' << std::endl;
+	BMD.addin(Delta, Mc);
+	    // Computed value
+	Delta.write(std::clog << "Rc:=", FileFormat::Maple) << ';' << std::endl;
 
-        return 1;
+	return 1;
     }
     return 0;
 }

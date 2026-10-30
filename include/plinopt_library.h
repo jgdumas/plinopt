@@ -101,6 +101,15 @@ template<typename _Mat> size_t density(const _Mat& L, const _Mat& R,
 template<typename _Mat> Pair<size_t> nonzeroes(const _Mat& L, const _Mat& R,
                                                const _Mat& P);
 
+	// Operations upper bound for matrix-vector multiplication
+template<typename _Mat>
+Pair<size_t> naiveOps(const _Mat& M);
+
+        // Checking matrix equality
+template<typename _Mat, typename _Stream>
+inline bool areEqual(const _Mat& A, _Stream& B,
+		     Pair<size_t>& nbelts, const bool verbose=false);
+
 	// Copy the transposed  matrix
 template<typename _Mat1, typename _Mat2>
 inline _Mat1& Transpose(_Mat1& T, const _Mat2& A);

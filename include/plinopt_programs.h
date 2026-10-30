@@ -31,19 +31,19 @@ namespace PLinOpt {
 // Program is vector of lines
 typedef std::vector<std::vector<std::string>> VProgram_t;
 
-        // Files contains a program with the following SYNTAX
-        // [+] constants name start with 'c'
-        // [+] input variables start with 'i' --> transformed into 'o'
+	// Files contains a program with the following SYNTAX
+	// [+] constants name start with 'c'
+	// [+] input variables start with 'i' --> transformed into 'o'
 		//    supposed to be just a simple affectation "x0:=i0;"
-        // [+] output variables start with 'o' --> transformed into 'i'
-        // [+] lines are of the forms:
-        //    xi := sum (yi op(li)), with sum: + or -, and: op * or / or empty
-        //        xi, yi are supposed to be without any of "+-:=/*;"
-        //        liin particular rational numbers a/b should be precomputed,
-        //        e.g., into a constant 'cxx:=a/b;' when used in computation.
-        //        e.g. replace: "x0:=x1*3/4;" by "c0:=3/4;x0:=x1*c0;"
-        //    each yi occurs singly in a given line
-        //    One operation per line (';' stops the parsing of that line)
+	// [+] output variables start with 'o' --> transformed into 'i'
+	// [+] lines are of the forms:
+	//    xi := sum (yi op(li)), with sum: + or -, and: op * or / or empty
+	//        xi, yi are supposed to be without any of "+-:=/*;"
+	//        liin particular rational numbers a/b should be precomputed,
+	//        e.g., into a constant 'cxx:=a/b;' when used in computation.
+	//        e.g. replace: "x0:=x1*3/4;" by "c0:=3/4;x0:=x1*c0;"
+	//    each yi occurs singly in a given line
+	//    One operation per line (';' stops the parsing of that line)
 
 // ============================================================
 
@@ -52,7 +52,7 @@ typedef std::vector<std::vector<std::string>> VProgram_t;
 // ============================================================
 // Main parsing procedure, writing the ouput program
 int Tellegen(std::ostream& sout, std::istream& input, const char cchar = 'c',
-             const char ichar = 'i', const char ochar = 'o');
+	     const char ichar = 'i', const char ochar = 'o');
 // ============================================================
 
 
@@ -64,7 +64,7 @@ VProgram_t& programParser(VProgram_t& ProgramVector, std::stringstream& ssin);
 // ============================================================
 // Compacting programs, parsing then rewriting
 std::ostream& Compacter(std::ostream& sout, std::istream& input,
-                        const size_t numloops=0, const bool simplSingle=true);
+			const size_t numloops=0, const bool simplSingle=true);
 // ============================================================
 
 // ============================================================
@@ -75,7 +75,7 @@ std::ostream& Compacter(std::ostream& sout, std::istream& input,
 //   [3] Backward reassingment of output variables
 //   [4] (optional) rewrites singly used variables in-place
 size_t variablesTrimer(VProgram_t& P, const bool simplSingle=true,
-                       const char inchar = 'i', const char outchar = 'o');
+		       const char inchar = 'i', const char outchar = 'o');
 // ============================================================
 
 
@@ -85,6 +85,17 @@ template<typename _Mat>
 _Mat& matrixBuilder(_Mat& A, const VProgram_t& P, const char outchar = 'o');
 // ============================================================
 
+// ============================================================
+// Parsing a program and building the associated matrix
+template<typename _Mat>
+Pair<size_t> SLPbuilder(_Mat& A, std::stringstream& ssin, const bool verbose=false);
+
+template<typename _Mat>
+Pair<size_t> SLPbuilder(_Mat& A, std::istream& input, const bool verbose=false) {
+    std::stringstream ssin; ssin << input.rdbuf();
+    return SLPbuilder(A, ssin, verbose);
+}
+// ============================================================
 
 // ============================================================
 // Transform program by creating temporaries for parenthesis blocks
@@ -96,7 +107,7 @@ VProgram_t& parenthesisExpand(VProgram_t& P, char& nextfree);
 // ============================================================
 // Replaces all temporary variables names by variables with the same char
 VProgram_t& singleVar(VProgram_t& P,
-                      const char ichar ='i', const char ochar ='o');
+		      const char ichar ='i', const char ochar ='o');
 // ============================================================
 
 // ============================================================
@@ -106,7 +117,7 @@ bool isNatural(const std::string& s);
 
 // ============================================================
 std::ostream& printline(std::ostream& sout,
-                        const std::vector<std::string>& line);
+			const std::vector<std::string>& line);
 // ===============================================================
 
 // ===============================================================
@@ -121,13 +132,13 @@ size_t progSize(const VProgram_t& P) ;
 bool OpOnVars(const VProgram_t& progV, const std::vector<std::string>& iVars);
 // Removing operations that produce iVars in P
 VProgram_t& RemoveVars(VProgram_t& progV, Pair<size_t>& Pops,
-                       const std::vector<std::string>& iVars);
+		       const std::vector<std::string>& iVars);
 // ===============================================================
 
 // ===============================================================
 std::ostream& operator<<(std::ostream& sout, const VProgram_t& P);
 std::ostream& operator<<(std::ostream& out,
-                         const std::map<std::string,size_t>& m);
+			 const std::map<std::string,size_t>& m);
 // ===============================================================
 
 // ============================================================
@@ -143,14 +154,14 @@ char unusedChar(const std::set<char>& C, const char cstart = 'a'-1);
 // ============================================================
 // Cleaning program lines: remove comments and trailing spaces
 inline void stringTrimer(std::string &s) {
-        // Trim everything after comment character
+	// Trim everything after comment character
     const auto hascomment(s.find_first_of('#',0));
     if (hascomment != std::string::npos) s.erase(s.begin()+hascomment,s.end());
-        // Trim spaces from the end (in place)
+	// Trim spaces from the end (in place)
     s.erase(std::find_if(s.rbegin(), s.rend(),
-                         [](unsigned char c) { return !std::isspace(c);}
-                         ).base(),
-            s.end());
+			 [](unsigned char c) { return !std::isspace(c);}
+			 ).base(),
+	    s.end());
 }
 // ============================================================
 
