@@ -17,28 +17,6 @@
 #include "plinopt_programs.h"
 
 namespace PLinOpt {
-// ============================================================
-// Parsing a program and building the associated matrix
-template<typename _Mat>
-Pair<size_t> SLPbuilder(_Mat& A, std::istream& input) {
-    std::stringstream ssin; ssin << input.rdbuf();
-
-	// Line by line parsing
-    VProgram_t ProgramVector;
-    programParser(ProgramVector, ssin);
-    const auto PVs { progOperations(ProgramVector) };
-    std::clog << std::string(40,'#') << std::endl;
-    std::clog << "# \033[1;32m" << PVs.first << "\tadditions" << "\033[0m" << std::endl;
-    std::clog << "# \033[1;32m" << PVs.second << "\tmultiplications" << "\033[0m" << std::endl;
-
-
-    char next(0); parenthesisExpand(ProgramVector, next);
-    std::clog << std::string(40,'#') << std::endl;
-
-    matrixBuilder(A, ProgramVector);
-
-    return PVs;
-}
 
 // ============================================================
 // Checking a linear program with a matrix
@@ -54,56 +32,30 @@ int SLPcheck(const std::string& prgname, const std::string& matname,
     Pair<size_t> Ops;
 
     if (prgname == "") {
-        Ops = SLPbuilder(A, std::cin);
+      Ops = SLPbuilder(A, std::cin, true);
     } else {
         std::ifstream ifile(prgname);
         if ( ifile ) {
-            Ops = SLPbuilder(A, ifile);
+	  Ops = SLPbuilder(A, ifile, true);
             ifile.close();
         }
     }
 
     if (matname != "") {
-        std::ifstream matfile(matname);
-        QRat QQ;
-        QMstream ms(QQ, matfile);
-        Matrix M(ms);
-        const Pair<size_t> nbelts(naiveOps(M));
-
-        const size_t m(std::max(M.rowdim(),A.rowdim()));
-        const size_t n(std::max(M.coldim(),A.coldim()));
-        M.resize(m,n); A.resize(m,n);
-        FMatrix B(M,F);
-        LinBox::DenseMatrix<Field> dB(F,m,n),dA(F,m,n),R(F,m,n);
-        any2dense(dA,A); any2dense(dB,B);
-        LinBox::MatrixDomain<Field> BMD(F);
-        BMD.sub(R,dB,dA);
-
-        if (BMD.isZero (R)) {
-            std::clog <<"# \033[1;32mSUCCESS: correct SLP for "
-                      << m << 'x' << n
-                      << " (" << nbelts.first << '+'
-                      << '|' << nbelts.second << 'x'
-                      << ") : " << Ops
-                      << " Matrix-Vector multiplication!\033[0m" << std::endl;
-        } else {
-            std::cerr << "# \033[1;31m****** ERROR, not a "
-                      << m << 'x' << n
-                      << " m-v algorithm******\033[0m"
-                      << std::endl;
-
-            A.write(std::clog<<"# Program:\n", FileFormat::Pretty);
-            B.write(std::clog<<"\n# Matrix:\n", FileFormat::Pretty);
-            R.write(std::clog<<"\n# diff:\n", FileFormat::Pretty) << std::endl;
-
-            return 1;
-        }
+      Pair<size_t> nbelts;
+      std::ifstream matfile(matname);
+      if (! areEqual(A, matfile, nbelts, true)) return 1;
+      std::clog <<"# \033[1;32mSUCCESS: correct SLP for "
+		<< A.rowdim() << 'x' << A.coldim()
+		<< " (" << nbelts.first << '+'
+		<< '|' << nbelts.second << 'x'
+		<< ") : " << Ops
+		<< " Matrix-Vector multiplication!\033[0m" << std::endl;
     } else {
-        A.write(std::cout, FileFormat(5));
+      A.write(std::cout, FileFormat(5));
     }
     return 0;
 }
-
 
 } // End of namespace PLinOpt
 // ============================================

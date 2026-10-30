@@ -39,6 +39,7 @@
 #include <sstream>
 
 #include "plinopt_optimize.h"
+#include "plinopt_programs.h"
 
 namespace PLinOpt {
 
@@ -46,7 +47,8 @@ namespace PLinOpt {
 // ============================================================
 // Optimizing a linear program over a field
 template<typename Field>
-int FOptimiser(std::istream& input, const size_t randomloops,
+int FOptimiser(std::istream& input, std::ostream& output,
+               const size_t randomloops,
                const bool printMaple, const bool printPretty,
                const bool tryDirect, const bool tryKernel, const bool tryLU,
                const bool tryAB, const bool mostCSE, const bool allkernels,
@@ -89,7 +91,7 @@ int FOptimiser(std::istream& input, const size_t randomloops,
 
     std::stringstream ssin; ssin << ssout.str();
     reseed('C', 0);     // the compacter's draws do not depend on the loops
-    PLinOpt::Compacter(std::cout,ssin);
+    PLinOpt::Compacter(output,ssin);
 
     if ((nbops.first !=0 || nbops.second != 0)) {
         std::clog << std::string(40,'#') << std::endl;
@@ -126,21 +128,54 @@ int FOptimiser(std::istream& input, const size_t randomloops,
 
 
 // ============================================================
-// Choice between modular computation or over the rationals
+// Does the program compute the matrix, over the rationals?
+bool checkProgram(const std::string& matrix, const std::string& program) {
+    QRat QQ;
+
+    std::stringstream pss(program);
+    Matrix A(QQ); SLPbuilder(A,pss,false);
+
+    std::stringstream mss(matrix);
+    Pair<size_t> nbelts;
+
+    return areEqual(A, mss, nbelts, false);
+}
+
+// ============================================================
+// Choice between modular computation, lifted computation, or rationals
 int Selector(std::istream& input, const size_t randomloops,
              const bool printMaple, const bool printPretty,
              const bool tryDirect, const bool tryKernel, const bool tryLU,
              const bool tryAB, const bool mostCSE, const bool allkernels, const bool KFI,
-             const Givaro::Integer& q, const int verbose) {
+             const Givaro::Integer& q, const bool lift, const int verbose) {
     if (! Givaro::isZero(q)) {
         Givaro::Modular<Givaro::Integer> FF(q);
-        return FOptimiser(input, randomloops, printMaple, printPretty, tryDirect,
+        return FOptimiser(input, std::cout, randomloops, printMaple, printPretty, tryDirect,
                           tryKernel, tryLU, tryAB, mostCSE, allkernels, KFI, FF, verbose);
-    } else {
+    }
+    if (lift) {
+            // Search over the lifting field, check over the rationals
+        std::stringstream matrix; matrix << input.rdbuf();
+        std::stringstream mss(matrix.str());
+        std::ostringstream program;
+        LiftField FF(LiftPrime);
+        const int status( FOptimiser(mss, program, randomloops, printMaple, printPretty,
+                                     tryDirect, tryKernel, tryLU, tryAB, mostCSE,
+                                     allkernels, KFI, FF, verbose) );
+        if (checkProgram(matrix.str(), program.str())) {
+            std::cout << program.str();
+            return status;
+        }
+        std::clog << "# \033[1;36mLifted program fails the rational check,"
+                  << " redoing the search over the rationals.\033[0m" << std::endl;
+        std::stringstream again(matrix.str());
         QRat QQ;
-        return FOptimiser(input, randomloops, printMaple, printPretty, tryDirect,
+        return FOptimiser(again, std::cout, randomloops, printMaple, printPretty, tryDirect,
                           tryKernel, tryLU, tryAB, mostCSE, allkernels, KFI, QQ, verbose);
     }
+    QRat QQ;
+    return FOptimiser(input, std::cout, randomloops, printMaple, printPretty, tryDirect,
+                      tryKernel, tryLU, tryAB, mostCSE, allkernels, KFI, QQ, verbose);
 }
 
 } // End of namespace PLinOpt
@@ -156,7 +191,7 @@ int main(int argc, char** argv) {
 
     bool printMaple(false), printPretty(false), mostCSE(false),
         tryKernel(false), tryLU(false), tryAB(false),
-        tryDirect(false), allkernels(false);
+        tryDirect(false), allkernels(false), lift(false);
 #if defined(KERNEL_FULL_IDENTITY)
     bool KFI(true);
 #else
@@ -173,7 +208,7 @@ int main(int argc, char** argv) {
         std::string args(argv[i]);
         if (args == "-h") {
             std::clog << "Usage: " << argv[0]
-                      << " [-h|-M|-P|-K|-D|-G|-E|-N|-A|-q #|-O #|-s #] [stdin|matrixfile.sms]\n";
+                      << " [-h|-M|-P|-K|-D|-G|-E|-N|-A|-Q|-q #|-O #|-s #] [stdin|matrixfile.sms]\n";
 
             std::clog
                 << "  -D/-K/-G: direct/kernel/LU methods (default is all)\n"
@@ -183,6 +218,8 @@ int main(int argc, char** argv) {
                 << "  -N: exhaustive nullspace permutations (default is not)\n"
                 << "  -P/-M: choose the printing format\n"
                 << "  -q #: search modulo (default is Rationals)\n"
+                << "  -Q: search over a word-size prime field, lift the program to the"
+                << " rationals and check it (falls back to the rational search)\n"
                 << "  -O #: randomized search with that many loops (default "
                 << randomloops << " loops)\n"
                 << "  -s #: seed of the randomized search (default is the clock;"
@@ -194,6 +231,7 @@ int main(int argc, char** argv) {
         else if (args == "-P") { printPretty = true; }
         else if (args == "-G") { tryLU = true; }
         else if (args == "-A") { tryAB = true; }
+        else if (args == "-Q") { lift = true; }
         else if (args == "-D") { tryDirect = true; }
         else if (args == "-K") { tryKernel = true; }
         else if (args == "-F") { KFI = true; }
@@ -221,13 +259,13 @@ int main(int argc, char** argv) {
     if (filename == "") {
         return PLinOpt::Selector(std::cin, randomloops, printMaple,
                                  printPretty, tryDirect, tryKernel, tryLU,
-                                 tryAB, mostCSE, allkernels, KFI, prime, verbose);
+                                 tryAB, mostCSE, allkernels, KFI, prime, lift, verbose);
     } else {
         std::ifstream inputmatrix(filename);
         if ( inputmatrix ) {
             int s=PLinOpt::Selector(inputmatrix, randomloops, printMaple,
                                     printPretty, tryDirect, tryKernel, tryLU,
-                                    tryAB, mostCSE, allkernels, KFI, prime, verbose);
+                                    tryAB, mostCSE, allkernels, KFI, prime, lift, verbose);
             inputmatrix.close();
             return s;
         }

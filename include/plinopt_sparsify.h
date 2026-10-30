@@ -122,10 +122,6 @@ template<typename _Mat1, typename _Mat2, typename _DMat>
 std::ostream& consistency(std::ostream& out, const _Mat1& M,
 			  const _Mat2& R, const _DMat& C);
 
-	// Operations upper bound for matrix-vector multiplication
-template<typename _Mat>
-Pair<size_t> naiveOps(const _Mat& M);
-
     // Prints out density profile of M
     // returns total density
 template<typename _Mat>
