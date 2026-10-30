@@ -64,8 +64,8 @@ BIN=${EXE:%=bin/%}
 
 all: ${BIN}
 
-bin/%: src/%.cpp
-	$(LINK.cpp) $^ $(LOADLIBES) $(LDLIBS) -o $@
+bin/%: src/%.cpp $(wildcard include/*.inl)
+	$(LINK.cpp) $< $(LOADLIBES) $(LDLIBS) -o $@
 
 clean:
 	- \rm ${BIN}
