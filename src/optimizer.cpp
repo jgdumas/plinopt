@@ -208,13 +208,15 @@ int main(int argc, char** argv) {
         std::string args(argv[i]);
         if (args == "-h") {
             std::clog << "Usage: " << argv[0]
-                      << " [-h|-M|-P|-K|-D|-G|-E|-N|-A|-Q|-q #|-O #|-s #] [stdin|matrixfile.sms]\n";
+                      << " [-h|-M|-P|-K|-D|-G|-E|-N|-A|-Q|-q #|-O #|-s #|-B #] [stdin|matrixfile.sms]\n";
 
             std::clog
                 << "  -D/-K/-G: direct/kernel/LU methods (default is all)\n"
                 << "  -F: Kernel Full Identity (default is " << (KFI?"yes":"no") << ")\n"
                 << "  -A: factoring method (default is not)\n"
                 << "  -E: exhaustive greedy CSE search (default is not)\n"
+                << "  -B #: budget of the exhaustive search, in states (default "
+                << PLinOpt::RecBudget << ")\n"
                 << "  -N: exhaustive nullspace permutations (default is not)\n"
                 << "  -P/-M: choose the printing format\n"
                 << "  -q #: search modulo (default is Rationals)\n"
@@ -236,6 +238,7 @@ int main(int argc, char** argv) {
         else if (args == "-K") { tryKernel = true; }
         else if (args == "-F") { KFI = true; }
         else if (args == "-E") { mostCSE = true; }
+        else if (args == "-B") { PLinOpt::RecBudget = atol(argv[++i]); }
         else if (args == "-N") { allkernels = true; }
         else if (args == "-q") { prime = Givaro::Integer(argv[++i]); }
         else if (args == "-v") { verbose = atoi(argv[++i]); }

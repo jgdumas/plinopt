@@ -8,6 +8,7 @@
  ****************************************************************/
 
 #include <limits>
+#include <unordered_map>
 #include "plinopt_optimize.h"
 #include "plinopt_sparsify.h"
 #include "plinopt_programs.h"
@@ -62,7 +63,8 @@ Pair<long> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
 		     std::vector<triple>& lmultiples, const triple& cse,
 		     std::vector<std::vector<triple>>& AllPairs,
 		     std::map<triple,size_t>& PairMap,
-		     const char tev, const char rav, const bool updateAPM) {
+		     const char tev, const char rav, const bool updateAPM,
+		     triple* applied = nullptr) {
     const auto& FF(lM.field());
     size_t lm(lM.coldim());
     long savedadds(0), savedmuls(0);
@@ -91,6 +93,7 @@ Pair<long> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
 	std::get<1>(lcse) = std::get<1>(cse);
 	FF.assign( std::get<2>(lcse), std::get<2>(cse) );
     }
+    if (applied) *applied = lcse;      // the new temporary is t_a + c t_b
 
 	// Factor out cse, in all rows
 	// adds a column for the new factor
@@ -901,104 +904,210 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
 }
 
 
-// Recusive search for the best cse
-template<typename triple,typename _Mat>
-bool RecSub(std::vector<std::string>& out, _Mat& Mat,
-	    std::vector<triple>& multiples,
-	    size_t& nbadd, size_t& nbmul, const size_t lvl,
-	    const char tev, const char rav) {
+// ============================================================
+// Exhaustive greedy CSE search, memoized over canonical states, with a budget
+//   A state is the current matrix, the temporaries created so far and the
+//   scalings already emitted.  Each temporary is a linear form over the
+//   inputs; two paths creating the same temporaries in different orders
+//   reach the same state up to their numbering, and the key below numbers
+//   them canonically, so every state is searched once.  The memo keeps the
+//   best savings from a state and the CSE achieving them; the program is
+//   then replayed from the root along the best choices.
+//   RecBudget bounds the number of states searched: past it, a state keeps
+//   only its first candidate (a greedy completion) and the search is
+//   reported as not exhaustive.
+size_t RecBudget(100000);
 
-    const auto& FF(Mat.field());
+template<typename _Mat>
+struct RecMemo {
+    typedef typename _Mat::Element Element;
+    typedef std::vector<std::pair<size_t,Element>> Form;    // over the inputs
+    struct Entry { long adds; long muls; std::string choice; };
+    std::unordered_map<std::string, Entry> table;
+    size_t inputs, states;
+    bool exhaustive;
+    RecMemo(const size_t n) : inputs(n), states(0), exhaustive(true) {}
+};
 
-    std::vector<std::vector<triple>> AllPairs;
-    std::vector<size_t> Density;
-	// Compute all pairs, in a row
-    for(auto iter=Mat.rowBegin(); iter != Mat.rowEnd(); ++iter) {
-	AllPairs.push_back(listpairs(*iter, FF));
-    }
-
-	// Count occurences of each pair in whole matrix
-    std::map<triple,size_t> PairMap;
-    for(const auto& rows: AllPairs) {
-	for (const auto& iter: rows) {
-	    PairMap[iter]++;
-	}
-    }
-	// Found some pairs
-    if (PairMap.size()) {
-	size_t maxfrq(0);
-	    // Find all pairs with maximal frequency
-	for (const auto& [element, frequency] : PairMap) {
-	    if (frequency > maxfrq) {
-		maxfrq = frequency;
-	    }
-	}
-	    // Factoring will gain something if maximal frequency > 1
-	if (maxfrq <= 1) {
-	    return false;
-	}
-    }
-
-    triple cse{0,0,0};
-    for(const auto& rows: AllPairs) {
-	if (rows.size() > 0) cse = rows.front();
-    }
-
-    size_t bestadds(nbadd), bestmuls(nbmul);
-    _Mat bestM(FF,Mat.rowdim(),Mat.coldim()); sparse2sparse(bestM, Mat);
-    std::vector<triple> bestmultiples(multiples);
-    std::vector<std::string> bestdout;
-
-#pragma omp parallel for shared(AllPairs,Mat,bestadds,bestmuls,bestM,bestmultiples,bestdout,tev,rav,multiples)
-    for(size_t i=0; i<AllPairs.size(); ++i) {
-	const auto& rows(AllPairs[i]);
-	for (const auto& cse: rows) {
-	    if (PairMap[cse] > 1) {
-		_Mat lM(FF,Mat.rowdim(),Mat.coldim()); sparse2sparse(lM, Mat);
-		std::vector<triple> lmultiples(multiples);
-		std::ostringstream ssout;
-		size_t moremul(0);
-
-		    // Factoring out that CSE from the matrix
-		const Pair<long> savings = RemOneCSE(ssout, lM, moremul,
-						     lmultiples, cse,
-						     AllPairs, tev, rav);
-
-		size_t ladditions(nbadd-savings.first);
-		size_t lmuls(nbmul-savings.second);
-
-		std::vector<std::string> sdout(1,ssout.str());
-		RecSub(sdout, lM, lmultiples, ladditions, lmuls, lvl+1, tev, rav);
-
-#pragma omp critical
-		{
-		if ( (ladditions < bestadds) ||
-		     ( (ladditions == bestadds) && (lmuls < bestmuls) ) ) {
-		    bestadds = ladditions;
-		    bestmuls = lmuls;
-		    sparse2sparse(bestM, lM);
-		    bestmultiples = lmultiples;
-		    bestdout = sdout;
-		}
-		}
-	    }
-	}
-    }
-
-    nbadd = bestadds;
-    nbmul = bestmuls;
-    multiples = bestmultiples;
-    sparse2sparse(Mat, bestM);
-    out.insert(out.end(),bestdout.begin(), bestdout.end());
-
-#ifdef VERBATIM_PARSING
-    std::clog << std::string(lvl,'#') << "# lvl(" << lvl << "), best: " << bestadds << '|' << bestmuls << std::endl;
-#endif
-
-    return true;
+template<typename Field, typename Form>
+std::string formKey(const Field& F, const Form& v) {
+    std::ostringstream o;
+    for(const auto& [k, c]: v) { F.write(o << k << ':', c) << ';'; }
+    return o.str();
 }
 
+    // t_a + c t_b, as a form over the inputs (sorted, without zeroes)
+template<typename Field, typename Form>
+Form formCombine(const Field& F, const Form& a, const Form& b,
+		 const typename Field::Element& c) {
+    std::map<size_t, typename Field::Element> m;
+    for(const auto& [k, v]: a) {
+	auto it(m.find(k));
+	if (it == m.end()) m.emplace(k, v); else F.addin(it->second, v);
+    }
+    typename Field::Element t; F.init(t);
+    for(const auto& [k, v]: b) {
+	F.mul(t, c, v);
+	auto it(m.find(k));
+	if (it == m.end()) m.emplace(k, t); else F.addin(it->second, t);
+    }
+    Form r;
+    for(const auto& [k, v]: m) if (!F.isZero(v)) r.emplace_back(k, v);
+    return r;
+}
 
+    // The canonical key of a state
+template<typename triple, typename _Mat, typename Memo>
+std::string stateKey(const _Mat& M, const std::vector<triple>& multiples,
+		     const std::vector<typename Memo::Form>& colvec,
+		     const Memo& memo) {
+    const auto& F(M.field());
+	// temporaries in the order of their forms
+    std::vector<std::pair<std::string,size_t>> temps;
+    for(size_t j=memo.inputs; j<colvec.size(); ++j)
+	temps.emplace_back(formKey(F, colvec[j]), j);
+    std::sort(temps.begin(), temps.end());
+    std::vector<size_t> canon(colvec.size());
+    for(size_t j=0; j<memo.inputs; ++j) canon[j] = j;
+    for(size_t k=0; k<temps.size(); ++k) canon[temps[k].second] = memo.inputs + k;
+    std::ostringstream o;
+    for(const auto& t: temps) o << t.first << '|';
+    o << '#';
+    for(auto it=M.rowBegin(); it != M.rowEnd(); ++it) {
+	std::vector<std::pair<size_t,typename _Mat::Element>> row;
+	for(const auto& e: *it) row.emplace_back(canon[e.first], e.second);
+	std::sort(row.begin(), row.end(),
+		  [](const auto& x, const auto& y){ return x.first < y.first; });
+	for(const auto& [k, c]: row) { F.write(o << k << ':', c) << ','; }
+	o << '/';
+    }
+    o << '#';
+    std::vector<std::string> muls;
+    for(const auto& m: multiples) {
+	std::ostringstream mo; F.write(mo << canon[std::get<1>(m)] << '*', std::get<2>(m));
+	muls.push_back(mo.str());
+    }
+    std::sort(muls.begin(), muls.end());
+    for(const auto& m: muls) o << m << ',';
+    return o.str();
+}
+
+template<typename Field, typename triple, typename Form>
+std::string choiceKey(const Field& F, const triple& cse,
+		      const std::vector<Form>& colvec) {
+    std::ostringstream o;
+    F.write(o << formKey(F, colvec[std::get<0>(cse)]) << '|'
+	      << formKey(F, colvec[std::get<1>(cse)]) << '|', std::get<2>(cse));
+    return o.str();
+}
+
+    // Best savings from a state (filling the memo)
+template<typename triple, typename _Mat, typename Memo>
+Pair<long> RecSearch(const _Mat& Mat, const std::vector<triple>& multiples,
+		     const std::vector<typename Memo::Form>& colvec,
+		     Memo& memo, const size_t lvl,
+	    const char tev, const char rav) {
+    const auto& FF(Mat.field());
+    const std::string key(stateKey<triple>(Mat, multiples, colvec, memo));
+    bool known(false); Pair<long> result{0,0};
+#pragma omp critical(recmemo)
+    {
+	const auto it(memo.table.find(key));
+	if (it != memo.table.end()) { known = true; result = Pair<long>{it->second.adds, it->second.muls}; }
+    }
+    if (known) return result;
+
+	// The candidates: pairs occurring in at least two rows
+    std::vector<std::vector<triple>> AllPairs;
+    for(auto iter=Mat.rowBegin(); iter != Mat.rowEnd(); ++iter)
+	AllPairs.push_back(listpairs(*iter, FF));
+    std::map<triple,size_t> PairMap;
+    for(const auto& rows: AllPairs) for (const auto& p: rows) PairMap[p]++;
+    std::vector<triple> candidates;
+    for(const auto& [p, frequency]: PairMap) if (frequency > 1) candidates.push_back(p);
+
+    bool over(false);
+#pragma omp critical(recmemo)
+    {
+	++memo.states;
+	if (memo.states > RecBudget) { over = true; memo.exhaustive = false; }
+    }
+    if (over && candidates.size() > 1) candidates.resize(1);
+
+    long bestadds(-1), bestmuls(-1); std::string bestchoice;
+    if (!candidates.empty()) {
+	bestadds = std::numeric_limits<long>::min(); bestmuls = bestadds;
+	    // parallel at the root only (nested regions are not active)
+#pragma omp parallel for shared(AllPairs,candidates,bestadds,bestmuls,bestchoice) if(lvl==0)
+	for(size_t k=0; k<candidates.size(); ++k) {
+	    const triple& cse(candidates[k]);
+		_Mat lM(FF,Mat.rowdim(),Mat.coldim()); sparse2sparse(lM, Mat);
+		std::vector<triple> lmultiples(multiples);
+	    std::vector<typename Memo::Form> lcolvec(colvec);
+	    std::vector<std::vector<triple>> lAllPairs(AllPairs);
+	    std::ostringstream ssout; size_t moremul(0);
+	    triple applied;
+	    std::map<triple,size_t> lPairMap;
+	    const Pair<long> savings = RemOneCSE(ssout, lM, moremul, lmultiples, cse,
+						 lAllPairs, lPairMap, tev, rav, false, &applied);
+	    lcolvec.push_back(formCombine(FF, lcolvec[std::get<0>(applied)],
+					  lcolvec[std::get<1>(applied)], std::get<2>(applied)));
+	    const Pair<long> rest(RecSearch(lM, lmultiples, lcolvec, memo, lvl+1, tev, rav));
+	    const long adds(savings.first + rest.first), muls(savings.second + rest.second);
+#pragma omp critical(recbest)
+		{
+		if ( (adds > bestadds) || ((adds == bestadds) && (muls > bestmuls)) ) {
+		    bestadds = adds; bestmuls = muls;
+		    bestchoice = choiceKey(FF, cse, colvec);
+		}
+		}
+	    }
+    } else {
+	bestadds = 0; bestmuls = 0;
+	}
+#pragma omp critical(recmemo)
+    {
+	memo.table[key] = typename Memo::Entry{bestadds, bestmuls, bestchoice};
+    }
+    return Pair<long>{bestadds, bestmuls};
+    }
+
+    // Replays the best choices from the root, emitting the program
+template<typename triple, typename _Mat, typename Memo>
+Pair<long> RecReplay(std::ostream& sout, _Mat& Mat, std::vector<triple>& multiples,
+		     std::vector<typename Memo::Form>& colvec, Memo& memo,
+		     const char tev, const char rav) {
+    const auto& FF(Mat.field());
+    Pair<long> total{0,0};
+    for(;;) {
+	const std::string key(stateKey<triple>(Mat, multiples, colvec, memo));
+	const auto it(memo.table.find(key));
+	if ((it == memo.table.end()) || it->second.choice.empty()) break;
+	    // the chosen CSE, by the forms of its two columns
+	const std::string& ch(it->second.choice);
+	const size_t s1(ch.find('|')), s2(ch.find('|', s1+1));
+	const std::string ka(ch.substr(0,s1)), kb(ch.substr(s1+1, s2-s1-1));
+	size_t a(colvec.size()), b(colvec.size());
+	for(size_t j=0; j<colvec.size(); ++j) {
+	    const std::string fj(formKey(FF, colvec[j]));
+	    if ((a == colvec.size()) && (fj == ka)) a = j;
+	    else if ((b == colvec.size()) && (fj == kb)) b = j;
+	}
+	triple cse; std::get<0>(cse) = a; std::get<1>(cse) = b;
+	std::istringstream ratio(ch.substr(s2+1)); FF.read(ratio, std::get<2>(cse));
+	std::vector<std::vector<triple>> AllPairs;
+	for(auto iter=Mat.rowBegin(); iter != Mat.rowEnd(); ++iter)
+	    AllPairs.push_back(listpairs(*iter, FF));
+	size_t moremul(0); triple applied;
+	std::map<triple,size_t> PairMap;
+	const Pair<long> savings = RemOneCSE(sout, Mat, moremul, multiples, cse,
+					     AllPairs, PairMap, tev, rav, false, &applied);
+	colvec.push_back(formCombine(FF, colvec[std::get<0>(applied)],
+				     colvec[std::get<1>(applied)], std::get<2>(applied)));
+	total.first += savings.first; total.second += savings.second;
+    }
+    return total;
+}
 
 // Global exhaustive greedy CSE optimization function (pairs and factors)
 template<typename outstream, typename _Mat>
@@ -1009,18 +1118,28 @@ Pair<size_t> RecOptimizer(outstream& sout, _Mat& M,
 
     Pair<size_t> nbops(naiveOps(M));
 
-	// Factoring sums
-    std::vector<std::string> dout;
+	// Factoring sums: the memoized search, then the replay of its choices
     std::vector<triple> multiples;
-    RecSub(dout, M, multiples, nbops.first, nbops.second, 0, tev, rav);
+    RecMemo<_Mat> memo(M.coldim());
+    std::vector<typename RecMemo<_Mat>::Form> colvec(M.coldim());
+    for(size_t j=0; j<M.coldim(); ++j) colvec[j].emplace_back(j, FF.one);
+
+    const Pair<long> best(RecSearch<triple>(M, multiples, colvec, memo, 0, tev, rav));
+    const Pair<long> replayed(RecReplay<triple>(sout, M, multiples, colvec, memo, tev, rav));
+    if (replayed != best) {
+	std::clog << "# \033[1;31mWARNING: replayed savings " << replayed.first << '|'
+		  << replayed.second << " differ from the searched " << best.first
+		  << '|' << best.second << "\033[0m" << std::endl;
+    }
+    std::clog << "# Exhaustive CSE search: " << memo.states << " states"
+	      << (memo.exhaustive ? "" : " (budget reached, not exhaustive)")
+	      << std::endl;
+    nbops.first -= replayed.first;
+    nbops.second -= replayed.second;
 
     size_t alreadymuls(nbops.second);
     for(auto it = M.IndexedBegin(); it != M.IndexedEnd(); ++it)
 	if (notAbsOne(FF,it.value())) --alreadymuls;
-
-    for(auto iter = dout.begin(); iter != dout.end(); ++iter) {
-	sout << *iter;
-    }
 
     size_t addcount(0);
 
