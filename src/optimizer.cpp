@@ -91,7 +91,7 @@ int FOptimiser(std::istream& input, std::ostream& output, std::ostream& olog,
 
     std::stringstream ssin; ssin << ssout.str();
     reseed('C', 0);     // the compacter's draws do not depend on the loops
-    PLinOpt::Compacter(output,ssin);
+    PLinOpt::Compacter(output,std::clog,ssin);
 
     if ((nbops.first !=0 || nbops.second != 0)) {
         olog << std::string(40,'#') << std::endl

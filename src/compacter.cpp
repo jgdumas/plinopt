@@ -48,18 +48,20 @@ int main(int argc, char** argv) {
     }
 
     if (filename == "") {
-        PLinOpt::Compacter(std::cout, std::cin, numloops, simplSingle);
+      PLinOpt::Compacter(std::cout, std::clog, std::cin, numloops, simplSingle);
     } else {
         std::fstream file(filename);
         if ( file ) {
             if (inPlace) {
                 std::ostringstream sout;
-                PLinOpt::Compacter(sout, file, numloops, simplSingle);
+                PLinOpt::Compacter(sout, std::clog, file, numloops, simplSingle);
                 file.close();
                 file.open(filename, std::ofstream::out | std::ofstream::trunc);
                 file << sout.str();
             } else {
-                PLinOpt::Compacter(std::cout, file, numloops, simplSingle);
+                std::ostringstream olog;
+                PLinOpt::Compacter(std::cout, olog, file, numloops, simplSingle);
+		std::clog << olog.str();
             }
             file.close();
         }

@@ -264,7 +264,7 @@ char unusedChar(const std::set<char>& C, const char cstart /* = 'a'-1 */) {
 
 // ============================================================
 // Main parsing procedure, writing the ouput program
-int Tellegen(std::ostream& output, std::istream& input,
+  int Tellegen(std::ostream& output, std::ostream& olog, std::istream& input,
 	     const char cchar /* = 'c'*/,
 	     const char ichar /* = 'i'*/, const char ochar /*= 'o'*/) {
 	// Files contains a program with the following SYNTAX
@@ -599,14 +599,14 @@ int Tellegen(std::ostream& output, std::istream& input,
 	}
     }
 
-    std::clog << std::string(40,'#') << std::endl;
-    std::clog << "# \033[1;32m" << Nops.first << "\tadditions ("
-	      << (Nops.first-dimOffset)
-	      << (dimOffset<0?'-':'+') << abs(dimOffset)
-	      << ")\033[0m" << std::endl;
-    std::clog << "# \033[1;32m" << Nops.second << "\tmultiplications"
-	      << "\033[0m" << std::endl;
-    std::clog << std::string(40,'#') << std::endl;
+    olog << std::string(40,'#') << std::endl
+	 << "# \033[1;32m" << Nops.first << "\tadditions ("
+	 << (Nops.first-dimOffset)
+	 << (dimOffset<0?'-':'+') << abs(dimOffset)
+	 << ")\033[0m" << std::endl
+	 << "# \033[1;32m" << Nops.second << "\tmultiplications"
+	 << "\033[0m" << std::endl
+	 << std::string(40,'#') << std::endl;
 
     return 0;
 }
@@ -1746,7 +1746,7 @@ VProgram_t& singleVar(VProgram_t& P,
 
 // ============================================================
 // Main compacting procedure, parsing then rewriting
-std::ostream& Compacter(std::ostream& sout, std::istream& input,
+std::ostream& Compacter(std::ostream& sout, std::ostream& olog, std::istream& input,
 			const size_t numloops, const bool simplSingle) {
 	// Files contains a program with the following SYNTAX
 	// [+] input variables start with a character (default is 'i')
@@ -1779,14 +1779,16 @@ std::ostream& Compacter(std::ostream& sout, std::istream& input,
 #  endif
 #endif
     } while ( (currPRs < prevPRs) && (--iter != 0) ) ;
+    std::clog << std::string(40,'#') << std::endl;
 
 	// Use a single char for the variable names
     singleVar(ProgramVector);
 
        // Comparing number of elements in the programs
-    std::clog << "# \033[1;32m" << currPRs << "\telements\tinstead of "
-	      << PVs << "\033[0m" << std::endl
-	      << std::string(40,'#') << std::endl;
+    olog << std::string(40,'#') << std::endl
+	 << "# \033[1;32m" << currPRs << "\telements\tinstead of "
+	 << PVs << "\033[0m" << std::endl
+	 << std::string(40,'#') << std::endl;
 
     return sout << ProgramVector;
 }
