@@ -181,10 +181,10 @@ inline _Mat& sparse2sparse(_Mat& A, const _Mat& B) {
 template<typename _DMat, typename _SMat>
 inline _DMat& any2dense(_DMat& A, const _SMat& M, const size_t m, const size_t n) {
   A.init(m,n);
-    if (M.rowdim() != 0)
-      for(auto indices = M.IndexedBegin(); indices != M.IndexedEnd(); ++indices)
-	A.setEntry(indices.rowIndex(), indices.colIndex(), indices.value());
-    return A;
+  if (M.rowdim() != 0)
+    for(auto indices = M.IndexedBegin(); indices != M.IndexedEnd(); ++indices)
+      A.setEntry(indices.rowIndex(), indices.colIndex(), indices.value());
+  return A;
 }
 
 	// copy matrix M into dense matrix A

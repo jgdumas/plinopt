@@ -47,7 +47,7 @@ namespace PLinOpt {
 // ============================================================
 // Optimizing a linear program over a field
 template<typename Field>
-int FOptimiser(std::istream& input, std::ostream& output,
+int FOptimiser(std::istream& input, std::ostream& output, std::ostream& olog,
                const size_t randomloops,
                const bool printMaple, const bool printPretty,
                const bool tryDirect, const bool tryKernel, const bool tryLU,
@@ -94,33 +94,32 @@ int FOptimiser(std::istream& input, std::ostream& output,
     PLinOpt::Compacter(output,ssin);
 
     if ((nbops.first !=0 || nbops.second != 0)) {
-        std::clog << std::string(40,'#') << std::endl;
-        std::clog << "# \033[1;32m" << nbops.first
-                  << "\tadditions\tinstead of " << opsinit.first
-                  << "\033[0m \t" << global << std::endl;
-        std::clog << "# \033[1;32m" << nbops.second
-                  << "\tmultiplications\tinstead of " << opsinit.second
-                  << "\033[0m" << std::endl;
-        std::clog << std::string(40,'#') << std::endl;
+        olog << std::string(40,'#') << std::endl
+	     << "# \033[1;32m" << nbops.first
+	     << "\tadditions\tinstead of " << opsinit.first
+	     << "\033[0m \t" << global << std::endl
+	     << "# \033[1;32m" << nbops.second
+	     << "\tmultiplications\tinstead of " << opsinit.second
+	     << "\033[0m" << std::endl
+	     << std::string(40,'#') << std::endl;
     }
 
         // ============================================================
         // Maple syntax checker
 #ifdef INPLACE_CHECKER
-    std::clog << std::string(40,'#') << std::endl;
-    std::clog << '<';
+    olog << std::string(40,'#') << std::endl << '<';
     for(size_t i=0; i< M.rowdim(); ++i) {
-        if (i != 0) std::clog << '|' << std::endl;
-        std::clog << '<';
+        if (i != 0) olog << '|' << std::endl;
+        olog << '<';
         for(size_t j=0; j<M.coldim(); ++j) {
-            if (j != 0) std::clog << '+';
-            std::clog << 'i' << j << "*(" << M.getEntry(i,j) << ')';
+            if (j != 0) olog << '+';
+            olog << 'i' << j << "*(" << M.getEntry(i,j) << ')';
         }
-        std::clog << " - o" << i << '>';
+        olog << " - o" << i << '>';
     }
-    std::clog << '>';
-    if (F.characteristic() > 0) std::clog << " mod " << F.characteristic();
-    std::clog << ';' << std::endl;
+    olog << '>';
+    if (F.characteristic() > 0) olog << " mod " << F.characteristic();
+    olog << ';' << std::endl;
 #endif
 
     return 0;
@@ -150,32 +149,37 @@ int Selector(std::istream& input, const size_t randomloops,
              const Givaro::Integer& q, const bool lift, const int verbose) {
     if (! Givaro::isZero(q)) {
         Givaro::Modular<Givaro::Integer> FF(q);
-        return FOptimiser(input, std::cout, randomloops, printMaple, printPretty, tryDirect,
-                          tryKernel, tryLU, tryAB, mostCSE, allkernels, KFI, FF, verbose);
+        return FOptimiser(input, std::cout, std::clog, randomloops,
+			  printMaple, printPretty, tryDirect, tryKernel,
+			  tryLU, tryAB, mostCSE, allkernels, KFI, FF, verbose);
     }
     if (lift) {
             // Search over the lifting field, check over the rationals
         std::stringstream matrix; matrix << input.rdbuf();
         std::stringstream mss(matrix.str());
-        std::ostringstream program;
+        std::ostringstream program, nbops;
         LiftField FF(LiftPrime);
-        const int status( FOptimiser(mss, program, randomloops, printMaple, printPretty,
-                                     tryDirect, tryKernel, tryLU, tryAB, mostCSE,
+        const int status( FOptimiser(mss, program, nbops, randomloops,
+				     printMaple, printPretty, tryDirect,
+				     tryKernel, tryLU, tryAB, mostCSE,
                                      allkernels, KFI, FF, verbose) );
         if (checkProgram(matrix.str(), program.str())) {
             std::cout << program.str();
+	    std::clog << nbops.str();
             return status;
         }
         std::clog << "# \033[1;36mLifted program fails the rational check,"
                   << " redoing the search over the rationals.\033[0m" << std::endl;
         std::stringstream again(matrix.str());
         QRat QQ;
-        return FOptimiser(again, std::cout, randomloops, printMaple, printPretty, tryDirect,
-                          tryKernel, tryLU, tryAB, mostCSE, allkernels, KFI, QQ, verbose);
+        return FOptimiser(again, std::cout, std::clog, randomloops, printMaple,
+			  printPretty, tryDirect, tryKernel, tryLU, tryAB,
+			  mostCSE, allkernels, KFI, QQ, verbose);
     }
     QRat QQ;
-    return FOptimiser(input, std::cout, randomloops, printMaple, printPretty, tryDirect,
-                      tryKernel, tryLU, tryAB, mostCSE, allkernels, KFI, QQ, verbose);
+    return FOptimiser(input, std::cout, std::clog, randomloops, printMaple,
+		      printPretty, tryDirect, tryKernel, tryLU, tryAB, mostCSE,
+		      allkernels, KFI, QQ, verbose);
 }
 
 } // End of namespace PLinOpt
@@ -191,7 +195,7 @@ int main(int argc, char** argv) {
 
     bool printMaple(false), printPretty(false), mostCSE(false),
         tryKernel(false), tryLU(false), tryAB(false),
-        tryDirect(false), allkernels(false), lift(false);
+        tryDirect(false), allkernels(false), lift(true);
 #if defined(KERNEL_FULL_IDENTITY)
     bool KFI(true);
 #else
@@ -207,23 +211,24 @@ int main(int argc, char** argv) {
     for (int i = 1; argc>i; ++i) {
         std::string args(argv[i]);
         if (args == "-h") {
-            std::clog << "Usage: " << argv[0]
-                      << " [-h|-M|-P|-K|-D|-G|-E|-N|-A|-Q|-q #|-O #|-s #] [stdin|matrixfile.sms]\n";
-
             std::clog
-                << "  -D/-K/-G: direct/kernel/LU methods (default is all)\n"
-                << "  -F: Kernel Full Identity (default is " << (KFI?"yes":"no") << ")\n"
-                << "  -A: factoring method (default is not)\n"
-                << "  -E: exhaustive greedy CSE search (default is not)\n"
-                << "  -N: exhaustive nullspace permutations (default is not)\n"
-                << "  -P/-M: choose the printing format\n"
-                << "  -q #: search modulo (default is Rationals)\n"
-                << "  -Q: search over a word-size prime field, lift the program to the"
-                << " rationals and check it (falls back to the rational search)\n"
-                << "  -O #: randomized search with that many loops (default "
-                << randomloops << " loops)\n"
-                << "  -s #: seed of the randomized search (default is the clock;"
-                << " the seed used is printed)\n";
+	      << "Usage: " << argv[0]
+	      << " [-h|-M|-P|-K|-D|-G|-E|-N|-A|-Q|-q #|-O #|-s #]"
+	      << " [stdin|matrixfile.sms]\n"
+	      << "  -D/-K/-G: direct/kernel/LU methods (default is all)\n"
+	      << "  -F: Kernel Full Identity (default is " << (KFI?"yes":"no") << ")\n"
+	      << "  -A: factoring method (default is not)\n"
+	      << "  -E: exhaustive greedy CSE search (default is not)\n"
+	      << "  -N: exhaustive nullspace permutations (default is not)\n"
+	      << "  -P/-M: choose the printing format\n"
+	      << "  -q #: search modulo (default is lifting,"
+	      << " falling back to Rationals if needed)\n"
+	      << "  -Q: do not lift over a word-size prime field, directly search over"
+	      << " the rationals\n"
+	      << "  -O #: randomized search with that many loops (default "
+	      << randomloops << " loops)\n"
+	      << "  -s #: seed of the randomized search (default is the clock;"
+	      << " the seed used is printed)\n";
 
             exit(-1);
         }
@@ -231,7 +236,7 @@ int main(int argc, char** argv) {
         else if (args == "-P") { printPretty = true; }
         else if (args == "-G") { tryLU = true; }
         else if (args == "-A") { tryAB = true; }
-        else if (args == "-Q") { lift = true; }
+        else if (args == "-Q") { lift = false; }
         else if (args == "-D") { tryDirect = true; }
         else if (args == "-K") { tryKernel = true; }
         else if (args == "-F") { KFI = true; }

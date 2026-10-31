@@ -1774,8 +1774,8 @@ std::ostream& Compacter(std::ostream& sout, std::istream& input,
 		  << prevPRs << std::endl;
 #ifdef VERBATIM_PARSING
 #  if VERBATIM_PARSING >= 5
-	std::clog << ProgramVector;
-	std::clog << std::string(40,'#') << std::endl;
+	std::clog << ProgramVector
+		  << std::string(40,'#') << std::endl;
 #  endif
 #endif
     } while ( (currPRs < prevPRs) && (--iter != 0) ) ;
@@ -1783,13 +1783,12 @@ std::ostream& Compacter(std::ostream& sout, std::istream& input,
 	// Use a single char for the variable names
     singleVar(ProgramVector);
 
-    sout << ProgramVector;
        // Comparing number of elements in the programs
     std::clog << "# \033[1;32m" << currPRs << "\telements\tinstead of "
-	      << PVs << "\033[0m" << std::endl;
-    std::clog << std::string(40,'#') << std::endl;
+	      << PVs << "\033[0m" << std::endl
+	      << std::string(40,'#') << std::endl;
 
-    return sout;
+    return sout << ProgramVector;
 }
 
 
