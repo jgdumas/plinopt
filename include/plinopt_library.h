@@ -124,6 +124,9 @@ _Mat1& matrixCopy(_Mat1&, const _Mat2&);
 
     // copy sparse matrix M into dense matrix A
 template<typename _DMat, typename _SMat>
+inline _DMat& any2dense(_DMat& A, const _SMat& M,
+			const size_t m, const size_t n);
+template<typename _DMat, typename _SMat>
 inline _DMat& any2dense(_DMat& A, const _SMat& M);
 
 template<typename _SMat>

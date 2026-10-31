@@ -75,45 +75,6 @@ inline _Mat1& NegTranspose(_Mat1& T, const _Mat2& A) {
     return T;
 }
 
-
-	// Checking matrix equality
-template<typename _Mat, typename _Stream>
-inline bool areEqual(const _Mat& A, _Stream& matfile,
-		     Pair<size_t>& nbelts, const bool verbose) {
-  typedef typename _Mat::Field Field;
-  using FMatrix=typename _Mat::template rebind<Field>::other;
-  const Field& FF(A.field());
-
-  QRat QQ;
-  QMstream ms(QQ, matfile);
-  Matrix M(ms);
-  nbelts = naiveOps(M);
-
-  const size_t m(std::max(M.rowdim(),A.rowdim()));
-  const size_t n(std::max(M.coldim(),A.coldim()));
-  M.resize(m,n);
-  FMatrix B(M,FF);
-  FMatrix C(A,FF); C.resize(m,n);
-  LinBox::DenseMatrix<Field> dB(FF,m,n),dA(FF,m,n),R(FF,m,n);
-  any2dense(dA,C); any2dense(dB,B);
-  LinBox::MatrixDomain<Field> BMD(FF);
-  BMD.sub(R,dB,dA);
-
-  const bool result(BMD.isZero(R));
-
-  if (verbose && (! result)) {
-    std::cerr << "# \033[1;31m****** ERROR, not a "
-	      << m << 'x' << n
-	      << " m-v algorithm******\033[0m"
-	      << std::endl;
-    A.write(std::clog<<"# Program:\n", FileFormat::Pretty);
-    B.write(std::clog<<"\n# Matrix:\n", FileFormat::Pretty);
-    R.write(std::clog<<"\n# diff:\n", FileFormat::Pretty) << std::endl;
-  }
-
-  return result;
-}
-
 	// Replace row i of A, by row j of B
 template<typename _Mat1, typename _Mat2>
 inline _Mat1& setRow(_Mat1& A, size_t i, const _Mat2& B, size_t j) {
@@ -218,12 +179,18 @@ inline _Mat& sparse2sparse(_Mat& A, const _Mat& B) {
 
 	// copy matrix M into dense matrix A
 template<typename _DMat, typename _SMat>
-inline _DMat& any2dense(_DMat& A, const _SMat& M) {
-    A.init(M.rowdim(), M.coldim());
+inline _DMat& any2dense(_DMat& A, const _SMat& M, const size_t m, const size_t n) {
+  A.init(m,n);
     if (M.rowdim() != 0)
       for(auto indices = M.IndexedBegin(); indices != M.IndexedEnd(); ++indices)
 	A.setEntry(indices.rowIndex(), indices.colIndex(), indices.value());
     return A;
+}
+
+	// copy matrix M into dense matrix A
+template<typename _DMat, typename _SMat>
+inline _DMat& any2dense(_DMat& A, const _SMat& M) {
+  return any2dense(A, M, M.rowdim(), M.coldim());
 }
 
 	// Copy (and convert) a matrix
@@ -252,6 +219,43 @@ inline DMatrix<_Field>& matrixCopy(DMatrix<_Field>& C,
     return any2dense(C,A);
 }
 
+
+
+	// Checking matrix equality
+template<typename _Mat, typename _Stream>
+inline bool areEqual(const _Mat& A, _Stream& matfile,
+		     Pair<size_t>& nbelts, const bool verbose) {
+  typedef typename _Mat::Field Field;
+  using FMatrix=typename _Mat::template rebind<Field>::other;
+  const Field& FF(A.field());
+
+  QRat QQ;
+  QMstream ms(QQ, matfile);
+  Matrix M(ms);
+  nbelts = naiveOps(M);
+
+  const size_t m(std::max(M.rowdim(),A.rowdim()));
+  const size_t n(std::max(M.coldim(),A.coldim()));
+  FMatrix B(M,FF);
+  LinBox::DenseMatrix<Field> dB(FF,m,n),dA(FF,m,n),R(FF,m,n);
+  any2dense(dA,A,m,n); any2dense(dB,B,m,n);
+  LinBox::MatrixDomain<Field> BMD(FF);
+  BMD.sub(R,dB,dA);
+
+  const bool result(BMD.isZero(R));
+
+  if (verbose && (! result)) {
+    std::cerr << "# \033[1;31m****** ERROR, not a "
+	      << m << 'x' << n
+	      << " m-v algorithm******\033[0m"
+	      << std::endl;
+    A.write(std::clog<<"# Program:\n", FileFormat::Pretty);
+    B.write(std::clog<<"\n# Matrix:\n", FileFormat::Pretty);
+    R.write(std::clog<<"\n# diff:\n", FileFormat::Pretty) << std::endl;
+  }
+
+  return result;
+}
 
 	// permute rows
 template<>
