@@ -992,14 +992,18 @@ template<typename triple, typename _Mat, typename Memo>
 Pair<long> RecSearch(const _Mat& Mat, const std::vector<triple>& multiples,
 		     const std::vector<typename Memo::Form>& colvec,
 		     Memo& memo, const size_t lvl,
-	    const char tev, const char rav) {
+		     const char tev, const char rav) {
     const auto& FF(Mat.field());
     const std::string key(stateKey<triple>(Mat, multiples, colvec, memo));
     bool known(false); Pair<long> result{0,0};
+
 #pragma omp critical(recmemo)
     {
 	const auto it(memo.table.find(key));
-	if (it != memo.table.end()) { known = true; result = Pair<long>{it->second.adds, it->second.muls}; }
+	if (it != memo.table.end()) {
+	  known = true;
+	  result = Pair<long>{it->second.adds, it->second.muls};
+	}
     }
     if (known) return result;
 
@@ -1007,10 +1011,13 @@ Pair<long> RecSearch(const _Mat& Mat, const std::vector<triple>& multiples,
     std::vector<std::vector<triple>> AllPairs;
     for(auto iter=Mat.rowBegin(); iter != Mat.rowEnd(); ++iter)
 	AllPairs.push_back(listpairs(*iter, FF));
+
     std::map<triple,size_t> PairMap;
-    for(const auto& rows: AllPairs) for (const auto& p: rows) PairMap[p]++;
+    for(const auto& rows: AllPairs) for (const auto& p: rows) ++PairMap[p];
+
     std::vector<triple> candidates;
-    for(const auto& [p, frequency]: PairMap) if (frequency > 1) candidates.push_back(p);
+    for(const auto& [p, frequency]: PairMap)
+      if (frequency > 1) candidates.push_back(p);
 
     bool over(false);
 #pragma omp critical(recmemo)
@@ -1026,41 +1033,42 @@ Pair<long> RecSearch(const _Mat& Mat, const std::vector<triple>& multiples,
 	    // parallel at the root only (nested regions are not active)
 #pragma omp parallel for shared(AllPairs,candidates,bestadds,bestmuls,bestchoice) if(lvl==0)
 	for(size_t k=0; k<candidates.size(); ++k) {
-	    const triple& cse(candidates[k]);
-		_Mat lM(FF,Mat.rowdim(),Mat.coldim()); sparse2sparse(lM, Mat);
-		std::vector<triple> lmultiples(multiples);
-	    std::vector<typename Memo::Form> lcolvec(colvec);
-	    std::vector<std::vector<triple>> lAllPairs(AllPairs);
-	    std::ostringstream ssout; size_t moremul(0);
-	    triple applied;
-	    std::map<triple,size_t> lPairMap;
-	    const Pair<long> savings(RemOneCSE(ssout, lM, moremul, lmultiples, cse,
-					       lAllPairs, lPairMap, tev, rav, false,
-					       applied));
-	    lcolvec.push_back(formCombine(FF, lcolvec[std::get<0>(applied)],
-					  lcolvec[std::get<1>(applied)],
-					  std::get<2>(applied)));
-	    const Pair<long> rest(RecSearch(lM, lmultiples, lcolvec, memo,
-					    lvl+1, tev, rav));
-	    const long adds(savings.first + rest.first),
-				     muls(savings.second + rest.second);
+	  const triple& cse(candidates[k]);
+	  _Mat lM(FF,Mat.rowdim(),Mat.coldim()); sparse2sparse(lM, Mat);
+	  std::vector<triple> lmultiples(multiples);
+	  std::vector<typename Memo::Form> lcolvec(colvec);
+	  std::vector<std::vector<triple>> lAllPairs(AllPairs);
+	  std::ostringstream ssout; size_t moremul(0);
+	  triple applied;
+	  std::map<triple,size_t> lPairMap;
+	  const Pair<long> savings(RemOneCSE(ssout, lM, moremul, lmultiples, cse,
+					     lAllPairs, lPairMap, tev, rav, false,
+					     applied));
+	  lcolvec.push_back(formCombine(FF, lcolvec[std::get<0>(applied)],
+					lcolvec[std::get<1>(applied)],
+					std::get<2>(applied)));
+	  const Pair<long> rest(RecSearch(lM, lmultiples, lcolvec, memo,
+					  lvl+1, tev, rav));
+	  const long adds(savings.first + rest.first),
+	    muls(savings.second + rest.second);
+
 #pragma omp critical(recbest)
-		{
-		if ( (adds > bestadds) || ((adds == bestadds) && (muls > bestmuls)) ) {
-		    bestadds = adds; bestmuls = muls;
-		    bestchoice = choiceKey(FF, cse, colvec);
-		}
-		}
+	  {
+	    if ( (adds > bestadds) || ((adds == bestadds) && (muls > bestmuls)) ) {
+	      bestadds = adds; bestmuls = muls;
+	      bestchoice = choiceKey(FF, cse, colvec);
 	    }
-    } else {
-	bestadds = 0; bestmuls = 0;
+	  }
 	}
+    } else {
+      bestadds = 0; bestmuls = 0;
+    }
 #pragma omp critical(recmemo)
     {
-	memo.table[key] = typename Memo::Entry{bestadds, bestmuls, bestchoice};
+      memo.table[key] = typename Memo::Entry{bestadds, bestmuls, bestchoice};
     }
     return Pair<long>{bestadds, bestmuls};
-    }
+}
 
     // Replays the best choices from the root, emitting the program
 template<typename triple, typename _Mat, typename Memo>
@@ -1073,6 +1081,7 @@ Pair<long> RecReplay(std::ostream& sout, _Mat& Mat, std::vector<triple>& multipl
 	const std::string key(stateKey<triple>(Mat, multiples, colvec, memo));
 	const auto it(memo.table.find(key));
 	if ((it == memo.table.end()) || it->second.choice.empty()) break;
+
 	    // the chosen CSE, by the forms of its two columns
 	const std::string& ch(it->second.choice);
 	const size_t s1(ch.find('|')), s2(ch.find('|', s1+1));
@@ -1116,12 +1125,14 @@ Pair<size_t> RecOptimizer(outstream& sout, _Mat& M,
     std::vector<typename RecMemo<_Mat>::Form> colvec(M.coldim());
     for(size_t j=0; j<M.coldim(); ++j) colvec[j].emplace_back(j, FF.one);
 
-    const Pair<long> best(RecSearch<triple>(M, multiples, colvec, memo, 0, tev, rav));
-    const Pair<long> replayed(RecReplay<triple>(sout, M, multiples, colvec, memo, tev, rav));
+    const Pair<long> best(RecSearch<triple>(M, multiples, colvec,
+					    memo, 0, tev, rav));
+    const Pair<long> replayed(RecReplay<triple>(sout, M, multiples, colvec,
+						memo, tev, rav));
     if (replayed != best) {
-	std::clog << "# \033[1;31mWARNING: replayed savings " << replayed.first << '|'
-		  << replayed.second << " differ from the searched " << best.first
-		  << '|' << best.second << "\033[0m" << std::endl;
+	std::clog << "# \033[1;31mWARNING: replayed savings " << replayed.first
+		  << '|'  << replayed.second << " differ from the searched "
+		  << best.first << '|' << best.second << "\033[0m" << std::endl;
     }
     std::clog << "# Exhaustive CSE search: " << memo.states << " states"
 	      << (memo.exhaustive ? "" : " (budget reached, not exhaustive)")

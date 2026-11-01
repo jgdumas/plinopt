@@ -65,13 +65,13 @@ int FOptimiser(std::istream& input, std::ostream& output, std::ostream& olog,
     global.stop();
 
     if (printPretty) {
-        M.write(std::clog,FileFormat::Pretty) << ';' << std::endl;
-        std::clog << std::string(40,'#') << std::endl;
+        M.write(std::clog,FileFormat::Pretty) << ';' << std::endl
+					      << std::string(40,'#') << std::endl;
     }
 
     if (printMaple) {
-        M.write(std::clog << "M:=",FileFormat::Maple) << ';' << std::endl;
-        std::clog << std::string(40,'#') << std::endl;
+        M.write(std::clog << "M:=",FileFormat::Maple) << ';' << std::endl
+			  << std::string(40,'#') << std::endl;
     }
 
     std::clog << std::string(40,'#') << std::endl;
@@ -132,11 +132,10 @@ bool checkProgram(const std::string& matrix, const std::string& program) {
     QRat QQ;
 
     std::stringstream pss(program);
-    Matrix A(QQ); SLPbuilder(A,pss,false);
+    Matrix A(QQ); SLPbuilder(A, pss, false);
 
     std::stringstream mss(matrix);
     Pair<size_t> nbelts;
-
     return areEqual(A, mss, nbelts, false);
 }
 
