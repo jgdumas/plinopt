@@ -4,7 +4,7 @@
 ####################################################################
 
 # Change FILE for algorithm prefix to check
-FILE=4x4x4_48_204
+FILE=4x4x4_48_201-balanced
 ALT=16
 #PM=1
 ##################"

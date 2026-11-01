@@ -106,12 +106,8 @@ template<typename triple, typename _Mat>
 void OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
             size_t& nbadd, size_t& nbmul, const char tev, const char rav);
 
-// Recusive search for the best CSE
-template<typename triple,typename _Mat>
-bool RecSub(std::vector<std::string>& out, _Mat& Mat,
-            std::vector<triple>& multiples,
-            size_t& nbadd, size_t& nbmul, const size_t lvl,
-            const char tev, const char rav);
+// Exhaustive search budget (states), see RecOptimizer
+extern size_t RecBudget;
 
 // Factors out same coefficient in a column
 template<typename Iter, typename triple, typename _Mat>

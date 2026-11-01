@@ -65,13 +65,13 @@ int FOptimiser(std::istream& input, std::ostream& output, std::ostream& olog,
     global.stop();
 
     if (printPretty) {
-        M.write(std::clog,FileFormat::Pretty) << ';' << std::endl;
-        std::clog << std::string(40,'#') << std::endl;
+        M.write(std::clog,FileFormat::Pretty) << ';' << std::endl
+					      << std::string(40,'#') << std::endl;
     }
 
     if (printMaple) {
-        M.write(std::clog << "M:=",FileFormat::Maple) << ';' << std::endl;
-        std::clog << std::string(40,'#') << std::endl;
+        M.write(std::clog << "M:=",FileFormat::Maple) << ';' << std::endl
+			  << std::string(40,'#') << std::endl;
     }
 
     std::clog << std::string(40,'#') << std::endl;
@@ -132,11 +132,10 @@ bool checkProgram(const std::string& matrix, const std::string& program) {
     QRat QQ;
 
     std::stringstream pss(program);
-    Matrix A(QQ); SLPbuilder(A,pss,false);
+    Matrix A(QQ); SLPbuilder(A, pss, false);
 
     std::stringstream mss(matrix);
     Pair<size_t> nbelts;
-
     return areEqual(A, mss, nbelts, false);
 }
 
@@ -211,24 +210,26 @@ int main(int argc, char** argv) {
     for (int i = 1; argc>i; ++i) {
         std::string args(argv[i]);
         if (args == "-h") {
-            std::clog
-	      << "Usage: " << argv[0]
-	      << " [-h|-M|-P|-K|-D|-G|-E|-N|-A|-Q|-q #|-O #|-s #]"
-	      << " [stdin|matrixfile.sms]\n"
-	      << "  -D/-K/-G: direct/kernel/LU methods (default is all)\n"
-	      << "  -F: Kernel Full Identity (default is " << (KFI?"yes":"no") << ")\n"
-	      << "  -A: factoring method (default is not)\n"
-	      << "  -E: exhaustive greedy CSE search (default is not)\n"
-	      << "  -N: exhaustive nullspace permutations (default is not)\n"
-	      << "  -P/-M: choose the printing format\n"
-	      << "  -q #: search modulo (default is lifting,"
-	      << " falling back to Rationals if needed)\n"
-	      << "  -Q: do not lift over a word-size prime field, directly search over"
-	      << " the rationals\n"
-	      << "  -O #: randomized search with that many loops (default "
-	      << randomloops << " loops)\n"
-	      << "  -s #: seed of the randomized search (default is the clock;"
-	      << " the seed used is printed)\n";
+	  std::clog
+	    << "Usage: " << argv[0]
+	    << " [-h|-M|-P|-K|-D|-G|-E|-N|-A|-Q|-q #|-O #|-s #|-B #]"
+	    << " [stdin|matrixfile.sms]\n"
+	    << "  -D/-K/-G: direct/kernel/LU methods (default is all)\n"
+	    << "  -F: Kernel Full Identity (default is " << (KFI?"yes":"no") << ")\n"
+	    << "  -A: factoring method (default is not)\n"
+	    << "  -E: exhaustive greedy CSE search (default is not)\n"
+	    << "  -B #: budget of the exhaustive search, in states (default "
+	    << PLinOpt::RecBudget << ")\n"
+	    << "  -N: exhaustive nullspace permutations (default is not)\n"
+	    << "  -P/-M: choose the printing format\n"
+	    << "  -q #: search modulo (default is lifting,"
+	    << " falling back to Rationals if needed)\n"
+	    << "  -Q: do not lift over a word-size prime field, directly search over"
+	    << " the rationals\n"
+	    << "  -O #: randomized search with that many loops (default "
+	    << randomloops << " loops)\n"
+	    << "  -s #: seed of the randomized search (default is the clock;"
+	    << " the seed used is printed)\n";
 
             exit(-1);
         }
@@ -241,6 +242,7 @@ int main(int argc, char** argv) {
         else if (args == "-K") { tryKernel = true; }
         else if (args == "-F") { KFI = true; }
         else if (args == "-E") { mostCSE = true; }
+        else if (args == "-B") { PLinOpt::RecBudget = atol(argv[++i]); }
         else if (args == "-N") { allkernels = true; }
         else if (args == "-q") { prime = Givaro::Integer(argv[++i]); }
         else if (args == "-v") { verbose = atoi(argv[++i]); }
