@@ -64,7 +64,7 @@ Pair<long> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
 		     std::vector<std::vector<triple>>& AllPairs,
 		     std::map<triple,size_t>& PairMap,
 		     const char tev, const char rav, const bool updateAPM,
-		     triple* applied = nullptr) {
+		     triple& lcse) {
     const auto& FF(lM.field());
     size_t lm(lM.coldim());
     long savedadds(0), savedmuls(0);
@@ -83,7 +83,6 @@ Pair<long> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
 	}
     }
 
-    triple lcse;
     if (count0<count1) { // More ones in std::get<1>(cse);
 	std::get<0>(lcse) = std::get<1>(cse);
 	std::get<1>(lcse) = std::get<0>(cse);
@@ -93,8 +92,6 @@ Pair<long> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
 	std::get<1>(lcse) = std::get<1>(cse);
 	FF.assign( std::get<2>(lcse), std::get<2>(cse) );
     }
-    if (applied) *applied = lcse;      // the new temporary is t_a + c t_b
-
 	// Factor out cse, in all rows
 	// adds a column for the new factor
     typename _Mat::Element ratio; FF.init(ratio);
@@ -212,16 +209,6 @@ Pair<long> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
     return Pair<long>{savedadds,savedmuls};
 }
 
-template<typename triple, typename _Mat>
-Pair<long> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
-		     std::vector<triple>& lmultiples, const triple& cse,
-		     std::vector<std::vector<triple>>& AllPairs,
-		     const char tev, const char rav) {
-    std::map<triple,size_t> PairMap;
-    return RemOneCSE(ssout, lM, nbmul, lmultiples, cse, AllPairs,
-		     PairMap, tev, rav, false);
-}
-
 
 // Removing CSEs until no pair occurs twice
 template<typename triple,typename _Mat>
@@ -248,8 +235,6 @@ void OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
     std::clog << "# Pairs: " << PairMap.size() << '|' << apcount << '|'
 	      << double(apcount)/double(AllPairs.size()) << std::endl;
 #endif
-
-    if (PairMap.size()==0) return;
 
 	// The loop below removes CSEs until no pair occurs twice, updating
 	// AllPairs and PairMap exactly as it goes (RemOneCSE); so when it
@@ -309,8 +294,9 @@ void OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
 
 	    // Now factoring out that CSE from the matrix
 	++nbadd;
-	auto savings(RemOneCSE(sout, M, nbmul, multiples, cse,
-			       AllPairs, PairMap, tev, rav, true));
+	triple applied;
+	auto savings(RemOneCSE(sout, M, nbmul, multiples, cse, AllPairs,
+			       PairMap, tev, rav, true, applied));
 
 #if VERBATIM_PARSING > 1
 #  if defined(RANDOM_TIES) && !defined(DENSITY_OPTIMIZATION)
@@ -1048,12 +1034,16 @@ Pair<long> RecSearch(const _Mat& Mat, const std::vector<triple>& multiples,
 	    std::ostringstream ssout; size_t moremul(0);
 	    triple applied;
 	    std::map<triple,size_t> lPairMap;
-	    const Pair<long> savings = RemOneCSE(ssout, lM, moremul, lmultiples, cse,
-						 lAllPairs, lPairMap, tev, rav, false, &applied);
+	    const Pair<long> savings(RemOneCSE(ssout, lM, moremul, lmultiples, cse,
+					       lAllPairs, lPairMap, tev, rav, false,
+					       applied));
 	    lcolvec.push_back(formCombine(FF, lcolvec[std::get<0>(applied)],
-					  lcolvec[std::get<1>(applied)], std::get<2>(applied)));
-	    const Pair<long> rest(RecSearch(lM, lmultiples, lcolvec, memo, lvl+1, tev, rav));
-	    const long adds(savings.first + rest.first), muls(savings.second + rest.second);
+					  lcolvec[std::get<1>(applied)],
+					  std::get<2>(applied)));
+	    const Pair<long> rest(RecSearch(lM, lmultiples, lcolvec, memo,
+					    lvl+1, tev, rav));
+	    const long adds(savings.first + rest.first),
+				     muls(savings.second + rest.second);
 #pragma omp critical(recbest)
 		{
 		if ( (adds > bestadds) || ((adds == bestadds) && (muls > bestmuls)) ) {
@@ -1100,10 +1090,12 @@ Pair<long> RecReplay(std::ostream& sout, _Mat& Mat, std::vector<triple>& multipl
 	    AllPairs.push_back(listpairs(*iter, FF));
 	size_t moremul(0); triple applied;
 	std::map<triple,size_t> PairMap;
-	const Pair<long> savings = RemOneCSE(sout, Mat, moremul, multiples, cse,
-					     AllPairs, PairMap, tev, rav, false, &applied);
+	const Pair<long> savings(RemOneCSE(sout, Mat, moremul, multiples, cse,
+					   AllPairs, PairMap, tev, rav, false,
+					   applied));
 	colvec.push_back(formCombine(FF, colvec[std::get<0>(applied)],
-				     colvec[std::get<1>(applied)], std::get<2>(applied)));
+				     colvec[std::get<1>(applied)],
+				     std::get<2>(applied)));
 	total.first += savings.first; total.second += savings.second;
     }
     return total;
