@@ -62,23 +62,24 @@ int Transpozer(std::istream& input, bool compactOutput=true,
 
 #ifdef VERBATIM_PARSING
 #  if VERBATIM_PARSING >= 4
-    std::clog << progV << std::endl;
-    std::clog << std::string(40,'#') << std::endl;
-    std::clog << "# Expanded program:\n" << ssout.str() << std::endl;
-    std::clog << std::string(40,'#') << std::endl;
+    std::clog << progV << std::endl
+	      << std::string(40,'#') << std::endl
+	      << "# Expanded program:\n" << ssout.str() << std::endl
+	      << std::string(40,'#') << std::endl;
 #  endif
 #endif
 
     std::stringstream rawslp;
-    int rt=PLinOpt::Tellegen(rawslp,ssout);
+    std::ostringstream olog;
+    int rt=PLinOpt::Tellegen(rawslp,olog,ssout);
 
     if (compactOutput) {
-        PLinOpt::Compacter(std::cout, rawslp, numloops, simplSingle);
+      PLinOpt::Compacter(std::cout, std::clog, rawslp, numloops, simplSingle);
     } else {
-        std::cout << rawslp.str() << std::flush;
+      std::cout << rawslp.str() << std::flush;
     }
+    std::clog << olog.str();
     return rt;
-//     return PLinOpt::Tellegen(std::cout,ssout);
 }
 
 

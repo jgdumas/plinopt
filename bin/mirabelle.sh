@@ -12,6 +12,7 @@ DIR=`dirname $0`
 OPTFLAGS=""
 VARS=()
 MOD=""
+NOPS=0
 
 # Requires bash >= 5.3
 if (( BASH_VERSINFO[0] < 5 || (BASH_VERSINFO[0] == 5 && BASH_VERSINFO[1] < 3) )); then
@@ -36,9 +37,14 @@ while [[ $# -gt 0 ]]; do
     shift # past argument
     shift # past value
     ;;
+    -n|--noops)
+    NOOP=1
+    shift # past argument
+    ;;
     -h|--h|-help|--help|-*|--*)
     echo "Usage: $0 [-O|-q #] [-v var[|var]*] P.slp"
     echo "  -O #: randomized search with that many loops"
+    echo "  -q #: modular computation"
     echo "  -v var: try to remove that variable (several -v var allowed)"
     echo "  -v \"v1|v2|...|vn\": try all these variables simultaneously"
       exit 1
@@ -78,8 +84,13 @@ function Show() {
 NAM="mirabelle_${VART}"
 
 #############################################################
-## Remove no-op outputs (canonicals, neg of canonicals ...)
-FIL=$(egrep '(\+|-|\*|\/)' ${IFIL}| egrep -v '(=-[^\+-\*\/]*;)')
+## No-op lines:
+if [[ "$NOOP" -ne 0 ]]; then
+    FIL=$(cat ${IFIL})
+else
+    ## Remove no-op outputs (canonicals, neg of canonicals ...)
+    FIL=$(egrep '(\+|-|\*|\/)' ${IFIL}| egrep -v '(=-[^\+-\*\/]*;)')
+fi
 # Show FIL
 
 #############################################################

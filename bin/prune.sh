@@ -85,16 +85,33 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+GRE='\033[1;32m'
+RED='\033[0;41m'
+BLU='\033[0;36m'
+NC='\033[0m'    # No Color
+
+NOOP=""
+CMPCTR="${DIR}/compacter"
+
+ELTS=(`${CMPCTR} ${FIL} |& grep elements|tail -1|awk '{print $2,$6}'|sed 's/\x1b\[[0-9;]*[a-zA-Z]//g'`)
+CMPC=$(( ${ELTS[0]} ))
+ORGC=$(( ${ELTS[1]} ))
+
+if [[ "${CMPC}" -lt "${ORGC}" ]]; then
+  >&2 echo -e "${RED}WARNING: SLP is not compact${GRE} (${ORGC} elements, could be ${CMPC})${NC}"
+  NOOP=" -n"
+fi
+MIRABL="${DIR}/mirabelle.sh${NOOP}"
 
 VARS=(`egrep -v '(^o)' ${FIL} | egrep "(${LIM})" | cut -d':' -f1|sort -u`)
 VARV="`echo ${VARS[@]}| sed 's/ / -v /g'`"
-echo "VARS: ${VARS[@]}"
+>&2 echo -e "# ${BLU}VARS: ${VARS[@]}${NC}"
 if [[ ${#VARS[@]} -gt 0 ]]; then
   LOG=prune_$$.log
   if [[ ${SQR} -gt 0 ]]; then
     for var in ${VARS[@]}; do
       for rav in ${VARS[@]}; do
-	${DIR}/mirabelle.sh -v $var -v $rav ${OPTFLAGS} ${MOD} ${FIL} 2>&1 | tee -a ${LOG}
+	${MIRABL} -v $var -v $rav ${OPTFLAGS} ${MOD} ${FIL} 2>&1 | tee -a ${LOG}
       done
     done
   elif [[ ${TRP} -gt 0 ]]; then
@@ -102,19 +119,19 @@ if [[ ${#VARS[@]} -gt 0 ]]; then
       for rav in ${VARS[@]}; do
 	if [[ "$var" != "$rav" ]]; then
 	  for arva in ${VARS[@]}; do
-	    ${DIR}/mirabelle.sh -v $var -v $rav -v $arva ${OPTFLAGS} ${MOD} ${FIL} 2>&1 | tee -a ${LOG}
+	    ${MIRABL} -v $var -v $rav -v $arva ${OPTFLAGS} ${MOD} ${FIL} 2>&1 | tee -a ${LOG}
 	  done
-        fi
+	fi
       done
     done
   else
     for var in ${VARS[@]}; do
-      ${DIR}/mirabelle.sh -v $var ${OPTFLAGS} ${MOD} ${FIL} 2>&1 | tee -a ${LOG}
+      ${MIRABL} -v $var ${OPTFLAGS} ${MOD} ${FIL} 2>&1 | tee -a ${LOG}
     done
   fi
 
   if [[ ${ALL} -gt 0 ]]; then
-    ${DIR}/mirabelle.sh -v ${VARV} ${ALLFLAGS} ${MOD} ${FIL} 2>&1 | tee -a ${LOG}
+    ${MIRABL} -v ${VARV} ${ALLFLAGS} ${MOD} ${FIL} 2>&1 | tee -a ${LOG}
   fi
 
   echo "-------- prune ${FIL} --------"
