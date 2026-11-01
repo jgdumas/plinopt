@@ -953,28 +953,35 @@ std::string stateKey(const _Mat& M, const std::vector<triple>& multiples,
     for(size_t j=memo.inputs; j<colvec.size(); ++j)
 	temps.emplace_back(formKey(F, colvec[j]), j);
     std::sort(temps.begin(), temps.end());
+
     std::vector<size_t> canon(colvec.size());
     for(size_t j=0; j<memo.inputs; ++j) canon[j] = j;
     for(size_t k=0; k<temps.size(); ++k) canon[temps[k].second] = memo.inputs + k;
+
     std::ostringstream o;
     for(const auto& t: temps) o << t.first << '|';
     o << '#';
+
     for(auto it=M.rowBegin(); it != M.rowEnd(); ++it) {
 	std::vector<std::pair<size_t,typename _Mat::Element>> row;
 	for(const auto& e: *it) row.emplace_back(canon[e.first], e.second);
 	std::sort(row.begin(), row.end(),
 		  [](const auto& x, const auto& y){ return x.first < y.first; });
+
 	for(const auto& [k, c]: row) { F.write(o << k << ':', c) << ','; }
 	o << '/';
     }
     o << '#';
+
     std::vector<std::string> muls;
     for(const auto& m: multiples) {
-	std::ostringstream mo; F.write(mo << canon[std::get<1>(m)] << '*', std::get<2>(m));
+	std::ostringstream mo;
+	F.write(mo << canon[std::get<1>(m)] << '*', std::get<2>(m));
 	muls.push_back(mo.str());
     }
     std::sort(muls.begin(), muls.end());
     for(const auto& m: muls) o << m << ',';
+
     return o.str();
 }
 
