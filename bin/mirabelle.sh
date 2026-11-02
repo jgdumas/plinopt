@@ -45,10 +45,11 @@ while [[ $# -gt 0 ]]; do
     echo "Usage: $0 [-O|-q #] [-v var[|var]*] P.slp"
     echo "  -O #: randomized search with that many loops"
     echo "  -q #: modular computation"
+    echo "  -n #: do not remove no-op variables (use for non-compact SLP)"
     echo "  -v var: try to remove that variable (several -v var allowed)"
     echo "  -v \"v1|v2|...|vn\": try all these variables simultaneously"
-      exit 1
-      ;;
+    exit 1
+    ;;
     *)
     IFIL=$1
     shift # past argument
