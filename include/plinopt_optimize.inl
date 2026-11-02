@@ -1020,7 +1020,7 @@ Pair<long> RecSearch(const _Mat& Mat, const std::vector<triple>& multiples,
 	AllPairs.push_back(listpairs(*iter, FF));
 
     std::map<triple,size_t> PairMap;
-    for(const auto& rows: AllPairs) for (const auto& p: rows) ++PairMap[p];
+    for(const auto& rows: AllPairs) for (const auto& p: rows) PairMap[p]++;
 
     std::vector<triple> candidates;
     for(const auto& [p, frequency]: PairMap)
@@ -1141,9 +1141,12 @@ Pair<size_t> RecOptimizer(outstream& sout, _Mat& M,
 		  << '|'  << replayed.second << " differ from the searched "
 		  << best.first << '|' << best.second << "\033[0m" << std::endl;
     }
-    std::clog << "# Exhaustive CSE search: " << memo.states << " states"
+    std::clog << "# \033[1;36m"
+	      << "Greedy CSE search: " << memo.states << " states"
 	      << (memo.exhaustive ? "" : " (budget reached, not exhaustive)")
-	      << std::endl;
+	      << "\033[0m" << std::endl
+	      << "# Greedy CSE saving: " << replayed << std::endl;
+
     nbops.first -= replayed.first;
     nbops.second -= replayed.second;
 
@@ -1435,7 +1438,7 @@ Pair<size_t>& AllCSEOpt(Pair<size_t>& nbops, std::ostringstream& sout,
     } else {
 	    // Optimal was already found
 	std::clog << "# \033[1;36m"
-		  << "No greedy CSE schedule has less additions.\033[0m \t"
+		  << "Greedy CSE: not better than previously found.\033[0m \t"
 		  << chrono << std::endl;
     }
     return nbops;
