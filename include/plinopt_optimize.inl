@@ -1124,7 +1124,8 @@ Pair<size_t> RecOptimizer(outstream& sout, _Mat& M,
     using triple=std::tuple<size_t, size_t, typename _Mat::Element>;
     const auto& FF(M.field());
 
-    Pair<size_t> nbops(naiveOps(M));
+    Pair<size_t> naops(naiveOps(M));
+    Pair<size_t> nbops(naops);
 
 	// Factoring sums: the memoized search, then the replay of its choices
     std::vector<triple> multiples;
@@ -1141,16 +1142,17 @@ Pair<size_t> RecOptimizer(outstream& sout, _Mat& M,
 		  << '|'  << replayed.second << " differ from the searched "
 		  << best.first << '|' << best.second << "\033[0m" << std::endl;
     }
-    std::clog << "# \033[1;36m"
-	      << "Greedy CSE search: " << memo.states << " states"
-	      << (memo.exhaustive ? "" : " (budget reached, not exhaustive)")
-	      << "\033[0m" << std::endl
-	      << "# Greedy CSE saving: " << replayed << std::endl;
+
+    std::clog << "# \033[1;36m" << "Greedy CSE search: " << memo.states << " states";
+    if (! memo.exhaustive)
+      std::clog << " (" << RecBudget << " budget exceeded, not exhaustive)";
+    std::clog << "\033[0m" << std::endl
+	      << "# Greedy CSE saving: -" << replayed.first << std::endl;
 
     nbops.first -= replayed.first;
     nbops.second -= replayed.second;
 
-    size_t alreadymuls(nbops.second);
+   size_t alreadymuls(nbops.second);
     for(auto it = M.IndexedBegin(); it != M.IndexedEnd(); ++it)
 	if (notAbsOne(FF,it.value())) --alreadymuls;
 
@@ -1158,7 +1160,15 @@ Pair<size_t> RecOptimizer(outstream& sout, _Mat& M,
 
     ProgramGen(sout, M, multiples, addcount, alreadymuls, ouv, tev, rav);
 
-    return Pair<size_t>(nbops.first,alreadymuls);
+    nbops.second = alreadymuls;
+
+    std::clog << "# Found E: "
+	      << nbops.first << '|' << nbops.second
+	      << " instead of "
+	      << naops.first << '|' << naops.second
+	      << std::endl;
+
+    return nbops;
 }
 
 
