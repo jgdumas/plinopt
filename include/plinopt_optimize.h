@@ -138,8 +138,8 @@ Pair<size_t> Optimizer(outstream& sout, _Mat& M,
 
 // Global exhaustive optimization function (pairs and factors)
 template<typename outstream, typename _Mat>
-Pair<size_t> RecOptimizer(outstream& sout, _Mat& M,
-                          const char ouv, const char tev, const char rav);
+Pair<size_t> RecOptimizer(outstream& sout, _Mat& M, char ouv,
+			  const char tev, const char rav, const int verbose=0);
 
 // Precondition _Matrix A is upper triangular
 template<typename outstream, typename _Mat>

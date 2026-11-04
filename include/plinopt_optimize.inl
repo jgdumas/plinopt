@@ -1126,8 +1126,9 @@ Pair<long> RecReplay(std::ostream& sout, _Mat& Mat, std::vector<triple>& multipl
 
 // Global exhaustive greedy CSE optimization function (pairs and factors)
 template<typename outstream, typename _Mat>
-Pair<size_t> RecOptimizer(outstream& sout, _Mat& M,
-			  const char ouv, const char tev, const char rav) {
+Pair<size_t> RecOptimizer(outstream& sout, _Mat& M, const char ouv,
+			  const char tev, const char rav,
+			  const int verbose) {
     using triple=std::tuple<size_t, size_t, typename _Mat::Element>;
     const auto& FF(M.field());
 
@@ -1151,11 +1152,13 @@ Pair<size_t> RecOptimizer(outstream& sout, _Mat& M,
 		  << best.first << '|' << best.second << "\033[0m" << std::endl;
     }
 
-    std::clog << "# \033[1;36m" << "Greedy CSE search: " << memo.states << " states";
-    if (! memo.exhaustive)
-      std::clog << " (" << RecBudget << " budget exceeded, not exhaustive)";
-    std::clog << "\033[0m" << std::endl
-	      << "# Greedy CSE saving: -" << replayed.first << std::endl;
+    if (verbose>0) {
+      std::clog << "# \033[1;36m" << "Greedy CSE search: " << memo.states << " states";
+      if (! memo.exhaustive)
+	std::clog << " (" << RecBudget << " budget exceeded, not exhaustive)";
+      std::clog << "\033[0m" << std::endl;
+      // std::clog << "# Greedy CSE saving: -" << replayed.first << std::endl;
+    }
 
     nbops.first -= replayed.first;
     nbops.second -= replayed.second;
@@ -1170,11 +1173,13 @@ Pair<size_t> RecOptimizer(outstream& sout, _Mat& M,
 
     nbops.second = alreadymuls;
 
-    std::clog << "# Found E: "
-	      << nbops.first << '|' << nbops.second
-	      << " instead of "
-	      << naops.first << '|' << naops.second
-	      << std::endl;
+    if (verbose>0) {
+      std::clog << "# Found E: "
+		<< nbops.first << '|' << nbops.second
+		<< " instead of "
+		<< naops.first << '|' << naops.second
+		<< std::endl;
+    }
 
     return nbops;
 }
@@ -1187,7 +1192,8 @@ Pair<size_t> RecOptimizer(outstream& sout, _Mat& M,
 template<typename Field>
 Pair<size_t>& LUOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
 			  const Field& F, const Matrix& M, const Matrix& T,
-			  Givaro::Timer& global, const size_t randomloops, const int verbose) {
+			  Givaro::Timer& global, const size_t randomloops,
+			  const int verbose) {
 
 	// ============================================================
 	// Rebind matrix type over sub field matrix type
@@ -1445,7 +1451,7 @@ Pair<size_t>& AllCSEOpt(Pair<size_t>& nbops, std::ostringstream& sout,
     std::ostringstream iout;
 	// Cancellation-free optimization
     input2Temps(iout, lM.coldim(), 'i', 't', lT);
-    auto rnbops( RecOptimizer(iout, lM, 'o', 't', 'r') );
+    auto rnbops( RecOptimizer(iout, lM, 'o', 't', 'r', 1) );
 
     chrono.stop(); global += chrono;
 
@@ -1454,7 +1460,6 @@ Pair<size_t>& AllCSEOpt(Pair<size_t>& nbops, std::ostringstream& sout,
 	sout << iout.str();
 	nbops = rnbops;
     } else {
-	    // Optimal was already found
 	std::clog << "# \033[1;36m"
 		  << "Greedy CSE: not better than previously found.\033[0m \t"
 		  << chrono << std::endl;
@@ -1659,7 +1664,7 @@ Pair<size_t> OptMethods(const Pair<size_t> opsinit,
 	// ============================================================
 	// Greedy CSE search
     if (mostCSE) {
-	AllCSEOpt(nbops, sout, F, M, T, global);
+      AllCSEOpt(nbops, sout, F, M, T, global);
     }
 
     if (cmpOpCount(opsinit,nbops) || (opsinit == nbops)) {
