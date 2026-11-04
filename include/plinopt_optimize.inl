@@ -96,7 +96,7 @@ Pair<long> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
 	// adds a column for the new factor
     typename _Mat::Element ratio; FF.init(ratio);
     for(size_t i=0; i<AllPairs.size(); ++i) {
-	    // Is cse a pair of row i: its two columns, in this order, with
+	    // Is cse a pair of row i: its two columns, with
 	    // this ratio (what listpairs would have listed)
 	bool found(false);
 	{
@@ -106,7 +106,9 @@ Pair<long> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
 		else if (iter->first == std::get<1>(cse)) second = iter;
 	    }
 	    if ( (first != lM[i].end()) && (second != lM[i].end())
-		 && (first < second) ) {
+		 // Actually the order is taken into account by 'coeff'
+		 // && (first < second)
+		 ) {
 		FF.div(ratio, second->second, first->second);
 		found = FF.areEqual(ratio, std::get<2>(cse));
 	    }
@@ -201,10 +203,9 @@ Pair<long> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
     }
     ssout << ';' << std::endl;
 
+        // The CSE is one add, the new variable is now the last column
     --savedadds;
-
-    ++lm;
-    lM.resize(lM.rowdim(), lm);
+    lM.resize(lM.rowdim(), ++lm);
 
     return Pair<long>{savedadds,savedmuls};
 }
@@ -1036,7 +1037,7 @@ Pair<long> RecSearch(const _Mat& Mat, const std::vector<triple>& multiples,
 
     long bestadds(-1), bestmuls(-1); std::string bestchoice;
     if (!candidates.empty()) {
-	bestadds = std::numeric_limits<long>::min(); bestmuls = bestadds;
+	bestmuls = bestadds = std::numeric_limits<long>::min();
 	    // parallel at the root only (nested regions are not active)
 #pragma omp parallel for shared(AllPairs,candidates,bestadds,bestmuls,bestchoice) if(lvl==0)
 	for(size_t k=0; k<candidates.size(); ++k) {
@@ -1084,6 +1085,13 @@ Pair<long> RecReplay(std::ostream& sout, _Mat& Mat, std::vector<triple>& multipl
 		     const char tev, const char rav) {
     const auto& FF(Mat.field());
     Pair<long> total{0,0};
+    std::vector<std::vector<triple>> AllPairs;
+    for(auto iter=Mat.rowBegin(); iter != Mat.rowEnd(); ++iter)
+      AllPairs.push_back(listpairs(*iter, FF));
+    std::map<triple,size_t> PairMap;
+    for(const auto& rows: AllPairs) for (const auto& p: rows) PairMap[p]++;
+
+
     for(;;) {
 	const std::string key(stateKey<triple>(Mat, multiples, colvec, memo));
 	const auto it(memo.table.find(key));
@@ -1101,14 +1109,13 @@ Pair<long> RecReplay(std::ostream& sout, _Mat& Mat, std::vector<triple>& multipl
 	}
 	triple cse; std::get<0>(cse) = a; std::get<1>(cse) = b;
 	std::istringstream ratio(ch.substr(s2+1)); FF.read(ratio, std::get<2>(cse));
-	std::vector<std::vector<triple>> AllPairs;
-	for(auto iter=Mat.rowBegin(); iter != Mat.rowEnd(); ++iter)
-	    AllPairs.push_back(listpairs(*iter, FF));
+
+	    // Applying the chosen CSE
 	size_t moremul(0); triple applied;
-	std::map<triple,size_t> PairMap;
 	const Pair<long> savings(RemOneCSE(sout, Mat, moremul, multiples, cse,
-					   AllPairs, PairMap, tev, rav, false,
+					   AllPairs, PairMap, tev, rav, true,
 					   applied));
+
 	colvec.push_back(formCombine(FF, colvec[std::get<0>(applied)],
 				     colvec[std::get<1>(applied)],
 				     std::get<2>(applied)));
@@ -1135,6 +1142,7 @@ Pair<size_t> RecOptimizer(outstream& sout, _Mat& M,
 
     const Pair<long> best(RecSearch<triple>(M, multiples, colvec,
 					    memo, 0, tev, rav));
+
     const Pair<long> replayed(RecReplay<triple>(sout, M, multiples, colvec,
 						memo, tev, rav));
     if (replayed != best) {
