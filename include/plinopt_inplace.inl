@@ -635,7 +635,7 @@ Tricounter SearchLinearAlgorithm(AProgram_t& Program,
         AProgram_t lProgram;
         Tricounter lops { LinearAlgorithm(lProgram, pA, variable, transposed) };
 
-#pragma omp critical
+#pragma omp critical(recsla)
         {
         if ( (std::get<0>(lops)<std::get<0>(nbops)) ||
              ( (std::get<0>(lops)==std::get<0>(nbops))
@@ -653,7 +653,7 @@ Tricounter SearchLinearAlgorithm(AProgram_t& Program,
 
         lops = LinearAlgorithm(lProgram, pA, variable, transposed, true);
 
-#pragma omp critical
+#pragma omp critical(recsla)
         {
         if ( (std::get<0>(lops)<std::get<0>(nbops)) ||
              ( (std::get<0>(lops)==std::get<0>(nbops))
@@ -890,7 +890,7 @@ Tricounter SearchTriLinearAlgorithm(std::ostream& out,
             // trying first a directed selection of variables
         Tricounter lops{ TriLinearProgram(lout, pA, pB, pT, true, expanded) };
 
-#pragma omp critical
+#pragma omp critical(recsta)
         {
         if ( (std::get<0>(lops)<std::get<0>(nbops)) ||
              ( (std::get<0>(lops)==std::get<0>(nbops))
@@ -908,7 +908,7 @@ Tricounter SearchTriLinearAlgorithm(std::ostream& out,
             // then trying a random selection of variables
         lops = TriLinearProgram(sout, pA, pB, pT, false, expanded);
 
-#pragma omp critical
+#pragma omp critical(recsta)
         {
         if ( (std::get<0>(lops)<std::get<0>(nbops)) ||
              ( (std::get<0>(lops)==std::get<0>(nbops))
