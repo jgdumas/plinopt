@@ -13,191 +13,194 @@
 #include "plinopt_sparsify.h"
 #include "plinopt_programs.h"
 
-
-namespace PLinOpt {
 // ===============================================================
+namespace PLinOpt {
 
+// ===============================================================
 template<typename T1, typename T2>
 std::ostream& operator<<(std::ostream& out, const std::map<T1,T2>& v) {
     out << '{';
     for (const auto& [element, frequency] : v)
-	out << element << '=' << frequency << ' ';
+        out << element << '=' << frequency << ' ';
     return out << '}';
 }
 
+// ===============================================================
 // Build pairs of indices with normalized coefficient (ratio of the two values)
 template<typename Container, typename Ring>
 std::vector<Etriple<Ring>> listpairs (const Container& c, const Ring& F) {
     std::vector<Etriple<Ring>> v;
     typename Ring::Element tmp; F.init(tmp);
     for(auto iter=c.begin(); iter != c.end(); ++iter) {
-	auto next(iter);
-	for(++next; next!= c.end(); ++next) {
-	    v.emplace_back(iter->first, next->first,
-			   F.div(tmp,next->second,iter->second));
-	}
+        auto next(iter);
+        for(++next; next!= c.end(); ++next) {
+            v.emplace_back(iter->first, next->first,
+                           F.div(tmp,next->second,iter->second));
+        }
     }
     return v;
 }
 
+// ===============================================================
 // If cse is present in row, add square of row density to score
 template<typename triple>
 inline size_t score(const std::vector<std::vector<triple>>& AllPairs,
-		    const std::vector<size_t>& Density,
-		    const triple& cse) {
+                    const std::vector<size_t>& Density,
+                    const triple& cse) {
     size_t score(0);
     for(size_t k=0; k<Density.size(); ++k) {
-	if (std::find(AllPairs[k].begin(), AllPairs[k].end(), cse)
-	    != AllPairs[k].end()) {
-	    score += Density[k]*Density[k];
-	}
+        if (std::find(AllPairs[k].begin(), AllPairs[k].end(), cse)
+            != AllPairs[k].end()) {
+            score += Density[k]*Density[k];
+        }
     }
     return score;
 }
 
+// ===============================================================
 // Removes cse, updating lM (and AllPairs/PairMap if updateAPM)
 template<typename triple, typename _Mat>
 Pair<long> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
-		     std::vector<triple>& lmultiples, const triple& cse,
-		     std::vector<std::vector<triple>>& AllPairs,
-		     std::map<triple,size_t>& PairMap,
-		     const char tev, const char rav, const bool updateAPM,
-		     triple& lcse) {
+                     std::vector<triple>& lmultiples, const triple& cse,
+                     std::vector<std::vector<triple>>& AllPairs,
+                     std::map<triple,size_t>& PairMap,
+                     const char tev, const char rav, const bool updateAPM,
+                     triple& lcse) {
     const auto& FF(lM.field());
     size_t lm(lM.coldim());
     long savedadds(0), savedmuls(0);
 
-	// Looking for the most number of ones in either columns of cse
-	// (scanning the rows: a transposed copy per CSE was a fifth of the
-	// optimizer's time)
+        // Looking for the most number of ones in either columns of cse
+        // (scanning the rows: a transposed copy per CSE was a fifth of the
+        // optimizer's time)
     size_t count0(0), count1(0);
     for(auto rit=lM.rowBegin(); rit != lM.rowEnd(); ++rit) {
-	for(const auto& iter: *rit) {
-	    if (iter.first == std::get<0>(cse)) {
-		if (isAbsOne(FF,iter.second)) ++count0;
-	    } else if (iter.first == std::get<1>(cse)) {
-		if (isAbsOne(FF,iter.second)) ++count1;
-	    }
-	}
+        for(const auto& iter: *rit) {
+            if (iter.first == std::get<0>(cse)) {
+                if (isAbsOne(FF,iter.second)) ++count0;
+            } else if (iter.first == std::get<1>(cse)) {
+                if (isAbsOne(FF,iter.second)) ++count1;
+            }
+        }
     }
 
     if (count0<count1) { // More ones in std::get<1>(cse);
-	std::get<0>(lcse) = std::get<1>(cse);
-	std::get<1>(lcse) = std::get<0>(cse);
-	FF.inv( std::get<2>(lcse), std::get<2>(cse) );
+        std::get<0>(lcse) = std::get<1>(cse);
+        std::get<1>(lcse) = std::get<0>(cse);
+        FF.inv( std::get<2>(lcse), std::get<2>(cse) );
     } else {             // More ones in std::get<0>(cse);
-	std::get<0>(lcse) = std::get<0>(cse);
-	std::get<1>(lcse) = std::get<1>(cse);
-	FF.assign( std::get<2>(lcse), std::get<2>(cse) );
+        std::get<0>(lcse) = std::get<0>(cse);
+        std::get<1>(lcse) = std::get<1>(cse);
+        FF.assign( std::get<2>(lcse), std::get<2>(cse) );
     }
-	// Factor out cse, in all rows
-	// adds a column for the new factor
+        // Factor out cse, in all rows
+        // adds a column for the new factor
     typename _Mat::Element ratio; FF.init(ratio);
     for(size_t i=0; i<AllPairs.size(); ++i) {
-	    // Is cse a pair of row i: its two columns, with
-	    // this ratio (what listpairs would have listed)
-	bool found(false);
-	{
-	    auto first(lM[i].end()), second(lM[i].end());
-	    for(auto iter=lM[i].begin(); iter != lM[i].end(); ++iter) {
-		if (iter->first == std::get<0>(cse)) first = iter;
-		else if (iter->first == std::get<1>(cse)) second = iter;
-	    }
-	    if ( (first != lM[i].end()) && (second != lM[i].end())
-		 // Actually the order is taken into account by 'coeff'
-		 // && (first < second)
-		 ) {
-		FF.div(ratio, second->second, first->second);
-		found = FF.areEqual(ratio, std::get<2>(cse));
-	    }
-	}
-	if (found) {
-	    typename _Mat::Element coeff; FF.init(coeff);
-	    for(auto iter=lM[i].begin(); iter!= lM[i].end(); ++iter) {
-		if (iter->first==std::get<0>(lcse)) {
-		    coeff = iter->second;
-		    lM[i].erase(iter); ++savedadds;
-		    break;
-		}
-	    }
-	    for(auto iter=lM[i].begin(); iter!= lM[i].end(); ++iter) {
-		if (iter->first==std::get<1>(lcse)) {
-		    if (notAbsOne(FF,iter->second)) ++savedmuls;
-		    lM[i].erase(iter);
-		    lM[i].emplace_back(lm,coeff);
-		    break;
-		}
-	    }
+            // Is cse a pair of row i: its two columns, with
+            // this ratio (what listpairs would have listed)
+        bool found(false);
+        {
+            auto first(lM[i].end()), second(lM[i].end());
+            for(auto iter=lM[i].begin(); iter != lM[i].end(); ++iter) {
+                if (iter->first == std::get<0>(cse)) first = iter;
+                else if (iter->first == std::get<1>(cse)) second = iter;
+            }
+            if ( (first != lM[i].end()) && (second != lM[i].end())
+                     // Actually the order is taken into account by 'coeff'
+                     // && (first < second)
+                ) {
+                FF.div(ratio, second->second, first->second);
+                found = FF.areEqual(ratio, std::get<2>(cse));
+            }
+        }
+        if (found) {
+            typename _Mat::Element coeff; FF.init(coeff);
+            for(auto iter=lM[i].begin(); iter!= lM[i].end(); ++iter) {
+                if (iter->first==std::get<0>(lcse)) {
+                    coeff = iter->second;
+                    lM[i].erase(iter); ++savedadds;
+                    break;
+                }
+            }
+            for(auto iter=lM[i].begin(); iter!= lM[i].end(); ++iter) {
+                if (iter->first==std::get<1>(lcse)) {
+                    if (notAbsOne(FF,iter->second)) ++savedmuls;
+                    lM[i].erase(iter);
+                    lM[i].emplace_back(lm,coeff);
+                    break;
+                }
+            }
 
-	    if (updateAPM) {
-		    // Update AllPairs[i] and PairMap: only the pairs with one
-		    // of the merged columns leave, only the pairs with the
-		    // new column arrive
-		std::vector<triple> newrow;
-		for (const auto& iter: AllPairs[i]) {
-		    if ( (std::get<0>(iter) != std::get<0>(lcse)) &&
-			 (std::get<1>(iter) != std::get<0>(lcse)) &&
-			 (std::get<0>(iter) != std::get<1>(lcse)) &&
-			 (std::get<1>(iter) != std::get<1>(lcse))
-			 ) {
-			newrow.push_back(iter);
-		    } else {
-			auto pit(PairMap.find(iter));
-			if (pit != PairMap.end()) {
-			    if (--(pit->second) == 0) PairMap.erase(pit);
-			}
-		    }
-		}
-		     // Add all pairs with new (last) element
-		typename _Mat::Element tmp; FF.init(tmp);
-		auto endlMi(lM[i].end()); --endlMi;
-		for(auto iter=lM[i].begin(); iter != endlMi; ++iter) {
-		    newrow.emplace_back(iter->first, endlMi->first,
-					FF.div(tmp, endlMi->second, iter->second));
-		    PairMap[newrow.back()]++;
-		}
+            if (updateAPM) {
+                    // Update AllPairs[i] and PairMap: only the pairs with one
+                    // of the merged columns leave, only the pairs with the
+                    // new column arrive
+                std::vector<triple> newrow;
+                for (const auto& iter: AllPairs[i]) {
+                    if ( (std::get<0>(iter) != std::get<0>(lcse)) &&
+                         (std::get<1>(iter) != std::get<0>(lcse)) &&
+                         (std::get<0>(iter) != std::get<1>(lcse)) &&
+                         (std::get<1>(iter) != std::get<1>(lcse))
+                        ) {
+                        newrow.push_back(iter);
+                    } else {
+                        auto pit(PairMap.find(iter));
+                        if (pit != PairMap.end()) {
+                            if (--(pit->second) == 0) PairMap.erase(pit);
+                        }
+                    }
+                }
+                    // Add all pairs with new (last) element
+                typename _Mat::Element tmp; FF.init(tmp);
+                auto endlMi(lM[i].end()); --endlMi;
+                for(auto iter=lM[i].begin(); iter != endlMi; ++iter) {
+                    newrow.emplace_back(iter->first, endlMi->first,
+                                        FF.div(tmp, endlMi->second, iter->second));
+                    PairMap[newrow.back()]++;
+                }
 
-		    // Update AllPairs[i]
-		AllPairs[i].assign(newrow.begin(),newrow.end());
-	    }
-	}
+                    // Update AllPairs[i]
+                AllPairs[i].assign(newrow.begin(),newrow.end());
+            }
+        }
     }
 
-	// If coefficient was already applied
-	//    then reuse the multiplication
-	//    else put it in a temporary for future reuse
+        // If coefficient was already applied
+        //    then reuse the multiplication
+        //    else put it in a temporary for future reuse
     auto asgs(Fabs(FF,std::get<2>(lcse)));
     size_t rindex(lm), moremul(0);
     if (notAbsOne(FF,asgs)) {
-	for(const auto& iter: lmultiples) {
-	    if ((std::get<1>(iter) == std::get<1>(lcse)) &&
-		(std::get<2>(iter) == asgs)) {
-		rindex = std::get<0>(iter);
-		break;
-	    }
-	}
-	if (rindex == lm) {
-	    ssout << rav << lm << ":=";
-	    printmulorjustdiv(ssout, tev, std::get<1>(lcse),
-			      asgs, moremul, FF) << ';' << std::endl;
-	    lmultiples.emplace_back(lm,std::get<1>(lcse),asgs);
-	}
+        for(const auto& iter: lmultiples) {
+            if ((std::get<1>(iter) == std::get<1>(lcse)) &&
+                (std::get<2>(iter) == asgs)) {
+                rindex = std::get<0>(iter);
+                break;
+            }
+        }
+        if (rindex == lm) {
+            ssout << rav << lm << ":=";
+            printmulorjustdiv(ssout, tev, std::get<1>(lcse),
+                              asgs, moremul, FF) << ';' << std::endl;
+            lmultiples.emplace_back(lm,std::get<1>(lcse),asgs);
+        }
     }
 
     nbmul += moremul;
     savedmuls -= moremul;
 
-	// Outputs the factor into a temporary variable
+        // Outputs the factor into a temporary variable
     ssout << tev << lm << ":=" << tev << std::get<0>(lcse);
     if ( (FF.isMOne(asgs)) || (Fsign(FF,std::get<2>(lcse))<0) ) {
-	ssout << '-';
+        ssout << '-';
     } else {
-	ssout << '+';
+        ssout << '+';
     }
     if (isAbsOne(FF,asgs)) {
-	ssout << tev << std::get<1>(lcse);
+        ssout << tev << std::get<1>(lcse);
     } else {
-	ssout << rav << rindex;
+        ssout << rav << rindex;
     }
     ssout << ';' << std::endl;
 
@@ -209,6 +212,7 @@ Pair<long> RemOneCSE(std::ostream& ssout, _Mat& lM, size_t& nbmul,
 }
 
 
+// ===============================================================
 // Removing CSEs until no pair occurs twice
 template<typename triple,typename _Mat>
 void OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
@@ -316,112 +320,117 @@ void OneSub(std::ostream& sout, _Mat& M, std::vector<triple>& multiples,
     }
 }
 
+// ===============================================================
 // Factors out same coefficient in a column
 template<typename Iter, typename triple, typename _Mat>
 void FactorOutColumns(std::ostream& sout, _Mat& T,
-		      std::vector<triple>& multiples, size_t& nbmul,
-		      const char tev, const char rav,
-		      const size_t j, const Iter& start, const Iter& end) {
+                      std::vector<triple>& multiples, size_t& nbmul,
+                      const char tev, const char rav,
+                      const size_t j, const Iter& start, const Iter& end) {
     if (start == end) return;
     const auto& FF(T.field());
 
     std::map<typename _Mat::Element, size_t> MapVals;
     for(Iter iter = start; iter != end; ++iter) {
-	MapVals[Fabs(FF,iter->second)]++;
+        MapVals[Fabs(FF,iter->second)]++;
     }
 
 
     for (const auto& [element, frequency] : MapVals) {
-	size_t m(T.rowdim());
+        size_t m(T.rowdim());
 
-	    // Found repeated coefficient
-	if ( (frequency>1) && (notAbsOne(FF,element)) ) {
-	    size_t rindex(m);
-		// If coefficient was already applied
-		//    then reuse the multiplication
-		//    else put it in a temporary for future reuse
-	     for(const auto& iter: multiples) {
-		if ((std::get<1>(iter) == j) &&
-		    (std::get<2>(iter) == element)) {
-		    rindex = std::get<0>(iter);
-		    break;
-		}
-	    }
-	    if (rindex == m) {
-		sout << rav << m << ":=";
-		printmulorjustdiv(sout, tev, j,
-				  element, nbmul, FF) << ';' << std::endl;
-		multiples.emplace_back(m,j,element);
-	    }
-		// Outputs the coefficient into a temporary variable
-	    sout << tev << m << ":=";
-	    sout << rav << rindex << ';' << std::endl;
-	    T.resize(++m, T.coldim());
+            // Found repeated coefficient
+        if ( (frequency>1) && (notAbsOne(FF,element)) ) {
+            size_t rindex(m);
+                // If coefficient was already applied
+                //    then reuse the multiplication
+                //    else put it in a temporary for future reuse
+            for(const auto& iter: multiples) {
+                if ((std::get<1>(iter) == j) &&
+                    (std::get<2>(iter) == element)) {
+                    rindex = std::get<0>(iter);
+                    break;
+                }
+            }
+            if (rindex == m) {
+                sout << rav << m << ":=";
+                printmulorjustdiv(sout, tev, j,
+                                  element, nbmul, FF) << ';' << std::endl;
+                multiples.emplace_back(m,j,element);
+            }
+                // Outputs the coefficient into a temporary variable
+            sout << tev << m << ":=";
+            sout << rav << rindex << ';' << std::endl;
+            T.resize(++m, T.coldim());
 
-		// Replace the coefficient in all rows by 1 or -1
-	    for(size_t k=0; k<frequency; ++k) {
-		auto& row(T[j]);
-		for(auto iter=row.begin(); iter != row.end(); ++iter) {
-		    if (Fabs(FF,iter->second) == element) {
-			T[m-1].emplace_back(iter->first, (Fsign(FF,iter->second) >= 0 ? FF.one : FF.mOne));
-			row.erase(iter);
-			break;
-		    }
-		}
-	    }
-	}
+                // Replace the coefficient in all rows by 1 or -1
+            for(size_t k=0; k<frequency; ++k) {
+                auto& row(T[j]);
+                for(auto iter=row.begin(); iter != row.end(); ++iter) {
+                    if (Fabs(FF,iter->second) == element) {
+                        T[m-1].emplace_back(iter->first,
+                                            (Fsign(FF,iter->second) >= 0 ?
+                                             FF.one : FF.mOne));
+                        row.erase(iter);
+                        break;
+                    }
+                }
+            }
+        }
     }
 }
 
+// ===============================================================
 // Factors out same coefficient in a row
 template<typename Iter, typename _Mat>
 void FactorOutRows(std::ostream& sout, _Mat& M, size_t& nbadd, const char tev,
-		   const size_t i, const Iter& start, const Iter& end) {
+                   const size_t i, const Iter& start, const Iter& end) {
     if (start == end) return;
     const auto& FF(M.field());
 
     std::map<typename _Mat::Element, size_t> MapVals;
     for(Iter iter = start; iter != end; ++iter) {
-	MapVals[Fabs(FF,iter->second)]++;
+        MapVals[Fabs(FF,iter->second)]++;
     }
 
     size_t m(M.coldim());
     for (const auto& [element, frequency] : MapVals) {
-	    // Found repeated coefficient
-	if ((frequency>1) && (notAbsOne(FF,element)) ) {
-	    sout << tev << m << ":=";
-	    ++m;
-		// Add a column with coefficient multiplying a new sum
-	    M.resize(M.rowdim(), m);
-	    M[i].emplace_back(m-1, element);
+            // Found repeated coefficient
+        if ((frequency>1) && (notAbsOne(FF,element)) ) {
+            sout << tev << m << ":=";
+            ++m;
+                // Add a column with coefficient multiplying a new sum
+            M.resize(M.rowdim(), m);
+            M[i].emplace_back(m-1, element);
 
-		// Remove elements that will be in the new sum
-	    auto& row(M[i]);
-	    for(auto iter=row.begin(); iter != row.end(); ++iter) {
-		if (Fabs(FF,iter->second) == element) {
-		    if (Fsign(FF,iter->second) < 0) sout << '-';
-		    sout << tev << iter->first;
-		    row.erase(iter);
-		    break;
-		}
-	    }
-		// Precompute the new sum (to be multiplied afterwards)
-	    for(size_t k=1; k<frequency; ++k) {
-		for(auto iter=row.begin(); iter != row.end(); ++iter) {
-		    if (Fabs(FF,iter->second) == element) {
-			++nbadd;
-			sout << (Fsign(FF,iter->second) < 0 ? '-' : '+')
-				  << tev << iter->first;
-			row.erase(iter);
-			break;
-		    }
-		}
-	    }
-	    sout << ';' << std::endl;
-	}
+                // Remove elements that will be in the new sum
+            auto& row(M[i]);
+            for(auto iter=row.begin(); iter != row.end(); ++iter) {
+                if (Fabs(FF,iter->second) == element) {
+                    if (Fsign(FF,iter->second) < 0) sout << '-';
+                    sout << tev << iter->first;
+                    row.erase(iter);
+                    break;
+                }
+            }
+                // Precompute the new sum (to be multiplied afterwards)
+            for(size_t k=1; k<frequency; ++k) {
+                for(auto iter=row.begin(); iter != row.end(); ++iter) {
+                    if (Fabs(FF,iter->second) == element) {
+                        ++nbadd;
+                        sout << (Fsign(FF,iter->second) < 0 ? '-' : '+')
+                             << tev << iter->first;
+                        row.erase(iter);
+                        break;
+                    }
+                }
+            }
+            sout << ';' << std::endl;
+        }
     }
 }
 
+// ===============================================================
 // Factors out triangles:
 // < ab | b > replaced by < 0 | b | b > then < 0 | 0 | 0 | 1>
 // < a  | . >             < 0 | . | 1 >      < 0 | . | 1 | 0>
@@ -438,172 +447,170 @@ bool Triangle(std::ostream& sout, _Mat& M, _Mat& T,
     bool over(true);
 
     do { over = true;
-
-    for(auto iter = T[j].begin(); iter != T[j].end();
+    for(auto iter = T[j].begin(); iter != T[j].end(); 
 	++iter) { if (notAbsOne(FF, iter->second)) {
 	for(auto next = T[j].begin(); next != T[j].end();
-	    ++next) { if ((next != iter) && notAbsOne(FF,next->second)) {
-	    const size_t i(next->first);
+	++next) { if ((next != iter) && notAbsOne(FF,next->second)) {
+        const size_t i(next->first);
 	    typename _Mat::Element quot; FF.init(quot);
 	    const auto& rowi(M[i]);
 	    FF.div(quot, next->second, iter->second); // nnz should be inv.
 	    for(auto third=rowi.begin(); third != rowi.end();
-		++third) { if ( (third->first != j)
-				&& (notAbsOne(FF,third->second)) ) {
-		typename _Mat::Element coeff; FF.init(coeff);
-		FF.div(coeff, quot, third->second);
-		if (isAbsOne(FF,coeff)) {
-		    size_t m(T.rowdim());
-		    found = true; // Triangle found !!!
-		    over = false; // will have to loop again
+        ++third) { if ( (third->first != j) && (notAbsOne(FF,third->second)) ) {
+            typename _Mat::Element coeff; FF.init(coeff);
+            FF.div(coeff, quot, third->second);
+            if (isAbsOne(FF,coeff)) {
+                size_t m(T.rowdim());
+                found = true; // Triangle found !!!
+                over = false; // will have to loop again
 
-			// First, record one multiplication by a
-					sout << tev << m << ":=";
-		    auto ais(Fabs(FF,iter->second));
-		    if ( (Fsign(FF,iter->second) <0)
-			 || FF.isMOne(iter->second) ) sout << '-';
-		    printmulorjustdiv(sout, tev, j, ais,
-				      nbmul, FF) << ';' << std::endl;
-		    multiples.emplace_back(m,j,iter->second);
+                    // First, record one multiplication by a
+                sout << tev << m << ":=";
+                auto ais(Fabs(FF,iter->second));
+                if ( (Fsign(FF,iter->second) <0) || FF.isMOne(iter->second) ) sout << '-';
+                printmulorjustdiv(sout, tev, j, ais,
+                                  nbmul, FF) << ';' << std::endl;
+                multiples.emplace_back(m,j,iter->second);
 
-			// Second, in j-th column, divide both elements by a
+                    // Second, in j-th column, divide both elements by a
 #ifdef VERBATIM_PARSING
 #  if VERBATIM_PARSING >= 2
-		    size_t dummy(0);
-		    printmulorjustdiv(std::clog << "# Found Triangle [",
-				      tev, j, ais, dummy, FF);
-		    std::clog << "]: (" << iter->first << ',' << j << ')' << '('
-			      << i << ',' << j << ')' << '('
-			      << i << ',' << third->first << ')' << std::endl;
+                size_t dummy(0);
+                printmulorjustdiv(std::clog << "# Found Triangle [",
+                                  tev, j, ais, dummy, FF);
+                std::clog << "]: (" << iter->first << ',' << j << ')' << '('
+                          << i << ',' << j << ')' << '('
+                          << i << ',' << third->first << ')' << std::endl;
 #  endif
 #endif
 
-			//   second.i) add column with 1 and quot
-		    T.resize(++m, T.coldim());
-		    T[m-1].emplace_back(iter->first, FF.one);
-		    T[m-1].emplace_back(next->first, quot);
+                    //   second.i) add column with 1 and quot
+                T.resize(++m, T.coldim());
+                T[m-1].emplace_back(iter->first, FF.one);
+                T[m-1].emplace_back(next->first, quot);
 
-			//   second.ii) remove iter & next from T[j]
-		    const auto& diter(*iter), & dnext(*next);
-		    auto isIorN {[diter,dnext](
-			const typename _Mat::Row::value_type& p)
-			{ return ((p == diter) || (p == dnext));}};
-		    T[j].erase(std::remove_if(T[j].begin(), T[j].end(), isIorN),
-			       T[j].end());
+                    //   second.ii) remove iter & next from T[j]
+                const auto& diter(*iter), & dnext(*next);
+                auto isIorN {[diter,dnext](
+                        const typename _Mat::Row::value_type& p)
+                    { return ((p == diter) || (p == dnext));}};
+                T[j].erase(std::remove_if(T[j].begin(), T[j].end(), isIorN),
+                           T[j].end());
 
-		    Transpose(M,T);
+                Transpose(M,T);
 
-			// Third, record multiplication by b
-			// Fourth, divide both row elements by b
-		    FactorOutRows(sout, M, nbadd, tev,
-				  i, M[i].begin(), M[i].end());
+                    // Third, record multiplication by b
+                    // Fourth, divide both row elements by b
+                FactorOutRows(sout, M, nbadd, tev,
+                              i, M[i].begin(), M[i].end());
 
-		    Transpose(T,M);
-		    break;
-	    } } }
+                Transpose(T,M);
+                break;
+            } } }
 	    if (found) break;
-	} }
+        } }
 	if (found) break;
-    } }
+        } }
     } while(!over);
     return found;
 }
 
 
 
+// ===============================================================
 // Direct program generateur from a matrix
 template<typename outstream, typename _Mat, typename triple>
 std::ostream& ProgramGen(outstream& sout, _Mat& M,
-			 std::vector<triple>& multiples,
-			 size_t& addcount, size_t& nbmul,
-			 const char ouv, const char tev, const char rav) {
+                         std::vector<triple>& multiples,
+                         size_t& addcount, size_t& nbmul,
+                         const char ouv, const char tev, const char rav) {
 
 #ifdef VERBATIM_PARSING
     std::clog << "# Program Generation:" << ouv << ' ' << tev << ' ' << rav
-	      << std::endl;
+              << std::endl;
     std::clog << std::string(30,'#') << std::endl;
 #endif
 
     const auto& FF(M.field());
 
-	// Factoring multiplier by columns
+        // Factoring multiplier by columns
     _Mat T(FF, M.coldim(), M.rowdim()); Transpose(T, M);
     for(size_t j=0; j<M.coldim(); ++j) {
-	FactorOutColumns(sout, T, multiples, nbmul, tev, rav,
-			 j, T[j].begin(), T[j].end());
+        FactorOutColumns(sout, T, multiples, nbmul, tev, rav,
+                         j, T[j].begin(), T[j].end());
     }
     Transpose(M,T);
 
-	// Factoring multiplier by rows
+        // Factoring multiplier by rows
     for(size_t i=0; i<M.rowdim(); ++i) {
-	FactorOutRows(sout, M, addcount, tev, i, M[i].begin(), M[i].end());
+        FactorOutRows(sout, M, addcount, tev, i, M[i].begin(), M[i].end());
     }
 
     Transpose(T,M);
 
-	// Factoring triangle multiplier
+        // Factoring triangle multiplier
     for(size_t j=0; j<M.coldim(); ++j) {
-	Triangle(sout, M, T, multiples, addcount, nbmul, tev, rav, j);
+        Triangle(sout, M, T, multiples, addcount, nbmul, tev, rav, j);
     }
 
-	// Computing remaining (simple) linear combinations
+        // Computing remaining (simple) linear combinations
     for(size_t i=0; i<M.rowdim(); ++i) {
-	const auto& row(M[i]);
-	if (row.size()>0) {
-	    sout << ouv << i << ":=";
+        const auto& row(M[i]);
+        if (row.size()>0) {
+            sout << ouv << i << ":=";
 
-	    auto arbs(Fabs(FF,row.begin()->second));
+            auto arbs(Fabs(FF,row.begin()->second));
 
-		// If already multiplied, reuse it
-	    size_t rindex(M.coldim());
-	    for(const auto& miter: multiples) {
-		if ((std::get<1>(miter) == row.begin()->first) &&
-		    (std::get<2>(miter) == arbs)) {
-		    rindex = std::get<0>(miter);
-		    break;
-		}
-	    }
-	    if (rindex != M.coldim()) {
-		if (! FF.areEqual(arbs,row.begin()->second)) sout << '-';
-		sout << rav << rindex;
-	    } else {
-		if ( (Fsign(FF,row.begin()->second) < 0)
-		     || FF.isMOne(row.begin()->second) ) sout << '-';
-		printmulorjustdiv(sout, tev, row.begin()->first,
-				  arbs, nbmul, FF);
-	    }
+                // If already multiplied, reuse it
+            size_t rindex(M.coldim());
+            for(const auto& miter: multiples) {
+                if ((std::get<1>(miter) == row.begin()->first) &&
+                    (std::get<2>(miter) == arbs)) {
+                    rindex = std::get<0>(miter);
+                    break;
+                }
+            }
+            if (rindex != M.coldim()) {
+                if (! FF.areEqual(arbs,row.begin()->second)) sout << '-';
+                sout << rav << rindex;
+            } else {
+                if ( (Fsign(FF,row.begin()->second) < 0)
+                     || FF.isMOne(row.begin()->second) ) sout << '-';
+                printmulorjustdiv(sout, tev, row.begin()->first,
+                                  arbs, nbmul, FF);
+            }
 
-		// For all the monomials of the linear combination
-	    auto iter(row.begin());
-	    for(++iter; iter!= row.end(); ++iter) {
-		++addcount;
-		auto ais(Fabs(FF,iter->second));
+                // For all the monomials of the linear combination
+            auto iter(row.begin());
+            for(++iter; iter!= row.end(); ++iter) {
+                ++addcount;
+                auto ais(Fabs(FF,iter->second));
 
-		    // If already multiplied, reuse it
-		size_t rindex(M.coldim());
-		for(const auto& miter: multiples) {
-		    if ((std::get<1>(miter) == iter->first) &&
-			(std::get<2>(miter) == ais)) {
-			rindex = std::get<0>(miter);
-			break;
-		    }
-		}
-		if (rindex != M.coldim()) {
-		    sout << (FF.areEqual(ais,iter->second) ? '+' : '-')
-			 << rav << rindex;
-		} else {
-			// otherwise next function will sout << '-'
-		    sout << ( ( (Fsign(FF,iter->second) <0)
-				|| FF.isMOne(iter->second) ) ? '-' : '+');
-		    printmulorjustdiv(sout, tev, iter->first,
-				      ais, nbmul, FF);
-		}
-	    }
-	    sout << ';' << std::endl;
-	}
-	else {
-	    sout << ouv << i << ":=0;" << std::endl;
-	}
+                    // If already multiplied, reuse it
+                size_t rindex(M.coldim());
+                for(const auto& miter: multiples) {
+                    if ((std::get<1>(miter) == iter->first) &&
+                        (std::get<2>(miter) == ais)) {
+                        rindex = std::get<0>(miter);
+                        break;
+                    }
+                }
+                if (rindex != M.coldim()) {
+                    sout << (FF.areEqual(ais,iter->second) ? '+' : '-')
+                         << rav << rindex;
+                } else {
+                        // otherwise next function will sout << '-'
+                    sout << ( ( (Fsign(FF,iter->second) <0)
+                                || FF.isMOne(iter->second) ) ? '-' : '+');
+                    printmulorjustdiv(sout, tev, iter->first,
+                                      ais, nbmul, FF);
+                }
+            }
+            sout << ';' << std::endl;
+        }
+        else {
+            sout << ouv << i << ":=0;" << std::endl;
+        }
     }
 #ifdef VERBATIM_PARSING
     std::clog << "# Program Generation done." << std::endl;
@@ -614,6 +621,7 @@ std::ostream& ProgramGen(outstream& sout, _Mat& M,
 }
 
 
+// ===============================================================
 // Global random optimization function (pairs and factors)
 template<typename outstream, typename _Mat>
 Pair<size_t> Optimizer(outstream& sout, _Mat& M,
@@ -624,7 +632,7 @@ Pair<size_t> Optimizer(outstream& sout, _Mat& M,
 
 	// Factoring sums
 
-    
+
     std::vector<triple> multiples;
     OneSub(sout, M, multiples, nbadd, nbmul, tev, rav);
 
@@ -637,10 +645,12 @@ Pair<size_t> Optimizer(outstream& sout, _Mat& M,
 
 
 
-	// Postcondition _Matrix A is nullified
+// ===============================================================
+// Selecting a full rank upper part
+//   From the matrix, or (if KFI) from the matrix and the identity
 template<typename outstream, typename _Mat>
-Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
-			     const bool KFI, const bool mostCSE) {
+Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A, const bool KFI,
+			     const bool mostCSE, const size_t recbudget) {
 	std::vector<size_t> l;
     if (KFI) {
 	const auto& FF(A.field());
@@ -653,7 +663,7 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
 	for(size_t i=0; i<A.rowdim(); ++i)
 	    A.setEntry(i,Nj+i,FF.one);
 
-	auto Pops = nullspacedecomp(sout, x, A, l, 'q', 'i', mostCSE);
+	auto Pops = nullspacedecomp(sout, x, A, l, 'q', 'i', mostCSE, recbudget);
 
 	std::vector<std::string> iVars(A.rowdim());
 	for(size_t i=0; i<A.rowdim(); ++i) {
@@ -685,15 +695,19 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
 
 	return Pops;
     } else {
-	return nullspacedecomp(sout, x, A, l, 'o', 'i', mostCSE);
+	return nullspacedecomp(sout, x, A, l, 'o', 'i', mostCSE, recbudget);
     }
 }
 
-	// Postcondition _Matrix A is nullified
+// ===============================================================
+// Selecting a full rank upper part
+//   optimizing separately the upper part,
+//   and then the lower part as a function of the upper part
+// Postcondition _Matrix A is nullified
 template<typename outstream, typename _Mat>
 Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
-			     std::vector<size_t>& l, const char ouv,
-			     const char inv, const bool mostCSE) {
+			     std::vector<size_t>& l, const char ouv, const char inv,
+			     const bool mostCSE, const size_t recbudget) {
     const auto& FF(A.field());
     typename _Mat::Element Det;
     size_t Rank;
@@ -841,7 +855,7 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
 	    // o <-- Free . i
 	Pair<size_t> Fops;
 	if (mostCSE) {
-	    Fops = RecOptimizer(sout, FreePart, ouv, 't', 'r');
+	    Fops = RecOptimizer(sout, FreePart, recbudget, ouv, 't', 'r');
 	} else {
 	    Fops = Optimizer(sout, FreePart, ouv, 't', 'r');
 	}
@@ -864,7 +878,7 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
 	    // x <-- Tx . o = (- x^T) o
 	Pair<size_t> Kops;
 	if (mostCSE) {
-	    Kops = RecOptimizer(sout, Tx, 'x', 'v', 'g');
+	    Kops = RecOptimizer(sout, Tx, recbudget, 'x', 'v', 'g');
 	} else {
 	    Kops = Optimizer(sout, Tx, 'x', 'v', 'g');
 	}
@@ -891,28 +905,6 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
 
 // ============================================================
 // Exhaustive greedy CSE search, memoized over canonical states, with a budget
-//   A state is the current matrix, the temporaries created so far and the
-//   scalings already emitted.  Each temporary is a linear form over the
-//   inputs; two paths creating the same temporaries in different orders
-//   reach the same state up to their numbering, and the key below numbers
-//   them canonically, so every state is searched once.  The memo keeps the
-//   best savings from a state and the CSE achieving them; the program is
-//   then replayed from the root along the best choices.
-//   RecBudget bounds the number of states searched: past it, a state keeps
-//   only its first candidate (a greedy completion) and the search is
-//   reported as not exhaustive.
-size_t RecBudget(100000);
-
-template<typename _Mat>
-struct RecMemo {
-    typedef typename _Mat::Element Element;
-    typedef std::vector<std::pair<size_t,Element>> Form;    // over the inputs
-    struct Entry { long adds; long muls; std::string choice; };
-    std::unordered_map<std::string, Entry> table;
-    size_t inputs, states;
-    bool exhaustive;
-    RecMemo(const size_t n) : inputs(n), states(0), exhaustive(true) {}
-};
 
 template<typename Field, typename Form>
 std::string formKey(const Field& F, const Form& v) {
@@ -942,10 +934,10 @@ Form formCombine(const Field& F, const Form& a, const Form& b,
 }
 
     // The canonical key of a state
-template<typename triple, typename _Mat, typename Memo>
+template<typename triple, typename _Mat>
 std::string stateKey(const _Mat& M, const std::vector<triple>& multiples,
-		     const std::vector<typename Memo::Form>& colvec,
-		     const Memo& memo) {
+		     const std::vector<typename RecMemo<_Mat>::Form>& colvec,
+		     const RecMemo<_Mat>& memo) {
     const auto& F(M.field());
 	// temporaries in the order of their forms
     std::vector<std::pair<std::string,size_t>> temps;
@@ -995,10 +987,10 @@ std::string choiceKey(const Field& F, const triple& cse,
 }
 
     // Best savings from a state (filling the memo)
-template<typename triple, typename _Mat, typename Memo>
+template<typename triple, typename _Mat>
 Pair<long> RecSearch(const _Mat& Mat, const std::vector<triple>& multiples,
-		     const std::vector<typename Memo::Form>& colvec,
-		     Memo& memo, const size_t lvl,
+		     const std::vector<typename RecMemo<_Mat>::Form>& colvec,
+		     RecMemo<_Mat>& memo, const size_t lvl,
 		     const char tev, const char rav) {
     const auto& FF(Mat.field());
     const std::string key(stateKey<triple>(Mat, multiples, colvec, memo));
@@ -1030,7 +1022,7 @@ Pair<long> RecSearch(const _Mat& Mat, const std::vector<triple>& multiples,
 #pragma omp critical(recmemo)
     {
 	++memo.states;
-	if (memo.states > RecBudget) { over = true; memo.exhaustive = false; }
+	if (memo.states > memo.budget) { over = true; memo.exhaustive = false; }
     }
     if (over && candidates.size() > 1) candidates.resize(1);
 
@@ -1043,7 +1035,7 @@ Pair<long> RecSearch(const _Mat& Mat, const std::vector<triple>& multiples,
 	  const triple& cse(candidates[k]);
 	  _Mat lM(FF,Mat.rowdim(),Mat.coldim()); sparse2sparse(lM, Mat);
 	  std::vector<triple> lmultiples(multiples);
-	  std::vector<typename Memo::Form> lcolvec(colvec);
+	  std::vector<typename RecMemo<_Mat>::Form> lcolvec(colvec);
 	  std::vector<std::vector<triple>> lAllPairs(AllPairs);
 	  std::ostringstream ssout; size_t moremul(0);
 	  triple applied;
@@ -1057,31 +1049,31 @@ Pair<long> RecSearch(const _Mat& Mat, const std::vector<triple>& multiples,
 	  const Pair<long> rest(RecSearch(lM, lmultiples, lcolvec, memo,
 					  lvl+1, tev, rav));
 	  const long adds(savings.first + rest.first),
-	    muls(savings.second + rest.second);
+	      muls(savings.second + rest.second);
 
 #pragma omp critical(recbest)
 	  {
-	    if ( (adds > bestadds) || ((adds == bestadds) && (muls > bestmuls)) ) {
-	      bestadds = adds; bestmuls = muls;
-	      bestchoice = choiceKey(FF, cse, colvec);
-	    }
+	      if ( (adds > bestadds) || ((adds == bestadds) && (muls > bestmuls)) ) {
+		  bestadds = adds; bestmuls = muls;
+		  bestchoice = choiceKey(FF, cse, colvec);
+	      }
 	  }
 	}
     } else {
-      bestadds = 0; bestmuls = 0;
+	bestadds = 0; bestmuls = 0;
     }
 #pragma omp critical(recmemo)
     {
-      memo.table[key] = typename Memo::Entry{bestadds, bestmuls, bestchoice};
+	memo.table[key] = typename RecMemo<_Mat>::Entry{bestadds, bestmuls, bestchoice};
     }
     return Pair<long>{bestadds, bestmuls};
 }
 
     // Replays the best choices from the root, emitting the program
-template<typename triple, typename _Mat, typename Memo>
+template<typename triple, typename _Mat>
 Pair<long> RecReplay(std::ostream& sout, _Mat& Mat,
-		     std::vector<typename Memo::Form>& colvec, Memo& memo,
-		     const char tev, const char rav) {
+		     std::vector<typename RecMemo<_Mat>::Form>& colvec,
+		     RecMemo<_Mat>& memo, const char tev, const char rav) {
     const auto& FF(Mat.field());
     Pair<long> total{0,0};
     std::vector<std::vector<triple>> AllPairs;
@@ -1127,8 +1119,8 @@ Pair<long> RecReplay(std::ostream& sout, _Mat& Mat,
 
 // Global exhaustive greedy CSE optimization function (pairs and factors)
 template<typename outstream, typename _Mat>
-Pair<size_t> RecOptimizer(outstream& sout, _Mat& M, const char ouv,
-			  const char tev, const char rav,
+Pair<size_t> RecOptimizer(outstream& sout, _Mat& M, const size_t budget,
+			  const char ouv, const char tev, const char rav,
 			  const int verbose) {
     using triple=std::tuple<size_t, size_t, typename _Mat::Element>;
     const auto& FF(M.field());
@@ -1138,7 +1130,7 @@ Pair<size_t> RecOptimizer(outstream& sout, _Mat& M, const char ouv,
 
 	// Factoring sums: the memoized search, then the replay of its choices
     std::vector<triple> multiples;
-    RecMemo<_Mat> memo(M.coldim());
+    RecMemo<_Mat> memo(M.coldim(),budget);
     std::vector<typename RecMemo<_Mat>::Form> colvec(M.coldim());
     for(size_t j=0; j<M.coldim(); ++j) colvec[j].emplace_back(j, FF.one);
 
@@ -1157,7 +1149,7 @@ Pair<size_t> RecOptimizer(outstream& sout, _Mat& M, const char ouv,
     if (verbose>0) {
       std::clog << "# \033[1;36m" << "Greedy CSE search: " << memo.states << " states";
       if (! memo.exhaustive)
-	std::clog << " (" << RecBudget << " budget exceeded, not exhaustive)";
+	std::clog << " (" << memo.budget << " budget exceeded, not exhaustive)";
       std::clog << "\033[0m" << std::endl;
       // std::clog << "# Greedy CSE saving: -" << replayed.first << std::endl;
     }
@@ -1441,7 +1433,7 @@ Pair<size_t>& CSEOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
 template<typename Field>
 Pair<size_t>& AllCSEOpt(Pair<size_t>& nbops, std::ostringstream& sout,
 			const Field& F, const Matrix& M, const Matrix& T,
-			Givaro::Timer& global) {
+			const size_t recbudget, Givaro::Timer& global) {
 	// ============================================================
 	// Rebind matrix type over sub field matrix type
     typedef typename Matrix::template rebind<Field>::other FMatrix;
@@ -1453,7 +1445,7 @@ Pair<size_t>& AllCSEOpt(Pair<size_t>& nbops, std::ostringstream& sout,
     std::ostringstream iout;
 	// Cancellation-free optimization
     input2Temps(iout, lM.coldim(), 'i', 't', lT);
-    auto rnbops( RecOptimizer(iout, lM, 'o', 't', 'r', 1) );
+    auto rnbops( RecOptimizer(iout, lM, recbudget, 'o', 't', 'r', 1) );
 
     chrono.stop(); global += chrono;
 
@@ -1551,7 +1543,8 @@ Pair<size_t>& KernelOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
 template<typename Field>
 Pair<size_t>& AllKernelOpt(Pair<size_t>& nbops, std::ostringstream& sout,
 			   const Field& F, const Matrix& T, const bool mostCSE,
-			   Givaro::Timer& global, const size_t randomloops, const int verbose) {
+			   const size_t recbudget, Givaro::Timer& global,
+			   const size_t randomloops, const int verbose) {
 	// ============================================================
 	// Rebind matrix type over sub field matrix type
     typedef typename Matrix::template rebind<Field>::other FMatrix;
@@ -1569,7 +1562,7 @@ Pair<size_t>& AllKernelOpt(Pair<size_t>& nbops, std::ostringstream& sout,
 	FMatrix lT(T, F);
 	std::ostringstream laout;
 	FMatrix NullSpace(F,lT.coldim(),T.coldim());
-	auto lkops( nullspacedecomp(laout, NullSpace, lT, l, 'o', 'i', mostCSE) );
+	auto lkops( nullspacedecomp(laout, NullSpace, lT,l,'o','i',mostCSE,recbudget) );
 
 #pragma omp critical(recall)
 	{
@@ -1619,10 +1612,10 @@ Pair<size_t>& AllKernelOpt(Pair<size_t>& nbops, std::ostringstream& sout,
 // ============================================================
 // Optimizing a linear program (Direct CSE or Kernel methods)
 template<typename Field>
-Pair<size_t> OptMethods(const Pair<size_t> opsinit,
+Pair<size_t> OptMethods(const Pair<size_t>& opsinit,
 			std::ostringstream& sout, const Field& F,
-			const Matrix& M, const Matrix& T,
-			Givaro::Timer& global, const size_t randomloops,
+			const Matrix& M, const Matrix& T, Givaro::Timer& global,
+			const size_t randomloops, const size_t recbudget,
 			const bool printMaple, const bool printPretty,
 			const bool tryDirect, const bool tryKernel,
 			const bool tryLU, bool tryAB, const bool mostCSE,
@@ -1660,13 +1653,13 @@ Pair<size_t> OptMethods(const Pair<size_t> opsinit,
 	// ============================================================
 	// Exhaustive nullspace permutation search (if # is <= 12!)
     if (allkernels && (M.rowdim() < 13)) {
-	AllKernelOpt(nbops, sout, F, T, mostCSE, global, randomloops,verbose);
+	AllKernelOpt(nbops, sout, F, T, mostCSE,recbudget, global, randomloops,verbose);
     }
 
 	// ============================================================
 	// Greedy CSE search
     if (mostCSE) {
-      AllCSEOpt(nbops, sout, F, M, T, global);
+	AllCSEOpt(nbops, sout, F, M, T, recbudget, global);
     }
 
     if (cmpOpCount(opsinit,nbops) || (opsinit == nbops)) {

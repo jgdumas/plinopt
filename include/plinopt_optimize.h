@@ -51,16 +51,18 @@ namespace PLinOpt {
 // DEFAULT: minimize sums, then additions
 
 #ifdef OPTIMIZE_ADDITIONS
-// Optimize for additions first, then multiplications
-auto cmpOpCount {[](const auto& a, const auto& b) { return (a.first<b.first) || ( (a.first==b.first) && (a.second<b.second) ); } };
+        // Optimize for additions first, then multiplications
+    auto cmpOpCount {[](const auto& a, const auto& b) {
+        return (a.first<b.first) || ( (a.first==b.first) && (a.second<b.second) ); } };
 #elif defined(OPTIMIZE_SUMS)
-// Optimize for sum of additions and multiplications
-auto cmpOpCount {[](const auto& a, const auto& b) { return (a.first+a.second<b.first+b.second); } };
+        // Optimize for sum of additions and multiplications
+    auto cmpOpCount {[](const auto& a, const auto& b) {
+        return (a.first+a.second<b.first+b.second); } };
 #else
-// Optimize for sum of add and mul, then on additions
-auto cmpOpCount {[](const auto& a, const auto& b) {
-    const auto asum(a.first+a.second), bsum(b.first+b.second);
-    return (asum<bsum) || ( (asum==bsum) && (a.first<b.first) ); } };
+        // Optimize for sum of add and mul, then on additions
+    auto cmpOpCount {[](const auto& a, const auto& b) {
+        const auto asum(a.first+a.second), bsum(b.first+b.second);
+        return (asum<bsum) || ( (asum==bsum) && (a.first<b.first) ); } };
 #endif
 
 
@@ -138,18 +140,18 @@ Pair<size_t> Optimizer(outstream& sout, _Mat& M,
 
 // Global exhaustive optimization function (pairs and factors)
 template<typename outstream, typename _Mat>
-Pair<size_t> RecOptimizer(outstream& sout, _Mat& M, char ouv,
-			  const char tev, const char rav, const int verbose=0);
+Pair<size_t> RecOptimizer(outstream& sout, _Mat& M, const size_t budget, char ouv,
+                          const char tev, const char rav, const int verbose=0);
 
 // Precondition _Matrix A is upper triangular
 template<typename outstream, typename _Mat>
 Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A, const bool KFI,
-                             const bool mostCSE=false);
+                             const bool mostCSE=false, const size_t budget=0);
 
 template<typename outstream, typename _Mat>
 Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
-                             std::vector<size_t>& l, const char ouv,
-                             const char inv, const bool mostCSE=false);
+                             std::vector<size_t>& l, const char ouv, const char inv,
+                             const bool mostCSE=false, const size_t budget=0);
 
 
 // ============================================================
@@ -165,39 +167,71 @@ Pair<size_t>& LUOptimiser(Pair<size_t>& nbops, std::ostringstream& gout,
 template<typename Field>
 Pair<size_t>& CSEOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
                            const Field& F, const Matrix& M, const Matrix& T,
-                           Givaro::Timer& global, const size_t randomloops, const int verbose=0);
+                           Givaro::Timer& global, const size_t randomloops,
+                           const int verbose=0);
 
 // ============================================================
 // Optimizing a linear program (whole CSE tree)
 template<typename Field>
 Pair<size_t>& AllCSEOpt(Pair<size_t>& nbops, std::ostringstream& sout,
                         const Field& F, const Matrix& M, const Matrix& T,
-                        Givaro::Timer& global, const size_t randomloops);
+                        const size_t recbudget, Givaro::Timer& global);
 
 // ============================================================
 // Optimizing a linear program (kernel method)
 template<typename Field>
 Pair<size_t>& KernelOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
                               const Field& F, const Matrix& T, Givaro::Timer& global,
-                              const size_t randomloops, const bool KFI, const int verbose=0);
+                              const size_t randomloops, const bool KFI,
+                              const int verbose=0);
 
 // ============================================================
 // Optimizing a linear program (kernel method, all permutations)
 template<typename Field>
 Pair<size_t>& AllKernelOpt(Pair<size_t>& nbops, std::ostringstream& sout,
                            const Field& F, const Matrix& T, const bool mostCSE,
-                           Givaro::Timer& global, const size_t randomloops, const int verbose=0);
+                           const size_t recbudget, Givaro::Timer& global,
+                           const size_t randomloops, const int verbose=0);
 
 
 // ============================================================
 // Optimizing a linear program (Direct CSE or Kernel methods)
 template<typename Field>
-Pair<size_t>& OptMethods(Pair<size_t>& nbops, std::ostringstream& ssout,
-                         const Field& F, const Matrix& M, const Matrix& T,
-                         Givaro::Timer& global, const size_t randomloops,
-                         const bool printMaple, const bool printPretty,
-                         const bool tryDirect, const bool tryKernel, const bool mostCSE,
-                         const bool allkernels, const bool KFI, const int verbose=0);
+Pair<size_t> OptMethods(const Pair<size_t>& opsinit,
+                        std::ostringstream& sout, const Field& F,
+                        const Matrix& M, const Matrix& T, Givaro::Timer& global,
+                        const size_t randomloops, const size_t recbudget,
+                        const bool printMaple, const bool printPretty,
+                        const bool tryDirect, const bool tryKernel,
+                        const bool tryLU, bool tryAB, const bool mostCSE,
+                        const bool allkernels, const bool KFI, const int verbose=0);
+
+// ============================================================
+// Exhaustive greedy CSE search, memoized over canonical states, with a budget
+//   A state is the current matrix, the temporaries created so far and the
+//   scalings already emitted.  Each temporary is a linear form over the
+//   inputs; two paths creating the same temporaries in different orders
+//   reach the same state up to their numbering, and the key below numbers
+//   them canonically, so every state is searched once.  The memo keeps the
+//   best savings from a state and the CSE achieving them; the program is
+//   then replayed from the root along the best choices.
+//   Budget bounds the number of states searched: past it, a state keeps
+//   only its first candidate (a greedy completion) and the search is
+//   reported as not exhaustive.
+#define _PLinOpt_DEFAULT_BUDGET_ 100000
+
+template<typename _Mat>
+struct RecMemo {
+    typedef typename _Mat::Element Element;
+    typedef std::vector<std::pair<size_t,Element>> Form;    // over the inputs
+    struct Entry { long adds; long muls; std::string choice; };
+    std::unordered_map<std::string, Entry> table;
+    size_t inputs, states, budget;
+    bool exhaustive;
+        // RecMemo(const size_t n, const size_t b=_PLinOpt_DEFAULT_BUDGET_)
+    RecMemo(const size_t n, const size_t b)
+        : inputs(n), states(0), budget(b), exhaustive(true) {}
+};
 
 } // End of namespace PLinOpt
 // ============================================

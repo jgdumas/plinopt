@@ -58,9 +58,9 @@ while [[ $# -gt 0 ]]; do
 done
 
 SLPCHK="${DIR}/SLPchecker${MOD}"
-OPTMZR="${DIR}/optimizer${OPTFLAGS}${MOD}"
+OPTMZR="${DIR}/optimizer${OPTFLAGS}${MOD} -r"
 MATTRP="${DIR}/matrix-transpose"
-TRSPZR="${DIR}/transpozer"
+TRSPZR="${DIR}/transpozer -r"
 SGLVAR="${DIR}/singlevar.sh"
 
 GRE='\033[1;32m'
