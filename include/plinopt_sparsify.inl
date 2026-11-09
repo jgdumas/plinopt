@@ -1008,7 +1008,7 @@ int Factorizer(_Mat& Alt, _Mat& CoB, const _Mat& M,
         FMatrix lAlt(F, M.rowdim(), innerdim);
         auto bSops{backSolver(lCoB, lAlt, M, redMul)};
 
-#pragma omp critical
+#pragma omp critical(recfct)
         {
             if (tricOpCount(bSops, nbops)) {
 #ifdef VERBATIM_PARSING

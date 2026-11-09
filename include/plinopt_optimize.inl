@@ -14,8 +14,6 @@
 #include "plinopt_programs.h"
 
 
-
-
 namespace PLinOpt {
 // ===============================================================
 
@@ -828,7 +826,7 @@ Pair<size_t> nullspacedecomp(outstream& sout, _Mat& x, _Mat& A,
 
 
 #ifdef VERBATIM_PARSING
-#pragma omp critical
+#pragma omp critical(recfpd)
 	{
 	std::clog << "# FreePart dimensions:\t(" << Rank
 		  << '+' << NotIndep << ')'
@@ -974,6 +972,7 @@ std::string stateKey(const _Mat& M, const std::vector<triple>& multiples,
     }
     o << '#';
 
+
     std::vector<std::string> muls;
     for(const auto& m: multiples) {
 	std::ostringstream mo;
@@ -1080,7 +1079,7 @@ Pair<long> RecSearch(const _Mat& Mat, const std::vector<triple>& multiples,
 
     // Replays the best choices from the root, emitting the program
 template<typename triple, typename _Mat, typename Memo>
-Pair<long> RecReplay(std::ostream& sout, _Mat& Mat, std::vector<triple>& multiples,
+Pair<long> RecReplay(std::ostream& sout, _Mat& Mat,
 		     std::vector<typename Memo::Form>& colvec, Memo& memo,
 		     const char tev, const char rav) {
     const auto& FF(Mat.field());
@@ -1091,9 +1090,10 @@ Pair<long> RecReplay(std::ostream& sout, _Mat& Mat, std::vector<triple>& multipl
     std::map<triple,size_t> PairMap;
     for(const auto& rows: AllPairs) for (const auto& p: rows) PairMap[p]++;
 
+    std::vector<triple> lmultiples;
 
     for(;;) {
-	const std::string key(stateKey<triple>(Mat, multiples, colvec, memo));
+	const std::string key(stateKey<triple>(Mat, lmultiples, colvec, memo));
 	const auto it(memo.table.find(key));
 	if ((it == memo.table.end()) || it->second.choice.empty()) break;
 
@@ -1112,13 +1112,14 @@ Pair<long> RecReplay(std::ostream& sout, _Mat& Mat, std::vector<triple>& multipl
 
 	    // Applying the chosen CSE
 	size_t moremul(0); triple applied;
-	const Pair<long> savings(RemOneCSE(sout, Mat, moremul, multiples, cse,
+	const Pair<long> savings(RemOneCSE(sout, Mat, moremul, lmultiples, cse,
 					   AllPairs, PairMap, tev, rav, true,
 					   applied));
 
 	colvec.push_back(formCombine(FF, colvec[std::get<0>(applied)],
 				     colvec[std::get<1>(applied)],
 				     std::get<2>(applied)));
+
 	total.first += savings.first; total.second += savings.second;
     }
     return total;
@@ -1144,8 +1145,9 @@ Pair<size_t> RecOptimizer(outstream& sout, _Mat& M, const char ouv,
     const Pair<long> best(RecSearch<triple>(M, multiples, colvec,
 					    memo, 0, tev, rav));
 
-    const Pair<long> replayed(RecReplay<triple>(sout, M, multiples, colvec,
+    const Pair<long> replayed(RecReplay<triple>(sout, M, colvec,
 						memo, tev, rav));
+
     if (replayed != best) {
 	std::clog << "# \033[1;31mWARNING: replayed savings " << replayed.first
 		  << '|'  << replayed.second << " differ from the searched "
@@ -1253,7 +1255,7 @@ Pair<size_t>& LUOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
 	Uops.first += Lops.first;
 	Uops.second += Lops.second;
 
-#pragma omp critical
+#pragma omp critical(reclu)
 	{
 	const bool better(cmpOpCount(Uops,gops));
 	const bool empty(gout.tellp() == std::streampos(0));
@@ -1332,7 +1334,7 @@ Pair<size_t>& ABOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
 	Pair<size_t> ABops(Bops.first + Aops.first,
 			   Bops.second + Aops.second);
 
-#pragma omp critical
+#pragma omp critical(recabo)
 	{
 	const bool better(cmpOpCount(ABops,gops));
 	const bool empty(gout.tellp() == std::streampos(0));
@@ -1396,7 +1398,7 @@ Pair<size_t>& CSEOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
 	input2Temps(ldout, lM.coldim(), 'i', 't', lT);
 	auto lnbops( Optimizer(ldout, lM, 'o', 't', 'r') );
 
-#pragma omp critical
+#pragma omp critical(reccse)
 	{
 	const bool better(cmpOpCount(lnbops,dops));
 	const bool empty(dout.tellp() == std::streampos(0));
@@ -1494,13 +1496,13 @@ Pair<size_t>& KernelOptimiser(Pair<size_t>& nbops, std::ostringstream& sout,
 	    auto lnbops( nullspacedecomp(lkout, NullSpace, lT, KFI) );
 
 	    if (lnbops == Pair<size_t>{-1,-1}) {
-#pragma omp critical
+#pragma omp critical(recnzk)
 	    {
 		nonzerokernel = false;
 	    }
 	    }
 
-#pragma omp critical
+#pragma omp critical(recker)
 	    {
 	    const bool better(cmpOpCount(lnbops,kops));
 	    const bool empty(kout.tellp() == std::streampos(0));
@@ -1569,7 +1571,7 @@ Pair<size_t>& AllKernelOpt(Pair<size_t>& nbops, std::ostringstream& sout,
 	FMatrix NullSpace(F,lT.coldim(),T.coldim());
 	auto lkops( nullspacedecomp(laout, NullSpace, lT, l, 'o', 'i', mostCSE) );
 
-#pragma omp critical
+#pragma omp critical(recall)
 	{
 	const bool better(cmpOpCount(lkops,aops));
 	const bool empty(aout.tellp() == std::streampos(0));

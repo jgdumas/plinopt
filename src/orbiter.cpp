@@ -303,7 +303,7 @@ template<int Measure> struct Orbiter {
 
         const size_t lbopt = Operations<Measure>()(Lj,Rg,hP,subloops);
 
-#pragma omp critical
+#pragma omp critical(recorb)
         {
         if (lbopt<=bestopt) {
             const auto lbnz(PLinOpt::nonzeroes(Lj,Rg,hP));
