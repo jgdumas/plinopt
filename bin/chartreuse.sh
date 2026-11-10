@@ -94,7 +94,7 @@ LOARS=(`echo "${OVARS}"`)
 ## Define output and input variables of the subprogram
 ##     together with replacement names
 
-CHARS=$(sed 's/:=/ /;s/+/ /g;s/:=/ /;s/+/ /g;s/-/ /g;s/;.*/ /;s/\*[0-9]* / /g;s/\/[0-9]* / /g;s/)//g;s/(//g' <<< ${FIL} | tr ' ' '\n' | sed 's/[0-9]//g;/^$/d' | sort -u| tr '\n' ' ')
+CHARS=$(sed 's/:=/ /;s/+/ /g;s/-/ /g;s/;.*/ /;s/\*[0-9]* / /g;s/\/[0-9]* / /g;s/)//g;s/(//g' <<< ${FIL} | tr ' ' '\n' | sed 's/[0-9]//g;/^$/d' | sort -u| tr '\n' ' ')
 # >&2 echo "# CHARS: ${CHARS[@]}"
 
 NCHAR="a"
