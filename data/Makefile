@@ -33,6 +33,7 @@ PREFIX=${patsubst %_L.sms,%,${firstword ${notdir ${MATS}}}}
 OPT=1000
 DIM= #-f 62 -a
 #MOD=
+MCFLAGS=-b 20
 
 ALGO=${MATS:%.sms=%.slp}
 ALGA=${ALTS:%.sms=%.slp}
@@ -53,7 +54,7 @@ count: ${ALGO}
 check: docheck count
 
 docheck: ${CHKS}
-	@ ${CHKPRG} ${MOD} ${MATS}
+	@ ${CHKPRG} ${MCFLAGS} ${MOD} ${MATS}
 
 prune_%.log: ${FILE}_%.slp
 	(time ${PRUNER} -O ${OPT} $< ) &> $@
