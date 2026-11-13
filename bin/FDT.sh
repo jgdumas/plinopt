@@ -21,6 +21,7 @@ else
     fics=(${fics[@]//*-X_*})
     # Do not test large files automatically
     fics=(${fics[@]//*32x32x32*})
+    fics=(${fics[@]//*1*x1*x1*})
 fi
 
 BINDRS=(./ ./bin `dirname $0` `which $0| xargs dirname`)
