@@ -233,7 +233,7 @@ int main(int argc, char** argv) {
             << " the rationals\n"
             << "  -O #: randomized search with that many loops (default "
             << randomloops << " loops)\n"
-            << "  -r/-c: raw/compacted input (default compact)\n"
+            << "  -r/-c: raw/compacted output (default compact)\n"
             << "  -s #: seed of the randomized search (default is the clock;"
             << " the seed used is printed)\n";
 

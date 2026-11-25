@@ -13,6 +13,7 @@ OPTFLAGS=""
 VARS=()
 MOD=""
 NOPS=0
+RAWO=0
 
 # Requires bash >= 5.3
 if (( BASH_VERSINFO[0] < 5 || (BASH_VERSINFO[0] == 5 && BASH_VERSINFO[1] < 3) )); then
@@ -32,7 +33,7 @@ while [[ $# -gt 0 ]]; do
     shift # past argument
     shift # past value
     ;;
-    -r|-m|-q|--modular)
+    -m|-q|--modular)
     MOD=" -q $2"
     shift # past argument
     shift # past value
@@ -41,11 +42,20 @@ while [[ $# -gt 0 ]]; do
     NOOP=1
     shift # past argument
     ;;
+    -r)
+    RAWO=1
+    shift # past argument
+    ;;
+    -c)
+    RAWO=0
+    shift # past argument
+    ;;
     -h|--h|-help|--help|-*|--*)
-    echo "Usage: $0 [-O|-q #] [-v var[|var]*] P.slp"
+    echo "Usage: $0 [-O|-q #] [-v var[|var]*] [-r|-c] P.slp"
     echo "  -O #: randomized search with that many loops"
     echo "  -q #: modular computation"
     echo "  -n #: do not remove no-op variables (use for non-compact SLP)"
+    echo "  -r/-c: raw/compacted output (default compact)\n"
     echo "  -v var: try to remove that variable (several -v var allowed)"
     echo "  -v \"v1|v2|...|vn\": try all these variables simultaneously"
     exit 1
@@ -59,6 +69,7 @@ done
 
 SLPCHK="${DIR}/SLPchecker${MOD}"
 OPTMZR="${DIR}/optimizer${OPTFLAGS}${MOD} -r"
+CMPCTR="${DIR}/compacter"
 MATTRP="${DIR}/matrix-transpose"
 TRSPZR="${DIR}/transpozer -r"
 SGLVAR="${DIR}/singlevar.sh"
@@ -94,12 +105,21 @@ else
 fi
 # Show FIL
 
+############################################################
+## Compact output:
+if [[ "$RAWO" -ne 0 ]]; then
+    OUTLOOK=cat
+else
+    OUTLOOK=${CMPCTR}
+fi
+# >&2 echo "OUTLOOK: ${OUTLOOK}"
+
 #############################################################
 ## Recover all related variables to form the subprogram
 
 FROS="("
 for vari in ${VARS[@]}; do
-    FRO=$(grep ${vari} <<< ${FIL}| head -1 | sed 's/.*:=+//;s/.*:=-//;s/.*:=//;s/+/ /g;s/-/ /g;s/;.*/ /;s/\*[0-9]* / /g;s/\/[0-9]* / /g;s/ /\[\^0-9\]|/g')
+    FRO=$(grep ${vari} <<< ${FIL}| head -1 | sed 's/.*:=+//;s/.*:=-//;s/.*:=//;s/+/ /g;s/-/ /g;s/;.*/ /;s/(//g;s/)//g;s/\*[0-9]* / /g;s/\/[0-9]* / /g;s/ /\[\^0-9\]|/g')
     FROS="${FROS}${FRO}"
 done
 FROS="${FROS}${VARP})"
@@ -184,34 +204,34 @@ function Compare() {
       >&2 echo -e "${GRE}> ${AFT[*]}\t\t/!\ IMPROVEMENT /!\ ${NC}"
 
       SDI=$(tac <<< "${HEA}" | sed 's/:=/ /;s/;.*//' | awk '{print "s/"$2"/"$1"/g;"}'|tr '\n' ';')
-#       Show SDI
+      # Show SDI
       (sed "s/${OCHAR}/o/g;s/${NCHAR}/i/g" <<< ${HBOD}) > ${LFND}
       (uniq <<< ${LCOM}) &>> ${LFND}
-      (((${SGLVAR} -c ${ZCHAR} <<< ${LOPT}) | egrep -v '(:=0;)' | sed "${SDI}${SDO}") >> ${LFND}) 2> /dev/null
+      (((${OUTLOOK} <<< ${LOPT}) | egrep -v '(:=0;)' | ${SGLVAR} -c ${ZCHAR} | sed "${SDI}${SDO}") >> ${LFND}) 2> /dev/null
   else
       if [[ "$DIF" -eq 0 ]]; then
-	  ADD=$((BEF[0]-AFT[0]))
-	  MUL=$((BEF[1]-AFT[1]))
-	  MSG=
-	  if [[ "$ADD" -gt 0 ]]; then
-	      MSG="additions"
-	  fi
-	  if [[ "$MUL" -gt 0 ]]; then
-	      MSG="multiplications"
-	  fi
-	  if [[ "$MSG" != "" ]]; then
-	      >&2 echo -e "== ${BLU}${AFT[*]}\t\t less ${MSG} ...${NC}"
+          ADD=$((BEF[0]-AFT[0]))
+          MUL=$((BEF[1]-AFT[1]))
+          MSG=
+          if [[ "$ADD" -gt 0 ]]; then
+              MSG="additions"
+          fi
+          if [[ "$MUL" -gt 0 ]]; then
+              MSG="multiplications"
+          fi
+          if [[ "$MSG" != "" ]]; then
+              >&2 echo -e "== ${BLU}${AFT[*]}\t\t less ${MSG} ...${NC}"
 
-	      SDI=$(tac <<< "${HEA}" | sed 's/:=/ /;s/;.*//' | awk '{print "s/"$2"/"$1"/g;"}' |tr '\n' ';')
-#	      Show SDI
-	      (sed "s/${OCHAR}/o/g;s/${NCHAR}/i/g" <<< ${HBOD}) > ${LFND}
-	      (uniq <<< ${LCOM}) &>> ${LFND}
-	      (((${SGLVAR} -c ${ZCHAR} <<< ${LOPT}) | egrep -v '(:=0;)' | sed "${SDI};${SDO}") >> ${LFND}) 2> /dev/null
-	  else
-	      >&2 echo "== ${AFT[*]}"
-	  fi
+              SDI=$(tac <<< "${HEA}" | sed 's/:=/ /;s/;.*//' | awk '{print "s/"$2"/"$1"/g;"}' |tr '\n' ';')
+              # Show SDI
+              (sed "s/${OCHAR}/o/g;s/${NCHAR}/i/g" <<< ${HBOD}) > ${LFND}
+              (uniq <<< ${LCOM}) &>> ${LFND}
+              (((${OUTLOOK} <<< ${LOPT}) | egrep -v '(:=0;)' | ${SGLVAR} -c ${ZCHAR} | sed "${SDI};${SDO}") >> ${LFND}) 2> /dev/null
+          else
+              >&2 echo "== ${AFT[*]}"
+          fi
       else
-	  >&2 echo "≤ ${AFT[*]}"
+          >&2 echo "≤ ${AFT[*]}"
       fi
   fi
 }

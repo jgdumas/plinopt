@@ -98,7 +98,7 @@ int main(int argc, char** argv) {
         if (args == "-h") {
             std::clog << "Usage: " << argv[0]
                       << "[-r|-c [-O #] [-s/-n]] [stdin|file.prg]\n"
-                      << "  -r/-c: raw/compacted input (default compact)\n"
+                      << "  -r/-c: raw/compacted output (default compact)\n"
                       << "  if compact:\n"
                       << "    -s/-n: replace or not singly used variables\n"
                       << "    -O #: number of trim loops (default until stable)"
