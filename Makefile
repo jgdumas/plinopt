@@ -77,13 +77,20 @@ clean:
 SHELL=/bin/bash
 check: ${BIN} trspcheck modcheck pmcheck mmcheck altcheck opcheck slpcheck
 
-mmcheck: ./bin/MMchecker
+CMPCTR=./bin/compacter
+OPTMZR=./bin/optimizer
+MMCHKR=./bin/MMchecker
+PMCHKR=./bin/PMchecker
+SLPCKR=./bin/SLPchecker
+TRNSPR=./bin/transpozer
+
+mmcheck: ${MMCHKR}
 	$< data/2x2x2_7_Strassen_{L,R,P}.sms
 	$< data/2x2x2_7_DPS-accurate_{L,R,P}.sms -m 513083
 	$< data/2x2x2_7_DPS-accurate_{L,R,P}.sms -r 1013 2 3
 	$< data/2x2x2_7_DPS-accurate-X_{L,R,P}.sms -P "X^2-3"
 
-pmcheck: ./bin/PMchecker
+pmcheck: ${PMCHKR}
 	$< data/4o4o8_Toom5_{L,R,P}.sms
 	$< data/4o4o8_Montgomery-13_{L,R,P}.sms
 	$< data/4o4o4_F243-11-44_{L,R,P}.sms -q 3 -P "1-X+X^5"
@@ -94,18 +101,18 @@ modcheck: ./bin/sparsifier
 	$< data/${AALG}_L.sms
 	$(foreach mod, 2 3 5, $< -q ${mod} data/${AALG}_L.sms;)
 
-trspcheck: ./bin/compacter ./bin/transpozer ./bin/SLPchecker data/test-prg.sms
-	./bin/transpozer data/test-prg.slp | ./bin/compacter | ./bin/transpozer | ./bin/compacter | ./bin/SLPchecker -M data/test-prg.sms
-
+trspcheck: ${CMPCTR} ${TRNSPR} ${SLPCKR} data/test-prg.sms
+	${TRNSPR} data/test-prg.slp | ${CMPCTR} | ${TRNSPR} | ${CMPCTR} | ${SLPCKR} -M data/test-prg.sms
 
 %.sms:%.slp
-	./bin/compacter $< | ./bin/SLPchecker > $@
+	${CMPCTR} $< | ${SLPCKR} > $@
 
 opcheck: ./bin/GDT.sh ${BIN}
 	$<
 
-slpcheck: ./bin/FDT.sh ./bin/optimizer
-	./bin/optimizer data/2x2x2_7_DPS-accurate_L.sms -E -N | ./bin/compacter | ./bin/SLPchecker -M data/2x2x2_7_DPS-accurate_L.sms
+slpcheck: MMAT=data/2x2x2_7_DPS-accurate_L.sms
+slpcheck: ./bin/FDT.sh ${OPTMZR}
+	${OPTMZR} ${MMAT} -E -N | ${CMPCTR} | ${SLPCKR} -M ${MMAT}
 	$<
 
 altcheck: AALG=4x4x4_48_203
@@ -113,7 +120,11 @@ altcheck: ./bin/ALTchecker.sh
 	$(foreach dim, 16 24, $(foreach mat, L R, $< data/${AALG}-${dim}{CoB,ALT}_${mat}.slp -M data/${AALG}_${mat}.sms;))
 	$(foreach dim, 16 24 32, $< data/${AALG}-${dim}{ALT,CoB}_P.slp -M data/${AALG}_P.sms;)
 
+
+.SECONDEXPANSION:
 largecheck: AALG=32x32x32_15096
-largecheck: ./bin/SLPchecker ./bin/MMchecker
-	./bin/MMchecker -b 5 data/${AALG}_{L,R,P}.sms
+largecheck: CMPCTR=cat
+largecheck: $(addsuffix .sms, $(addprefix data/$${AALG}_,L R P))
+largecheck: ${SLPCKR} ${MMCHKR}
+	${MMCHKR} -b 5 data/${AALG}_{L,R,P}.sms
 	$(foreach mat, L R P, $< -M data/${AALG}_${mat}.s{ms,lp};)
