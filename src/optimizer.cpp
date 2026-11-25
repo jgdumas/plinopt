@@ -66,12 +66,12 @@ int FOptimiser(std::istream& input, std::ostream& output, std::ostream& olog,
 
     if (printPretty) {
         M.write(std::clog,FileFormat::Pretty) << ';' << std::endl
-					      << std::string(40,'#') << std::endl;
+                                              << std::string(40,'#') << std::endl;
     }
 
     if (printMaple) {
         M.write(std::clog << "M:=",FileFormat::Maple) << ';' << std::endl
-			  << std::string(40,'#') << std::endl;
+                          << std::string(40,'#') << std::endl;
     }
 
     std::clog << std::string(40,'#') << std::endl;
@@ -99,13 +99,13 @@ int FOptimiser(std::istream& input, std::ostream& output, std::ostream& olog,
 
     if ((nbops.first !=0 || nbops.second != 0)) {
         olog << std::string(40,'#') << std::endl
-	     << "# \033[1;32m" << nbops.first
-	     << "\tadditions\tinstead of " << opsinit.first
-	     << "\033[0m \t" << global << std::endl
-	     << "# \033[1;32m" << nbops.second
-	     << "\tmultiplications\tinstead of " << opsinit.second
-	     << "\033[0m" << std::endl
-	     << std::string(40,'#') << std::endl;
+             << "# \033[1;32m" << nbops.first
+             << "\tadditions\tinstead of " << opsinit.first
+             << "\033[0m \t" << global << std::endl
+             << "# \033[1;32m" << nbops.second
+             << "\tmultiplications\tinstead of " << opsinit.second
+             << "\033[0m" << std::endl
+             << std::string(40,'#') << std::endl;
     }
 
         // ============================================================
@@ -163,12 +163,12 @@ int Selector(std::istream& input, const size_t randomloops, const size_t recbudg
         std::ostringstream program, nbops;
         LiftField FF(LiftPrime);
         const int status( FOptimiser(mss, program, nbops, randomloops, recbudget,
-									 printMaple, printPretty, compactOutput, tryDirect,
-									 tryKernel, tryLU, tryAB, mostCSE,
+                                                                         printMaple, printPretty, compactOutput, tryDirect,
+                                                                         tryKernel, tryLU, tryAB, mostCSE,
                                      allkernels, KFI, FF, verbose) );
         if (checkProgram(matrix.str(), program.str())) {
             std::cout << program.str();
-	    std::clog << nbops.str();
+            std::clog << nbops.str();
             return status;
         }
         std::clog << "# \033[1;36mLifted program fails the rational check,"
@@ -176,12 +176,12 @@ int Selector(std::istream& input, const size_t randomloops, const size_t recbudg
         std::stringstream again(matrix.str());
         QRat QQ;
         return FOptimiser(again, std::cout, std::clog, randomloops, recbudget,
-						  printMaple, printPretty, compactOutput, tryDirect, tryKernel,
+                                                  printMaple, printPretty, compactOutput, tryDirect, tryKernel,
                           tryLU, tryAB, mostCSE, allkernels, KFI, QQ, verbose);
     }
     QRat QQ;
     return FOptimiser(input, std::cout, std::clog, randomloops, recbudget,
-					  printMaple, printPretty, compactOutput, tryDirect, tryKernel,
+                                          printMaple, printPretty, compactOutput, tryDirect, tryKernel,
                       tryLU, tryAB, mostCSE, allkernels, KFI, QQ, verbose);
 }
 
@@ -207,7 +207,7 @@ int main(int argc, char** argv) {
 
     int verbose(1);
     size_t randomloops(DORANDOMSEARCH?DEFAULT_RANDOM_LOOPS:1);
-	size_t recbudget(_PLinOpt_DEFAULT_BUDGET_);
+        size_t recbudget(_PLinOpt_DEFAULT_BUDGET_);
     Givaro::Integer prime(0u);
 
     std::string filename;
@@ -215,27 +215,27 @@ int main(int argc, char** argv) {
     for (int i = 1; argc>i; ++i) {
         std::string args(argv[i]);
         if (args == "-h") {
-	  std::clog
-	    << "Usage: " << argv[0]
-	    << " [-h|-M|-P|-K|-D|-G|-E|-N|-A|-Q|-r|-c|-q #|-O #|-s #|-B #]"
-	    << " [stdin|matrixfile.sms]\n"
-	    << "  -D/-K/-G: direct/kernel/LU methods (default is all)\n"
-	    << "  -F: Kernel Full Identity (default is " << (KFI?"yes":"no") << ")\n"
-	    << "  -A: factoring method (default is not)\n"
-	    << "  -E: exhaustive greedy CSE search (default is not)\n"
-	    << "  -B #: budget of the exhaustive search, in states (default "
-	    << _PLinOpt_DEFAULT_BUDGET_ << ")\n"
-	    << "  -N: exhaustive nullspace permutations (default is not)\n"
-	    << "  -P/-M: choose the printing format\n"
-	    << "  -q #: search modulo (default is lifting,"
-	    << " falling back to Rationals if needed)\n"
-	    << "  -Q: do not lift over a word-size prime field, directly search over"
-	    << " the rationals\n"
-	    << "  -O #: randomized search with that many loops (default "
-	    << randomloops << " loops)\n"
-        << "  -r/-c: raw/compacted input (default compact)\n"
-	    << "  -s #: seed of the randomized search (default is the clock;"
-	    << " the seed used is printed)\n";
+          std::clog
+            << "Usage: " << argv[0]
+            << " [-h|-M|-P|-K|-D|-G|-E|-N|-A|-Q|-r|-c|-q #|-O #|-s #|-B #]"
+            << " [stdin|matrixfile.sms]\n"
+            << "  -D/-K/-G: direct/kernel/LU methods (default is all)\n"
+            << "  -F: Kernel Full Identity (default is " << (KFI?"yes":"no") << ")\n"
+            << "  -A: factoring method (default is not)\n"
+            << "  -E: exhaustive greedy CSE search (default is not)\n"
+            << "  -B #: budget of the exhaustive search, in states (default "
+            << _PLinOpt_DEFAULT_BUDGET_ << ")\n"
+            << "  -N: exhaustive nullspace permutations (default is not)\n"
+            << "  -P/-M: choose the printing format\n"
+            << "  -q #: search modulo (default is lifting,"
+            << " falling back to Rationals if needed)\n"
+            << "  -Q: do not lift over a word-size prime field, directly search over"
+            << " the rationals\n"
+            << "  -O #: randomized search with that many loops (default "
+            << randomloops << " loops)\n"
+            << "  -r/-c: raw/compacted input (default compact)\n"
+            << "  -s #: seed of the randomized search (default is the clock;"
+            << " the seed used is printed)\n";
 
             exit(-1);
         }
@@ -252,6 +252,8 @@ int main(int argc, char** argv) {
         else if (args == "-N") { allkernels = true; }
         else if (args == "-q") { prime = Givaro::Integer(argv[++i]); }
         else if (args == "-v") { verbose = atoi(argv[++i]); }
+        else if (args == "-r") { compactOutput = false; }
+        else if (args == "-c") { compactOutput = true; }
         else if (args == "-s") { PLinOpt::RandomSeed = atoll(argv[++i]); }
         else if (args == "-O") {
             randomloops = atoi(argv[++i]);
