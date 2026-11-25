@@ -108,7 +108,7 @@ slpcheck: ./bin/FDT.sh ./bin/optimizer
 	./bin/optimizer data/2x2x2_7_DPS-accurate_L.sms -E -N | ./bin/compacter | ./bin/SLPchecker -M data/2x2x2_7_DPS-accurate_L.sms
 	$<
 
-altcheck: AALG=4x4x4_48_204
+altcheck: AALG=4x4x4_48_203
 altcheck: ./bin/ALTchecker.sh
 	$(foreach dim, 16 24, $(foreach mat, L R, $< data/${AALG}-${dim}{CoB,ALT}_${mat}.slp -M data/${AALG}_${mat}.sms;))
 	$(foreach dim, 16 24 32, $< data/${AALG}-${dim}{ALT,CoB}_P.slp -M data/${AALG}_P.sms;)
